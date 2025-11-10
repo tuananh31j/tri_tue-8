@@ -1,55 +1,55 @@
 import React, { useState, useEffect, useRef } from "react";
-import type { KanbanTask, ScheduleEvent } from "../types";
+import type { ScheduleEvent } from "../types";
+import { DATABASE_URL_BASE } from "@/firebase";
 
-const DATABASE_URL_BASE =
-  "https://morata-a9eba-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet";
+
 const KANBAN_URL = `${DATABASE_URL_BASE}/Kanban.json`;
 
-const initialTasks: KanbanTask[] = [
-  {
-    id: "k-1",
-    title: "Xem lại bài giảng video",
-    subtitle: "Môn: Lập trình Web",
-    status: "todo",
-    type: "study",
-    attachment: {
-      type: "video",
-      url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    },
-  },
-  {
-    id: "k-2",
-    title: "Tải và đọc đề cương ôn tập",
-    subtitle: "Thi: Vật lý 1",
-    status: "todo",
-    type: "exam",
-    attachment: { type: "file", url: "#", name: "de-cuong-vat-ly-1.pdf" },
-  },
-  {
-    id: "k-3",
-    title: "Làm bài tập lớn",
-    subtitle: "Môn: Toán cao cấp A2",
-    status: "inprogress",
-    type: "study",
-    attachment: {
-      type: "image",
-      url: "https://picsum.photos/seed/code/400/200",
-    },
-  },
-  {
-    id: "k-4",
-    title: "Đọc giáo trình chương 1",
-    subtitle: "Môn: Kinh tế vi mô",
-    status: "done",
-    type: "study",
-  },
-];
+// const initialTasks: any[] = [
+//   {
+//     id: "k-1",
+//     title: "Xem lại bài giảng video",
+//     subtitle: "Môn: Lập trình Web",
+//     status: "todo",
+//     type: "study",
+//     attachment: {
+//       type: "video",
+//       url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+//     },
+//   },
+//   {
+//     id: "k-2",
+//     title: "Tải và đọc đề cương ôn tập",
+//     subtitle: "Thi: Vật lý 1",
+//     status: "todo",
+//     type: "exam",
+//     attachment: { type: "file", url: "#", name: "de-cuong-vat-ly-1.pdf" },
+//   },
+//   {
+//     id: "k-3",
+//     title: "Làm bài tập lớn",
+//     subtitle: "Môn: Toán cao cấp A2",
+//     status: "inprogress",
+//     type: "study",
+//     attachment: {
+//       type: "image",
+//       url: "https://picsum.photos/seed/code/400/200",
+//     },
+//   },
+//   {
+//     id: "k-4",
+//     title: "Đọc giáo trình chương 1",
+//     subtitle: "Môn: Kinh tế vi mô",
+//     status: "done",
+//     type: "study",
+//   },
+// ];
 
 const KanbanCard: React.FC<{
-  task: KanbanTask;
-  onDoubleClick: (task: KanbanTask) => void;
+  task: any;
+  onDoubleClick: (task: any) => void;
   isEditing: boolean;
-  onSave: (id: string, data: Partial<KanbanTask>) => void;
+  onSave: (id: string, data: Partial<any>) => void;
   onCancel: () => void;
   onDelete: (id: string) => void;
 }> = ({ task, onDoubleClick, isEditing, onSave, onCancel, onDelete }) => {
@@ -376,7 +376,7 @@ export const KanbanModal: React.FC<{
   event: ScheduleEvent | null;
   onUpdate?: () => void;
 }> = ({ isOpen, onClose, event, onUpdate }) => {
-  const [tasks, setTasks] = useState<KanbanTask[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -391,8 +391,8 @@ export const KanbanModal: React.FC<{
           if (response.ok) {
             const data = await response.json();
             if (data && data.Tasks) {
-              // Convert from Firebase format to KanbanTask format
-              const convertedTasks: KanbanTask[] = data.Tasks.map(
+              // Convert from Firebase format to any format
+              const convertedTasks: any[] = data.Tasks.map(
                 (task: any) => ({
                   id: task.Id,
                   title: task.Title,
@@ -451,8 +451,8 @@ export const KanbanModal: React.FC<{
 
   if (!isOpen) return null;
 
-  // Helper function to convert KanbanTask to Firebase format
-  const convertTaskToFirebase = (task: KanbanTask) => ({
+  // Helper function to convert any to Firebase format
+  const convertTaskToFirebase = (task: any) => ({
     Id: task.id,
     Title: task.title,
     Subtitle: task.subtitle,
@@ -544,11 +544,11 @@ export const KanbanModal: React.FC<{
     }
   };
 
-  const handleDoubleClick = (task: KanbanTask) => {
+  const handleDoubleClick = (task: any) => {
     setEditingTaskId(task.id);
   };
 
-  const handleSave = async (id: string, data: Partial<KanbanTask>) => {
+  const handleSave = async (id: string, data: Partial<any>) => {
     const updatedTasks = tasks.map((t) =>
       t.id === id ? { ...t, ...data } : t
     );
@@ -619,7 +619,7 @@ export const KanbanModal: React.FC<{
     done: tasks.filter((t) => t.status === "done"),
   };
 
-  const renderTaskCards = (taskList: KanbanTask[]) => {
+  const renderTaskCards = (taskList: any[]) => {
     return taskList.map((task) => (
       <div
         key={task.id}
@@ -656,7 +656,7 @@ export const KanbanModal: React.FC<{
           </h2>
           <button
             onClick={async () => {
-              const newTask: KanbanTask = {
+              const newTask: any = {
                 id: `k-${Date.now()}`,
                 title: "Task mới",
                 subtitle: "Mô tả task",

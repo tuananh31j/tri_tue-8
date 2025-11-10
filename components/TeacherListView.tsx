@@ -3,11 +3,10 @@ import { useAuth } from "../contexts/AuthContext";
 import { isAdmin } from "../config/admins";
 import type { ScheduleEvent } from "../types";
 import PageHeader from "../layouts/PageHeader";
+import { DATABASE_URL_BASE } from "@/firebase";
 
-const DATABASE_URL_BASE =
-  "https://morata-a9eba-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet";
-const TEACHER_LIST_URL = `${DATABASE_URL_BASE}/Gi%C3%A1o_vi%C3%AAn.json`;
-const SCHEDULE_URL = `${DATABASE_URL_BASE}/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
+const TEACHER_LIST_URL = `${DATABASE_URL_BASE}/datasheet/Gi%C3%A1o_vi%C3%AAn.json`;
+const SCHEDULE_URL = `${DATABASE_URL_BASE}/datasheet/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
 
 interface Teacher {
   id: string;

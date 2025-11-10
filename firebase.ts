@@ -15,6 +15,8 @@ const firebaseConfig = {
   appId: "1:544190636228:web:5b59936be85db4cc44a991",
   measurementId: "G-GXP7XPGNG7"
 };
+export const DATABASE_URL_BASE =
+  firebaseConfig.databaseURL || "https://morata-a9eba-default-rtdb.asia-southeast1.firebasedatabase.app";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

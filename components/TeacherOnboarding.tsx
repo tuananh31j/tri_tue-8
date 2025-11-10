@@ -37,7 +37,11 @@ const TeacherOnboarding: React.FC<TeacherOnboardingProps> = ({
         {/* Header */}
         <div className="text-center mb-4 sm:mb-6">
           {/* Logo */}
-          <span className="text-2xl text-white font-extrabold">Trí Tuệ 8+</span>
+          <img
+            src="/logo.jpg"
+            alt="Trí Tuệ 8+ Logo"
+            className="mx-auto mb-4 w-36 h-36"
+          />
           <h2 className="text-xl sm:text-2xl font-bold text-[#86c7cc] mb-2">
             Chào mừng giáo viên!
           </h2>

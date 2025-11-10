@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { useAppNavigation } from "../hooks/useAppNavigation";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -9,8 +15,26 @@ interface NavigationDropdownProps {
     | "students"
     | "teachers"
     | "admin-calendar"
-    | "attendance";
+    | "attendance"
+    | "invoice";
 }
+
+interface MenuItem {
+  id: string;
+  label: string;
+  icon?: string;
+  action: () => void;
+  adminOnly?: boolean;
+}
+
+const VIEW_LABELS: Record<string, string> = {
+  schedule: "Study Schedule",
+  students: "Students",
+  teachers: "Teachers",
+  "admin-calendar": "Admin Calendar",
+  invoice: "Create Invoices",
+  attendance: "Attendance",
+};
 
 const NavigationDropdown: React.FC<NavigationDropdownProps> = ({
   currentView,
@@ -18,7 +42,7 @@ const NavigationDropdown: React.FC<NavigationDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const { userProfile } = useAuth();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const navigater = useNavigate();
+  const navigate = useNavigate();
   const {
     navigateToLanding,
     navigateToSchedule,
@@ -28,8 +52,12 @@ const NavigationDropdown: React.FC<NavigationDropdownProps> = ({
     navigateToAttendance,
   } = useAppNavigation();
 
+  const isAdmin = useMemo(() => userProfile?.role === "admin", [userProfile]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
@@ -39,47 +67,92 @@ const NavigationDropdown: React.FC<NavigationDropdownProps> = ({
       }
     };
 
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  const getCurrentViewLabel = () => {
-    switch (currentView) {
-      case "schedule":
-        return "Study Schedule";
-      case "students":
-        return "Students";
-      case "teachers":
-        return "Teachers";
-      case "admin-calendar":
-        return "Admin Calendar";
-      case "invoice":
-        return "Create Invoices";
-      default:
-        return "Navigation";
-    }
-  };
+  const handleNavigation = useCallback((action: () => void) => {
+    action();
+    setIsOpen(false);
+  }, []);
 
-  const getCurrentViewColor = () => {
-    return "bg-gradient-to-r from-[#86c7cc] to-[#86c7cc]";
-  };
+  const menuItems: MenuItem[] = useMemo(
+    () => [
+      {
+        id: "home",
+        label: "Home",
+        action: navigateToLanding,
+      },
+      {
+        id: "schedule",
+        label: "Study Schedule",
+        action: navigateToSchedule,
+      },
+      {
+        id: "students",
+        label: "Students",
+        action: navigateToStudents,
+      },
+      {
+        id: "teachers",
+        label: "Teachers",
+        action: navigateToTeachers,
+        adminOnly: true,
+      },
+      {
+        id: "attendance",
+        label: "📋 Attendance",
+        action: navigateToAttendance,
+      },
+      // {
+      //   id: "admin-calendar",
+      //   label: "📅 Admin Calendar",
+      //   action: navigateToAdminCalendar,
+      //   adminOnly: true,
+      // },
+      {
+        id: "invoice",
+        label: "Create Invoices",
+        action: () => navigate("/invoice"),
+        adminOnly: true,
+      },
+    ],
+    [
+      navigateToLanding,
+      navigateToSchedule,
+      navigateToStudents,
+      navigateToTeachers,
+      navigateToAttendance,
+      navigateToAdminCalendar,
+      navigate,
+    ]
+  );
 
-  const isAdmin = userProfile.role === "admin";
+  const filteredMenuItems = useMemo(
+    () =>
+      menuItems.filter((item) => {
+        // Don't show current view in dropdown
+        if (item.id === currentView) return false;
+        // Show home always
+        if (item.id === "home") return true;
+        // Filter admin-only items
+        if (item.adminOnly && !isAdmin) return false;
+        return true;
+      }),
+    [menuItems, currentView, isAdmin]
+  );
+
+  const currentViewLabel = VIEW_LABELS[currentView] || "Navigation";
 
   return (
-    <div className="fixed top-24 right-4 z-[9999]" ref={dropdownRef}>
+    <div className="fixed top-24 right-4 z-9999" ref={dropdownRef}>
       {/* Dropdown Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`${getCurrentViewColor()} text-white px-4 py-3 rounded-lg font-bold shadow-2xl hover:opacity-90 transition-all flex items-center gap-2 min-w-[200px] justify-between`}
+        className="bg-linear-to-r from-[#86c7cc] to-[#86c7cc] text-white px-4 py-3 rounded-lg font-bold shadow-2xl hover:opacity-90 transition-all flex items-center gap-2 min-w-[200px] justify-between"
         title="Navigation Menu"
       >
-        <span className="text-black">{getCurrentViewLabel()}</span>
+        <span className="text-black">{currentViewLabel}</span>
         <svg
           className={`w-5 h-5 transition-transform ${
             isOpen ? "rotate-180" : ""
@@ -100,93 +173,16 @@ const NavigationDropdown: React.FC<NavigationDropdownProps> = ({
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute top-full right-0 mt-2 w-[200px] bg-white rounded-lg shadow-2xl border-2 border-gray-200 overflow-hidden animate-fadeIn">
-          <button
-            onClick={() => {
-              navigateToLanding();
-              setIsOpen(false);
-            }}
-            className="w-full px-4 py-3 bg-white text-gray-800 hover:bg-gray-100 font-semibold transition flex items-center gap-2 border-b border-gray-200"
-            title="Home"
-          >
-            Home
-          </button>
-
-          {currentView !== "schedule" && (
+          {filteredMenuItems.map((item) => (
             <button
-              onClick={() => {
-                navigateToSchedule();
-                setIsOpen(false);
-              }}
-              className="w-full px-4 py-3 bg-white text-gray-800 hover:bg-blue-50 font-semibold transition flex items-center gap-2 border-b border-gray-200"
-              title="Study Schedule"
+              key={item.id}
+              onClick={() => handleNavigation(item.action)}
+              className="w-full px-4 py-3 bg-white text-gray-800 hover:bg-blue-50 font-semibold transition flex items-center gap-2 border-b border-gray-200 last:border-b-0"
+              title={item.label}
             >
-              Study Schedule
+              {item.label}
             </button>
-          )}
-
-          {currentView !== "students" && (
-            <button
-              onClick={() => {
-                navigateToStudents();
-                setIsOpen(false);
-              }}
-              className="w-full px-4 py-3 bg-white text-gray-800 hover:bg-blue-50 font-semibold transition flex items-center gap-2 border-b border-gray-200"
-              title="Students"
-            >
-              Students
-            </button>
-          )}
-
-          {currentView !== "teachers" && isAdmin && (
-            <button
-              onClick={() => {
-                navigateToTeachers();
-                setIsOpen(false);
-              }}
-              className="w-full px-4 py-3 bg-white text-gray-800 hover:bg-blue-50 font-semibold transition flex items-center gap-2 border-b border-gray-200"
-              title="Teachers"
-            >
-              Teachers
-            </button>
-          )}
-
-          {currentView !== "attendance" && (
-            <button
-              onClick={() => {
-                navigateToAttendance();
-                setIsOpen(false);
-              }}
-              className="w-full px-4 py-3 bg-white text-gray-800 hover:bg-blue-50 font-semibold transition flex items-center gap-2 border-b border-gray-200"
-              title="Attendance"
-            >
-              📋 Attendance
-            </button>
-          )}
-
-          {currentView !== "admin-calendar" && isAdmin && (
-            <button
-              onClick={() => {
-                navigateToAdminCalendar();
-                setIsOpen(false);
-              }}
-              className="w-full px-4 py-3 bg-white text-gray-800 hover:bg-blue-50 font-semibold transition flex items-center gap-2 border-b border-gray-200"
-              title="Admin Calendar - Full Schedule View"
-            >
-              📅 Admin Calendar
-            </button>
-          )}
-          {currentView !== "invoice" && isAdmin && (
-            <button
-              onClick={() => {
-                navigater("/invoice");
-                setIsOpen(false);
-              }}
-              className="w-full px-4 py-3 bg-white text-gray-800 hover:bg-blue-50 font-semibold transition flex items-center gap-2 border-b border-gray-200"
-              title="Admin Calendar - Full Schedule View"
-            >
-              Create Invoices
-            </button>
-          )}
+          ))}
         </div>
       )}
     </div>

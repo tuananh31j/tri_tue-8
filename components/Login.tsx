@@ -58,7 +58,11 @@ const Login: React.FC = () => {
       <div className="max-w-md w-full">
         {/* Logo and Title */}
         <div className="text-center mb-6 sm:mb-8">
-         
+          <img
+            src="/logo.jpg"
+            alt="Trí Tuệ 8+ Logo"
+            className="mx-auto mb-4 w-36 h-36"
+          />
           <h1 className="text-3xl sm:text-4xl font-bold text-[#86c7cc] mb-2">
             Trí Tuệ 8+
           </h1>

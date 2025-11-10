@@ -33,8 +33,12 @@ const PageHeader: React.FC<PageHeaderProps> = ({
     >
       <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="flex items-center gap-3 sm:gap-4">
-         {/* Logo */}
-          <span className="text-2xl text-white font-extrabold">Trí Tuệ 8+</span>
+          {/* Logo */}
+          <img
+            src="/logo.jpg"
+            alt="Trí Tuệ 8+ Logo"
+            className="mb-4 w-24 h-24"
+          />
 
           {/* Title Section */}
           <div>

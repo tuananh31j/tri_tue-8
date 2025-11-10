@@ -11,24 +11,14 @@ import TimePickerModal from "./TimePickerModal";
 import { KanbanModal } from "./KanbanModal";
 import FloatingActionButton from "./FloatingActionButton";
 import NavigationDropdown from "./NavigationDropdown";
-import { app } from "../firebase";
+import { app, DATABASE_URL_BASE } from "../firebase";
 import { SUBJECT_COLORS, GRADIENTS } from "../constants/colors";
 
-// 🔥 DYNAMIC DATABASE URL - Lấy từ Firebase config
-const getDatabaseUrl = () => {
-  const dbUrl = app.options.databaseURL;
-  if (!dbUrl) {
-    console.error("⚠️ Firebase databaseURL not configured!");
-    return "https://morata-a9eba-default-rtdb.asia-southeast1.firebasedatabase.app";
-  }
-  return dbUrl.replace(/\/$/, ""); // Remove trailing slash
-};
-
-const DATABASE_URL_BASE = `${getDatabaseUrl()}/datasheet`;
-const SCHEDULE_URL = `${DATABASE_URL_BASE}/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
-const KANBAN_URL = `${DATABASE_URL_BASE}/Kanban.json`;
-const STUDENT_LIST_URL = `${DATABASE_URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh.json`;
-const TEACHER_LIST_URL = `${DATABASE_URL_BASE}/Gi%C3%A1o_vi%C3%AAn.json`;
+const URL_BASE = `${DATABASE_URL_BASE}/datasheet`;
+const SCHEDULE_URL = `${URL_BASE}/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
+const KANBAN_URL = `${URL_BASE}/Kanban.json`;
+const STUDENT_LIST_URL = `${URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh.json`;
+const TEACHER_LIST_URL = `${URL_BASE}/Gi%C3%A1o_vi%C3%AAn.json`;
 
 const getMonday = (d: Date): Date => {
   const date = new Date(d);
@@ -291,7 +281,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   ) => {
     try {
       const url = id
-        ? `${DATABASE_URL_BASE}/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u/${id}.json`
+        ? `${URL_BASE}/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u/${id}.json`
         : SCHEDULE_URL;
 
       const method = id ? "PUT" : "POST";
@@ -322,7 +312,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const handleDeleteEvent = async (event: ScheduleEvent) => {
     try {
       console.log("Deleting event:", event);
-      const url = `${DATABASE_URL_BASE}/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u/${event.id}.json`;
+      const url = `${URL_BASE}/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u/${event.id}.json`;
       console.log("Delete URL:", url);
 
       const response = await fetch(url, {
@@ -672,7 +662,17 @@ const Header: React.FC<{
       <div className="flex flex-col sm:flex-row items-center gap-4 p-4 sm:p-6">
         <div className="flex items-center gap-4">
           {/* Logo */}
-          <span className="text-2xl text-white font-extrabold">Trí Tuệ 8+</span>
+          <img
+            src="/logo.jpg"
+            alt="Trí Tuệ 8+ Logo"
+            className="mx-auto mb-4 w-24 h-24"
+          />
+          {/* Title Section */}
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-white flex items-center gap-2">
+              Schedule Planner
+            </h1>
+          </div>
         </div>
       </div>
 

@@ -40,13 +40,30 @@ const AppLayout: React.FC<AppLayoutProps> = ({
     <div
       className={`min-h-screen h-screen overflow-y-auto bg-linear-to-br from-red-50  to-red-100`}
     >
-      {/* Navigation Dropdown - Sticky at top */}
+      {/* Navigation Dropdown - Always on top, interactive */}
       {showNavigation && currentView && (
         <NavigationDropdown currentView={currentView} />
       )}
 
-      {/* Main Content - Rendered by child routes */}
-      <Outlet />
+      {/* Main Content Area with Background Logo */}
+      <div className="relative">
+        {/* Background Logo - Fixed position, overlays content but non-interactive */}
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-50">
+          <img
+            src="/logo.jpg"
+            alt="Background Logo"
+            className="w-auto h-[60vh] max-w-[60vw] object-contain opacity-[0.08] select-none"
+            style={{
+              filter: "grayscale(20%) brightness(1.1)",
+            }}
+          />
+        </div>
+
+        {/* Main Content - Rendered by child routes */}
+        <div className="relative z-0">
+          <Outlet />
+        </div>
+      </div>
     </div>
   );
 };

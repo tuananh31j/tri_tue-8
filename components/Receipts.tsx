@@ -20,6 +20,7 @@ interface TuitionData {
 
 interface SalaryData {
   teacherName: string;
+  month: string;
   subject: string;
   caTH: string;
   luongTH: string;
@@ -36,12 +37,16 @@ interface SalaryData {
 }
 
 // Generate VietQR URL with hardcoded bank info
-const generateVietQR = (amount: string, studentName: string): string => {
+const generateVietQR = (
+  amount: string,
+  studentName: string,
+  month: string
+): string => {
   const bankId = "VPB"; // VPBank
   const accountNo = "4319888";
   const accountName = "NGUYEN THI HOA";
   const numericAmount = amount.replace(/[^0-9]/g, "");
-  const description = `HP T10 ${studentName}`;
+  const description = `HP T${month} ${studentName}`;
   return `https://img.vietqr.io/image/${bankId}-${accountNo}-compact.png?amount=${numericAmount}&addInfo=${encodeURIComponent(
     description
   )}&accountName=${encodeURIComponent(accountName)}`;
@@ -172,23 +177,62 @@ export const TuitionReceipt: React.FC<{
 
       <div
         ref={receiptRef}
-        className="bg-white rounded-lg shadow-md border"
+        className="bg-white rounded-lg shadow-md border relative overflow-hidden"
         style={{ borderColor: COLORS.dark, minWidth: "700px" }}
       >
-        <div className="p-8">
+        {/* Background Logo */}
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <img
+            src="/logo.jpg"
+            alt="Background Logo"
+            onError={(e) => console.error("Logo load failed:", e)}
+            onLoad={() => console.log("Logo loaded successfully")}
+            style={{
+              width: "auto",
+              height: "400px",
+              maxWidth: "400px",
+              objectFit: "contain",
+              opacity: 1,
+              filter: "grayscale(20%) brightness(1.1)",
+              userSelect: "none",
+              pointerEvents: "none",
+            }}
+          />
+        </div>
+
+        <div
+          className="p-8 relative"
+          style={{ zIndex: 10, position: "relative" }}
+        >
           <h2 className="text-center text-3xl font-bold text-[#86c7cc]">
             PHIẾU THU HỌC PHÍ THÁNG {data.month}
           </h2>
           <div
             className="mt-6 border rounded overflow-hidden"
-            style={{ borderColor: COLORS.default }}
+            style={{ borderColor: COLORS.default, background: "transparent" }}
           >
             <div
               className="bg-[${COLORS.default}]"
-              style={{ background: COLORS.light }}
+              style={{ background: "transparent" }}
             />
-            <div className="bg-[#f7fafc] p-4">
-              <div className="bg-[" style={{ background: COLORS.default }} />
+            <div
+              className="bg-[#f7fafc] p-4"
+              style={{ background: "rgba(255, 255, 255, 0.85)" }}
+            >
+              <div className="bg-[" style={{ background: "transparent" }} />
               <div
                 className="bg-yellow-300 p-2 text-center font-semibold text-lg"
                 style={{ background: COLORS.default, color: "#fff" }}
@@ -228,7 +272,11 @@ export const TuitionReceipt: React.FC<{
                 </div>
                 <div className="w-48 h-48 bg-white border flex items-center justify-center overflow-hidden shrink-0">
                   <img
-                    src={generateVietQR(data.totalAmount, data.studentName)}
+                    src={generateVietQR(
+                      data.totalAmount,
+                      data.studentName,
+                      data.month
+                    )}
                     alt="VietQR Code"
                     className="w-full h-full object-contain"
                     crossOrigin="anonymous"
@@ -256,7 +304,9 @@ export const SalarySlip: React.FC<{
         setIsExporting(true);
         await exportAsImage(
           salaryRef.current,
-          `Phieu_Luong_${data.teacherName.replace(/\s+/g, "_")}_Thang_10.png`
+          `Phieu_Luong_${data.teacherName.replace(/\s+/g, "_")}_Thang_${
+            data.month
+          }.png`
         );
         onExport();
       } catch (error) {
@@ -307,10 +357,44 @@ export const SalarySlip: React.FC<{
 
       <div
         ref={salaryRef}
-        className="bg-white rounded-lg shadow-md border"
+        className="bg-white rounded-lg shadow-md border relative overflow-hidden"
         style={{ borderColor: COLORS.dark }}
       >
-        <div className="p-6">
+        {/* Background Logo */}
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <img
+            src="/public/logo.jpg"
+            alt="Background Logo"
+            style={{
+              width: "auto",
+              height: "300px",
+              maxWidth: "300px",
+              objectFit: "contain",
+              opacity: 0.15,
+              filter: "grayscale(20%) brightness(1.1)",
+              userSelect: "none",
+              pointerEvents: "none",
+            }}
+          />
+        </div>
+
+        <div
+          className="p-6 relative"
+          style={{ zIndex: 10, position: "relative" }}
+        >
           <h2 className="text-center text-2xl font-bold text-[#86c7cc]">
             PHIẾU LƯƠNG THÁNG {data.month}
           </h2>
@@ -371,6 +455,7 @@ const Receipts: React.FC = () => {
   // Salary form state
   const [salaryData, setSalaryData] = useState<SalaryData>({
     teacherName: "Nguyễn Văn A",
+    month: "10",
     subject: "Tiếng Anh",
     caTH: "10",
     luongTH: "500,000",
@@ -599,6 +684,24 @@ const Receipts: React.FC = () => {
                       }
                       className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
                       placeholder="VD: Nguyễn Văn A"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Tháng
+                    </label>
+                    <input
+                      type="text"
+                      value={salaryData.month}
+                      onChange={(e) =>
+                        setSalaryData({
+                          ...salaryData,
+                          month: e.target.value,
+                        })
+                      }
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
+                      placeholder="VD: 10"
                     />
                   </div>
 

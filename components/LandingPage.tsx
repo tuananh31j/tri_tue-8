@@ -92,9 +92,11 @@ const LandingPage: React.FC = () => {
           <div className="logo">
             <a href="#">
               {/* Logo */}
-              <span className="text-2xl text-white font-extrabold">
-                Trí Tuệ 8+
-              </span>
+              <img
+                src="/logo.jpg"
+                alt="Trí Tuệ 8+ Logo"
+                className="mx-auto mb-4 w-36 h-36"
+              />
             </a>
           </div>
           <nav className="auth-buttons">

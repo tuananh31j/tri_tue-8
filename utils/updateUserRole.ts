@@ -1,7 +1,9 @@
 // Script để cập nhật role admin cho user
 // Chạy script này để fix vấn đề admin không thấy data
 
-const DATABASE_URL_BASE = 'https://morata-a9eba-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet';
+import { DATABASE_URL_BASE as URL_BASE } from "@/firebase";
+
+const DATABASE_URL_BASE = URL_BASE + '/datasheet';
 
 // Email admin cần cập nhật
 const ADMIN_EMAILS_TO_UPDATE = [

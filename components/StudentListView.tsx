@@ -2,12 +2,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import type { ScheduleEvent } from "../types";
 import PageHeader from "../layouts/PageHeader";
+import { DATABASE_URL_BASE } from "@/firebase";
 
-const DATABASE_URL_BASE =
-  "https://morata-a9eba-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet";
-const STUDENT_LIST_URL = `${DATABASE_URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh.json`;
-const SCHEDULE_URL = `${DATABASE_URL_BASE}/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
-const EXTENSION_HISTORY_URL = `${DATABASE_URL_BASE}/Gia_h%E1%BA%A1n.json`;
+
+const STUDENT_LIST_URL = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh.json`;
+const SCHEDULE_URL = `${DATABASE_URL_BASE}/datasheet/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
+const EXTENSION_HISTORY_URL = `${DATABASE_URL_BASE}/datasheet/Gia_h%E1%BA%A1n.json`;
 
 interface Student {
   id: string;
