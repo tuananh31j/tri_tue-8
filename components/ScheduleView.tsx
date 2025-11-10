@@ -273,14 +273,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       })
       .filter((event) => {
         // 🔒 PERMISSION FILTER: Admin sees all, Teacher sees only their events
-        console.log(userProfile,'sdfsfsfvvvv')
+        console.log(event, "sdfsfsfvvvv");
         if (userProfile?.isAdmin) {
           // Admin sees all events
           return true;
         } else {
           // Teacher only sees their own events - compare by teacher name
           if (!userProfile.email) return false;
-          return event["Email giáo viên"] === userProfile.email;
+          return event["Giáo viên phụ trách"] === userProfile.displayName;
         }
       });
   }, [allEvents, weekDates, activeFilter, currentUser, userProfile]);
