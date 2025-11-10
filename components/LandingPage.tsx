@@ -67,7 +67,7 @@ const teamMembers: TeamMember[] = [
 const duplicatedTeamMembers = [...teamMembers, ...teamMembers];
 
 const LandingPage: React.FC = () => {
-  const { currentUser, signOut } = useAuth();
+  const { currentUser, signOut, userProfile } = useAuth();
   const {
     navigateToSchedule,
     navigateToStudents,
@@ -83,14 +83,18 @@ const LandingPage: React.FC = () => {
     }
   };
 
+  const isAdmin = userProfile.role === "admin";
+
   return (
     <>
       <header className="site-header">
         <div className="container">
           <div className="logo">
             <a href="#">
-            {/* Logo */}
-          <span className="text-2xl text-white font-extrabold">Trí Tuệ 8+</span>
+              {/* Logo */}
+              <span className="text-2xl text-white font-extrabold">
+                Trí Tuệ 8+
+              </span>
             </a>
           </div>
           <nav className="auth-buttons">
@@ -140,15 +144,18 @@ const LandingPage: React.FC = () => {
                 >
                   Students
                 </button>
-                <button
-                  onClick={navigateToTeachers}
-                  className="btn btn--primary hero-btn"
-                  style={{
-                    background: "linear-gradient(135deg, #86c7cc, #86c7cc)",
-                  }}
-                >
-                  Teachers
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={navigateToTeachers}
+                    className="btn btn--primary hero-btn"
+                    style={{
+                      background: "linear-gradient(135deg, #86c7cc, #86c7cc)",
+                    }}
+                  >
+                    Teachers
+                  </button>
+                )}
+
                 <button
                   onClick={navigateToAttendance}
                   className="btn btn--primary hero-btn"
@@ -196,7 +203,6 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
         {/* Preview receipts (tuition & salary) */}
-       
       </main>
     </>
   );
