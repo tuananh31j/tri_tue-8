@@ -37,7 +37,7 @@ interface SalaryData {
 
 // Generate VietQR URL with hardcoded bank info
 const generateVietQR = (amount: string, studentName: string): string => {
-  const bankId = "970436"; // VPBank
+  const bankId = "VPB"; // VPBank
   const accountNo = "4319888";
   const accountName = "NGUYEN THI HOA";
   const numericAmount = amount.replace(/[^0-9]/g, "");
