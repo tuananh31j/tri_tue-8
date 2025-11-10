@@ -19,7 +19,7 @@ const getDatabaseUrl = () => {
   const dbUrl = app.options.databaseURL;
   if (!dbUrl) {
     console.error("⚠️ Firebase databaseURL not configured!");
-    return "https://upedu2-5df07-default-rtdb.asia-southeast1.firebasedatabase.app";
+    return "https://morata-a9eba-default-rtdb.asia-southeast1.firebasedatabase.app";
   }
   return dbUrl.replace(/\/$/, ""); // Remove trailing slash
 };
@@ -165,6 +165,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   console.log("Current user:", currentUser, userProfile);
   const handleFilterByEmail = (data: any) => {
     if (userProfile.role === "admin") return data;
+    console.log(data, "sdfsdfsdf");
     return data.filter(
       (event: any) => event["Email giáo viên"] === currentUser?.email
     );
@@ -178,11 +179,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       console.log("Fetched schedule data:", data);
 
       if (data) {
-        const dataSRC = handleFilterByEmail(data);
-        let eventsArray = Object.keys(dataSRC).map((key) => ({
+        // const dataSRC = handleFilterByEmail(data);
+        let eventsArray = Object.keys(data).map((key) => ({
           id: key,
           ...data[key],
         }));
+        console.log(eventsArray, "sdfsdfsdf");
 
         // 🔒 PERMISSION FILTER: Teachers only see their own schedules
         // ⚠️ TEMPORARILY DISABLED - Everyone can see all data
@@ -271,13 +273,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       })
       .filter((event) => {
         // 🔒 PERMISSION FILTER: Admin sees all, Teacher sees only their events
+        console.log(userProfile,'sdfsfsfvvvv')
         if (userProfile?.isAdmin) {
           // Admin sees all events
           return true;
         } else {
           // Teacher only sees their own events - compare by teacher name
-          if (!userProfile?.teacherName) return false;
-          return event["Giáo viên phụ trách"] === userProfile.teacherName;
+          if (!userProfile.email) return false;
+          return event["Email giáo viên"] === userProfile.email;
         }
       });
   }, [allEvents, weekDates, activeFilter, currentUser, userProfile]);
@@ -298,7 +301,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         ...taskData,
         "Email giáo viên": currentUser?.email || taskData["Email giáo viên"],
       };
-
+      console.log(taskData, "sdfsdsfsddfsdf", taskWithEmail);
       const response = await fetch(url, {
         method: method,
         headers: { "Content-Type": "application/json" },

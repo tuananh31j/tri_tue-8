@@ -1,6 +1,7 @@
 # 🔐 Hướng dẫn Setup Google Authentication
 
 ## ✅ Bạn đã làm:
+
 - ✓ Bật Google Authentication trên Firebase Console
 
 ## 📝 Còn cần làm:
@@ -20,13 +21,14 @@ Mở file `firebase.ts` và thay thế các giá trị sau:
 
 ```typescript
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",                    // ← Thay bằng apiKey thật
+  apiKey: "YOUR_API_KEY", // ← Thay bằng apiKey thật
   authDomain: "upedu2-5df07.firebaseapp.com",
-  databaseURL: "https://upedu2-5df07-default-rtdb.asia-southeast1.firebasedatabase.app",
+  databaseURL:
+    "https://morata-a9eba-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "upedu2-5df07",
   storageBucket: "upedu2-5df07.firebasestorage.app",
   messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // ← Thay bằng messagingSenderId thật
-  appId: "YOUR_APP_ID"                        // ← Thay bằng appId thật
+  appId: "YOUR_APP_ID", // ← Thay bằng appId thật
 };
 ```
 
@@ -48,8 +50,8 @@ npm run dev
 
 Truy cập: http://localhost:5173
 
-**Nếu gặp lỗi "auth/configuration-not-found":**
-→ Kiểm tra lại Firebase Config đã đúng chưa
+**Nếu gặp lỗi "auth/configuration-not-found":** → Kiểm tra lại Firebase Config
+đã đúng chưa
 
 ### 5. Build và Deploy
 
@@ -62,11 +64,13 @@ firebase deploy --only hosting
 ## 🎯 Cách hoạt động:
 
 1. **Khi chưa login:**
+
    - User thấy màn hình Login
    - Click "Đăng nhập bằng Google"
    - Chọn tài khoản Google
 
 2. **Sau khi login:**
+
    - Tự động vào Landing Page
    - Hiển thị email ở góc phải
    - Có nút "Logout"
@@ -85,11 +89,13 @@ firebase deploy --only hosting
 ## 📱 Screenshots chức năng:
 
 ### Login Page:
+
 - Logo Tutoring Space
 - Nút "Đăng nhập bằng Google" với icon
 - Responsive design
 
 ### After Login:
+
 - Header hiển thị email
 - Nút Logout màu đỏ rượu
 - Full access vào app
@@ -102,16 +108,14 @@ firebase deploy --only hosting
 
 ## 🆘 Troubleshooting:
 
-**Lỗi: "Firebase: Error (auth/configuration-not-found)"**
-→ Kiểm tra `apiKey`, `messagingSenderId`, `appId` trong `firebase.ts`
+**Lỗi: "Firebase: Error (auth/configuration-not-found)"** → Kiểm tra `apiKey`,
+`messagingSenderId`, `appId` trong `firebase.ts`
 
-**Lỗi: "auth/unauthorized-domain"**
-→ Thêm domain vào Authorized domains trong Firebase Console
+**Lỗi: "auth/unauthorized-domain"** → Thêm domain vào Authorized domains trong
+Firebase Console
 
-**Login popup bị block**
-→ Cho phép popup trong browser settings
+**Login popup bị block** → Cho phép popup trong browser settings
 
 ---
 
 ✅ **Sau khi làm xong, app sẽ có Google Authentication đầy đủ!** 🎉
-
