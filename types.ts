@@ -1,7 +1,7 @@
 export type ScheduleEvent = {
     id: string;
     "Tên công việc": string;
-    "Loại"?: 'LichHoc' | 'LichThi' | 'LichLamViec';
+    "Loại"?: 'LichHoc' | 'LichThi' | 'LichLamViec' | 'CV';
     "Ngày": string;
     "Giờ bắt đầu": string;
     "Giờ kết thúc": string;
@@ -23,6 +23,7 @@ export interface UserProfile {
     uid: string;
     email: string;
     displayName?: string;
+    teacherName?: string; // Optional display name used in legacy schedule/attendance matching
     role: UserRole;
     teacherId?: string; // Link to Giáo_viên record
     position?: string; // Position from Giáo_viên table (Admin, Giáo viên, etc.)

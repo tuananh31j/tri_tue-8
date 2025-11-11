@@ -1,9 +1,41 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import type { ScheduleEvent } from "../types";
-import PageHeader from "../layouts/PageHeader";
+import { useAuth } from "../../contexts/AuthContext";
+import type { ScheduleEvent } from "../../types";
+import PageHeader from "../../layouts/PageHeader";
 import { DATABASE_URL_BASE } from "@/firebase";
-
+import {
+  Button,
+  Input,
+  Table,
+  Card,
+  Spin,
+  DatePicker,
+  Modal,
+  Form,
+  InputNumber,
+  Select,
+  Statistic,
+  Typography,
+  Row,
+  Col,
+  Space,
+  Tag,
+  message,
+  Popconfirm,
+} from "antd";
+import {
+  SearchOutlined,
+  EyeOutlined,
+  ClockCircleOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  ClearOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+import WrapperContent from "@/components/WrapperContent";
+import Loader from "@/components/Loader";
 
 const STUDENT_LIST_URL = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh.json`;
 const SCHEDULE_URL = `${DATABASE_URL_BASE}/datasheet/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
@@ -44,6 +76,11 @@ const StudentListView: React.FC = () => {
   const [extensionHistory, setExtensionHistory] = useState<any[]>([]);
   const [isEditExtensionModalOpen, setEditExtensionModalOpen] = useState(false);
   const [editingExtension, setEditingExtension] = useState<any | null>(null);
+
+  // Form instances
+  const [editStudentForm] = Form.useForm();
+  const [extendHoursForm] = Form.useForm();
+  const [editExtensionForm] = Form.useForm();
 
   // Fetch students
   useEffect(() => {
@@ -141,6 +178,19 @@ const StudentListView: React.FC = () => {
     };
     fetchExtensionHistory();
   }, []);
+
+  // Update edit extension form when editingExtension changes
+  useEffect(() => {
+    if (editingExtension && isEditExtensionModalOpen) {
+      editExtensionForm.setFieldsValue({
+        newHours: editingExtension["Giờ nhập thêm"] || 0,
+        reason: "",
+      });
+    } else if (!editingExtension && isEditExtensionModalOpen) {
+      // Reset form
+      editExtensionForm.resetFields();
+    }
+  }, [editingExtension, isEditExtensionModalOpen, editExtensionForm]);
 
   // Calculate total extended hours from Gia_hạn table
   const calculateTotalExtendedHours = (studentId: string): number => {
@@ -365,11 +415,16 @@ const StudentListView: React.FC = () => {
 
       if (isNew) {
         // Add new student - Remove id field from studentData
+        if (!currentUser) {
+          alert("⚠️ You must be logged in to add students");
+          return;
+        }
+        const authToken = await currentUser.getIdToken();
         const { id, ...dataWithoutId } = studentData as any;
 
         console.log("📤 Sending new student data:", dataWithoutId);
 
-        const response = await fetch(STUDENT_LIST_URL, {
+        const response = await fetch(`${STUDENT_LIST_URL}?auth=${authToken}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dataWithoutId),
@@ -413,7 +468,12 @@ const StudentListView: React.FC = () => {
         });
 
         // Update existing student
-        const url = `${DATABASE_URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Fc_sinh/${studentData.id}.json`;
+        if (!currentUser) {
+          alert("⚠️ You must be logged in to update students");
+          return;
+        }
+        const authToken = await currentUser.getIdToken();
+        const url = `${DATABASE_URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Fc_sinh/${studentData.id}.json?auth=${authToken}`;
         console.log("📤 Updating student:", studentData.id, studentData);
         const response = await fetch(url, {
           method: "PUT",
@@ -517,24 +577,24 @@ const StudentListView: React.FC = () => {
 
           if (hoursChanged) {
             alert(
-              `✅ Student updated and Hours Extended change logged!\nOld: ${oldHours}h → New: ${newHours}h`
+              `✅ Học sinh đã cập nhật và thay đổi Giờ mở rộng đã được ghi lại!\nCũ: ${oldHours}h → Mới: ${newHours}h`
             );
           } else {
-            alert("✅ Student updated successfully!");
+            alert("✅ Học sinh đã được cập nhật thành công!");
           }
         } else {
           const errorText = await response.text();
           console.error(
-            "❌ Failed to update student. Status:",
+            "❌ Không cập nhật được học sinh. Status:",
             response.status,
             errorText
           );
-          alert(`❌ Failed to update student. Status: ${response.status}`);
+          alert(`❌ Không cập nhật được học sinh. Status: ${response.status}`);
         }
       }
     } catch (error) {
       console.error("Error saving student:", error);
-      alert("Failed to save student: " + error);
+      alert("❌ Lỗi khi lưu học sinh: " + error);
     }
   };
 
@@ -544,17 +604,11 @@ const StudentListView: React.FC = () => {
   };
 
   const handleExtendHours = (student: Student) => {
-    console.log("🎯 Opening extend modal for student:", {
-      id: student.id,
-      name: student["Họ và tên"],
-      currentExtended: student["Số giờ đã gia hạn"],
-    });
     setExtendingStudent(student);
     setExtendModalOpen(true);
   };
 
   const handleEditExtension = (record: any) => {
-    console.log("✏️ Editing extension record:", record);
     setEditingExtension(record);
     setEditExtensionModalOpen(true);
   };
@@ -568,13 +622,6 @@ const StudentListView: React.FC = () => {
     try {
       const oldHours = Number(editingExtension["Giờ nhập thêm"]) || 0;
       const studentId = editingExtension.studentId;
-
-      console.log("💾 Saving edited extension:", {
-        recordId: editingExtension.id,
-        oldHours,
-        newHours,
-        reason,
-      });
 
       // Update the existing record with new hours and edit history
       const now = new Date();
@@ -609,8 +656,6 @@ const StudentListView: React.FC = () => {
         throw new Error(`Failed to update: ${updateResponse.status}`);
       }
 
-      console.log("✅ Extension record updated");
-
       // Recalculate total extended hours
       const historyResponse = await fetch(
         `${EXTENSION_HISTORY_URL}?_=${Date.now()}`,
@@ -633,7 +678,11 @@ const StudentListView: React.FC = () => {
       console.log("📊 Updated total extended hours:", totalExtended);
 
       // Update student's total extended hours
-      const studentUrl = `${DATABASE_URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Fc_sinh/${studentId}.json`;
+      if (!currentUser) {
+        throw new Error("You must be logged in to update student hours");
+      }
+      const authToken = await currentUser.getIdToken();
+      const studentUrl = `${DATABASE_URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Fc_sinh/${studentId}.json?auth=${authToken}`;
       const studentUpdateResponse = await fetch(studentUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -642,7 +691,7 @@ const StudentListView: React.FC = () => {
 
       if (!studentUpdateResponse.ok) {
         throw new Error(
-          `Failed to update student: ${studentUpdateResponse.status}`
+          `Không cập nhật được học sinh: ${studentUpdateResponse.status}`
         );
       }
 
@@ -688,12 +737,16 @@ const StudentListView: React.FC = () => {
       alert("✅ Extension record updated successfully!");
     } catch (error) {
       console.error("Error updating extension:", error);
-      alert("❌ Failed to update extension: " + error);
+      alert("❌ Không cập nhật được tiện ích mở rộng: " + error);
     }
   };
 
   const handleDeleteExtension = async (recordId: string, studentId: string) => {
-    if (!confirm("⚠️ Are you sure you want to delete this extension record?")) {
+    if (
+      !confirm(
+        "⚠️ Bạn có chắc chắn muốn xóa bản ghi tiện ích mở rộng này không?"
+      )
+    ) {
       return;
     }
 
@@ -742,7 +795,9 @@ const StudentListView: React.FC = () => {
       });
 
       if (!updateResponse.ok) {
-        throw new Error(`Failed to update student: ${updateResponse.status}`);
+        throw new Error(
+          `Không cập nhật được học sinh: ${updateResponse.status}`
+        );
       }
 
       // Refresh all data
@@ -782,10 +837,10 @@ const StudentListView: React.FC = () => {
         setExtensionHistory(historyArray);
       }
 
-      alert("✅ Extension record deleted successfully!");
+      alert("✅ Bản ghi mở rộng đã được xóa thành công!");
     } catch (error) {
       console.error("Error deleting extension:", error);
-      alert("❌ Failed to delete extension: " + error);
+      alert("❌ Không xóa được bản ghi mở rộng: " + error);
     }
   };
 
@@ -801,7 +856,7 @@ const StudentListView: React.FC = () => {
 
       if (!extendingStudent.id) {
         alert("❌ Lỗi: Học sinh không có ID!");
-        console.error("❌ Student missing ID:", extendingStudent);
+        console.error("❌ Học sinh thiếu ID:", extendingStudent);
         return;
       }
 
@@ -932,10 +987,10 @@ const StudentListView: React.FC = () => {
           setExtendModalOpen(false);
           setExtendingStudent(null);
 
-          const action = additionalHours >= 0 ? "added" : "subtracted";
+          const action = additionalHours >= 0 ? "Thêm" : "Trừ";
           const absHours = Math.abs(additionalHours);
           alert(
-            `✅ Successfully ${action} ${absHours} hours for ${extendingStudent["Họ và tên"]}!\nNew total: ${totalExtended}h`
+            `✅ Thành công ${action} ${absHours} giờ cho ${extendingStudent["Họ và tên"]}!\nTổng mới: ${totalExtended}h`
           );
         } else {
           const errorText = await updateResponse.text();
@@ -945,7 +1000,7 @@ const StudentListView: React.FC = () => {
             errorText
           );
           alert(
-            `❌ Failed to update student. Status: ${updateResponse.status}`
+            `❌ Không cập nhật được học sinh. Status: ${updateResponse.status}`
           );
         }
       }
@@ -1039,7 +1094,7 @@ const StudentListView: React.FC = () => {
                         display: flex;
                         align-items: flex-start;
                         justify-content: space-between;
-                        border-bottom: 4px solid #86c7cc;
+                        border-bottom: 4px solid #36797f;
                         padding-bottom: 20px;
                         margin-bottom: 30px;
                     }
@@ -1047,7 +1102,7 @@ const StudentListView: React.FC = () => {
                     .header-center { flex: 1; text-align: center; padding: 0 20px; }
                     .header-right { text-align: right; min-width: 140px; }
                     h1 {
-                        color: #86c7cc;
+                        color: #36797f;
                         margin: 15px 0 8px 0;
                         font-size: 42px;
                         font-weight: bold;
@@ -1065,13 +1120,13 @@ const StudentListView: React.FC = () => {
                         font-weight: normal;
                     }
                     h2 {
-                        color: #86c7cc;
+                        color: #36797f;
                         font-size: 22px;
                         margin-top: 35px;
                         margin-bottom: 18px;
                         font-weight: bold;
                         text-transform: uppercase;
-                        border-bottom: 3px solid #86c7cc;
+                        border-bottom: 3px solid #36797f;
                         padding-bottom: 8px;
                     }
                     .info-grid {
@@ -1096,7 +1151,7 @@ const StudentListView: React.FC = () => {
                         font-size: 15px;
                     }
                     th {
-                        background: #86c7cc;
+                        background: #36797f;
                         color: white;
                         font-weight: bold;
                         font-size: 16px;
@@ -1109,10 +1164,10 @@ const StudentListView: React.FC = () => {
                     .summary-title {
                         font-size: 24px;
                         font-weight: bold;
-                        color: #86c7cc;
+                        color: #36797f;
                         text-transform: uppercase;
                         margin-bottom: 25px;
-                        border-bottom: 3px solid #86c7cc;
+                        border-bottom: 3px solid #36797f;
                         padding-bottom: 8px;
                     }
                     .summary-grid {
@@ -1128,7 +1183,7 @@ const StudentListView: React.FC = () => {
                     .summary-value {
                         font-size: 42px;
                         font-weight: bold;
-                        color: #86c7cc;
+                        color: #36797f;
                     }
                     .summary-label {
                         color: #333;
@@ -1138,7 +1193,7 @@ const StudentListView: React.FC = () => {
                     .footer {
                         margin-top: 60px;
                         padding-top: 25px;
-                        border-top: 3px solid #86c7cc;
+                        border-top: 3px solid #36797f;
                         display: grid;
                         grid-template-columns: 1fr 1fr;
                         gap: 50px;
@@ -1184,23 +1239,23 @@ const StudentListView: React.FC = () => {
                 <h2>Student Information</h2>
                 <div class="info-grid">
                     <div class="info-item">
-                        <span class="info-label">Full Name:</span>
+                        <span class="info-label">Full Họ và tên:</span>
                         <span class="info-value">${student["Họ và tên"]}</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Student Code:</span>
+                        <span class="info-label">Student Mã:</span>
                         <span class="info-value">${
                           student["Mã học sinh"] || "N/A"
                         }</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Date of Birth:</span>
+                        <span class="info-label">Sinh nhật:</span>
                         <span class="info-value">${
                           student["Ngày sinh"] || "N/A"
                         }</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Phone Number:</span>
+                        <span class="info-label">Số điện thoại:</span>
                         <span class="info-value">${
                           student["Số điện thoại"] || "N/A"
                         }</span>
@@ -1218,36 +1273,36 @@ const StudentListView: React.FC = () => {
                         </div>
                         <div class="summary-item">
                             <div class="summary-value">${totalHours.hours}h ${
-      totalHours.minutes
-    }m</div>
+                              totalHours.minutes
+                            }m</div>
                             <div class="summary-label">Total Time</div>
                         </div>
                         <div class="summary-item">
                             <div class="summary-value">${hoursExtendedFromHistory.toFixed(
                               2
                             )}h</div>
-                            <div class="summary-label">Hours Extended</div>
+                            <div class="summary-label">Giờ mở rộng</div>
                         </div>
                         <div class="summary-item">
                             <div class="summary-value">${hoursRemaining.toFixed(
                               2
                             )}h</div>
-                            <div class="summary-label">Remaining Hours</div>
+                            <div class="summary-label">Giờ còn lại</div>
                         </div>
                     </div>
                 </div>
 
-                <h2>Session Details</h2>
+                <h2>Chi tiết buổi học</h2>
                 <table>
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Duration</th>
-                            <th>Content</th>
-                            <th>Teacher</th>
-                            <th>Comment</th>
+                            <th>Ngày</th>
+                            <th>Thời gian</th>
+                            <th>Thời lượng</th>
+                            <th>Nội dung</th>
+                            <th>Giáo viên</th>
+                            <th>Nhận xét</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1293,11 +1348,11 @@ const StudentListView: React.FC = () => {
                 <div class="footer">
                     <div class="signature">
                         <p><strong>Teacher In Charge</strong></p>
-                        <div class="signature-line">Signature</div>
+                        <div class="signature-line">Chữ ký</div>
                     </div>
                     <div class="signature">
                         <p><strong>Parent/Guardian</strong></p>
-                        <div class="signature-line">Signature</div>
+                        <div class="signature-line">Chữ ký</div>
                     </div>
                 </div>
 
@@ -1318,394 +1373,479 @@ const StudentListView: React.FC = () => {
   };
 
   return (
-    <>
-      <PageHeader
-        title="STUDENT LIST"
-        subtitle="Trí Tuệ 8+ - Student Management"
-      />
-
+    <WrapperContent title="Quản lý học sinh">
       {/* Filters */}
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex justify-end mb-4">
-          <button
+          <Button
+            type="primary"
+            size="large"
             onClick={handleAddStudent}
-            className="px-6 py-3 bg-[#86c7cc] text-white rounded-lg font-semibold hover:bg-[#86c7cc] transition shadow-lg flex items-center gap-2"
+            icon={<PlusOutlined />}
           >
-            <span className="text-xl text-white">+</span>
-            <span>Add New Student</span>
-          </button>
+            Thêm mới học sinh
+          </Button>
         </div>
 
         {/* Search Box */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="🔍 Tìm kiếm theo tên, mã học sinh, số điện thoại, email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 pl-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc] text-base"
-            />
-            <svg
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            )}
-          </div>
+        <Card title="🔍 Tìm kiếm học sinh" className="mb-6">
+          <Input
+            placeholder="Nhập tên học sinh"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            prefix={<SearchOutlined />}
+            suffix={
+              searchTerm ? (
+                <Button
+                  type="text"
+                  icon={<ClearOutlined />}
+                  onClick={() => setSearchTerm("")}
+                  size="small"
+                />
+              ) : null
+            }
+            size="large"
+          />
           {searchTerm && (
             <p className="mt-2 text-sm text-gray-600">
               Tìm thấy{" "}
-              <span className="font-bold text-[#86c7cc]">
+              <span className="font-bold text-[#36797f]">
                 {displayStudents.length}
               </span>{" "}
               học sinh
             </p>
           )}
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Filters</h2>
+        <Card title="Filters" className="mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                From Date
+                Từ ngày
               </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              <DatePicker
+                value={startDate ? dayjs(startDate) : null}
+                onChange={(date) =>
+                  setStartDate(date ? date.format("YYYY-MM-DD") : "")
+                }
+                className="w-full"
+                size="large"
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                To Date
+                Đến ngày
               </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              <DatePicker
+                value={endDate ? dayjs(endDate) : null}
+                onChange={(date) =>
+                  setEndDate(date ? date.format("YYYY-MM-DD") : "")
+                }
+                className="w-full"
+                size="large"
               />
             </div>
           </div>
-          <div className="mt-4 flex gap-2">
-            <button
+          <div className="mt-4">
+            <Button
               onClick={() => {
                 setStartDate("");
                 setEndDate("");
               }}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition"
+              icon={<ClearOutlined />}
             >
-              Clear Filters
-            </button>
+              Xóa bộ lọc
+            </Button>
           </div>
-        </div>
+        </Card>
 
-        {/* Students Grid */}
+        {/* Students Table */}
         {loading ? (
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#86c7cc]"></div>
-            <p className="mt-4 text-gray-600">Loading data...</p>
-          </div>
+          <Card>
+            <Loader />
+          </Card>
         ) : (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="overflow-x-auto overflow-y-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-linear-to-r from-[#86c7cc] to-[#86c7cc] sticky top-0 z-10">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                      #
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                      Full Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                      Student Code
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                      Phone
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
-                      Hours Studied
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
-                      Hours Extended
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
-                      Hours Remaining
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
-                      Sessions
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider min-w-[280px]">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {displayStudents.map((student, index) => (
-                    <tr key={student.id} className="hover:bg-red-50 transition">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {index + 1}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">
-                          {student["Họ và tên"]}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {student["Mã học sinh"] || "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {student["Số điện thoại"] || "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {student["Email"] || "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="text-sm font-bold text-[#86c7cc]">
-                          {student.hours}h {student.minutes}p
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="text-sm font-bold text-[#86c7cc]">
-                          {student.hoursExtended || 0}h
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="text-sm font-bold text-green-600">
-                          {student.hoursRemaining
-                            ? student.hoursRemaining.toFixed(2)
-                            : "0.00"}
-                          h
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          {student.totalSessions} sessions
-                        </span>
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap text-center text-sm font-medium">
-                        <div className="flex gap-1 justify-center flex-wrap">
-                          <button
-                            onClick={() => handleStudentClick(student)}
-                            className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-[#86c7cc]/20 text-[#86c7cc] bg-white hover:bg-[#86c7cc] hover:text-white hover:border-[#86c7cc] font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
-                            title="View Details"
-                          >
-                            👁️ View
-                          </button>
-                          <button
-                            onClick={() => handleExtendHours(student)}
-                            className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-green-200 text-green-600 bg-white hover:bg-green-600 hover:text-white hover:border-green-600 font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
-                            title="Extend Hours"
-                          >
-                            ⏰ Extension
-                          </button>
-                          <button
-                            onClick={(e) => handleEditStudent(e, student)}
-                            className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-blue-200 text-blue-600 bg-white hover:bg-blue-600 hover:text-white hover:border-blue-600 font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
-                            title="Edit"
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button
-                            onClick={(e) => handleDeleteStudent(e, student)}
-                            className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-red-200 text-red-600 bg-white hover:bg-red-600 hover:text-white hover:border-red-600 font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
-                            title="Delete"
-                          >
-                            🗑️ Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <Card>
+            <Table
+              dataSource={displayStudents.map((student, index) => ({
+                key: student.id,
+                index: index + 1,
+                name: student["Họ và tên"],
+                code: student["Mã học sinh"] || "-",
+                phone: student["Số điện thoại"] || "-",
+                email: student["Email"] || "-",
+                hours: `${student.hours}h ${student.minutes}p`,
+                hoursExtended: `${student.hoursExtended || 0}h`,
+                hoursRemaining: `${student.hoursRemaining ? student.hoursRemaining.toFixed(2) : "0.00"}h`,
+                sessions: student.totalSessions,
+                student,
+              }))}
+              columns={[
+                {
+                  title: "#",
+                  dataIndex: "index",
+                  key: "index",
+                  width: 60,
+                  align: "center",
+                },
+                {
+                  title: "Họ và tên",
+                  dataIndex: "name",
+                  key: "name",
+                  render: (text) => <strong>{text}</strong>,
+                },
+                {
+                  title: "Mã học sinh",
+                  dataIndex: "code",
+                  key: "code",
+                },
+                {
+                  title: "Số điện thoại",
+                  dataIndex: "phone",
+                  key: "phone",
+                },
+                {
+                  title: "Email",
+                  dataIndex: "email",
+                  key: "email",
+                },
+                {
+                  title: "Số giờ học",
+                  dataIndex: "hours",
+                  key: "hours",
+                  align: "center",
+                  render: (text) => (
+                    <Tag color="blue" style={{ fontWeight: "bold" }}>
+                      {text}
+                    </Tag>
+                  ),
+                },
+                {
+                  title: "Số giờ gia hạn",
+                  dataIndex: "hoursExtended",
+                  key: "hoursExtended",
+                  align: "center",
+                  render: (text) => (
+                    <Tag color="orange" style={{ fontWeight: "bold" }}>
+                      {text}
+                    </Tag>
+                  ),
+                },
+                {
+                  title: "Số giờ còn lại",
+                  dataIndex: "hoursRemaining",
+                  key: "hoursRemaining",
+                  align: "center",
+                  render: (text) => (
+                    <Tag color="green" style={{ fontWeight: "bold" }}>
+                      {text}
+                    </Tag>
+                  ),
+                },
+                {
+                  title: "Buổi học",
+                  dataIndex: "sessions",
+                  key: "sessions",
+                  align: "center",
+                  render: (sessions) => (
+                    <Tag color="purple">{sessions} sessions</Tag>
+                  ),
+                },
+                {
+                  title: "Cài đặt",
+                  key: "actions",
+                  align: "center",
+                  width: 280,
+                  render: (_, record) => (
+                    <Space align="start" direction="vertical" size="small">
+                      <Button
+                        type="default"
+                        size="small"
+                        icon={<EyeOutlined />}
+                        onClick={() => handleStudentClick(record.student)}
+                        title="View Details"
+                      >
+                        Chi tiết
+                      </Button>
+                      <Button
+                        type="default"
+                        size="small"
+                        icon={<ClockCircleOutlined />}
+                        onClick={() => handleExtendHours(record.student)}
+                        title="Extend Hours"
+                        style={{ borderColor: "#52c41a", color: "#52c41a" }}
+                      >
+                        Gia hạn
+                      </Button>
+                      <Button
+                        type="default"
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={(e) => handleEditStudent(e, record.student)}
+                        title="Edit"
+                        style={{ borderColor: "#1890ff", color: "#1890ff" }}
+                      >
+                        Chỉnh sửa
+                      </Button>
+                      <Popconfirm
+                        title="Xóa học sinh"
+                        description="Bạn có chắc chắn muốn xóa học sinh này không?"
+                        onConfirm={(e) =>
+                          handleDeleteStudent(e, record.student)
+                        }
+                        okText="Yes"
+                        cancelText="No"
+                      >
+                        <Button
+                          type="default"
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          danger
+                          title="Delete"
+                        >
+                          Xoá
+                        </Button>
+                      </Popconfirm>
+                    </Space>
+                  ),
+                },
+              ]}
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} of ${total} students`,
+              }}
+              scroll={{ x: 1200 }}
+            />
+          </Card>
         )}
 
         {!loading && displayStudents.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-xl text-gray-600">Chưa có học sinh nào</p>
-          </div>
+          <Card>
+            <div className="text-center py-20">
+              <p className="text-xl text-gray-600">Chưa có học sinh nào</p>
+            </div>
+          </Card>
         )}
       </div>
 
-      {/* Student Detail Modal - Professional Design */}
-      {isModalOpen &&
-        selectedStudent &&
-        (() => {
-          // Tính Hours Extended và Remaining từ bảng Gia_hạn
-          const hoursExtendedFromHistory = calculateTotalExtendedHours(
-            selectedStudent.id
-          );
-          const totalStudiedHours =
-            selectedStudent.hours + selectedStudent.minutes / 60;
-          const modalHoursRemaining = Math.max(
-            0,
-            hoursExtendedFromHistory - totalStudiedHours
-          );
+      {/* Student Detail Modal */}
+      <Modal
+        title={
+          selectedStudent ? (
+            <div className="flex items-center gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-primary">
+                  {selectedStudent["Họ và tên"]}
+                </h2>
+                <p className="text-primary text-sm">
+                  Hồ sơ học sinh & báo cáo học tập
+                </p>
+              </div>
+            </div>
+          ) : null
+        }
+        open={isModalOpen}
+        onCancel={() => setModalOpen(false)}
+        footer={null}
+        width={1000}
+        style={{ top: 20 }}
+        bodyStyle={{ padding: 0 }}
+      >
+        {selectedStudent && (
+          <div className="p-6">
+            {(() => {
+              // Tính Hours Extended và Remaining từ bảng Gia_hạn
+              const hoursExtendedFromHistory = calculateTotalExtendedHours(
+                selectedStudent.id
+              );
+              const totalStudiedHours =
+                selectedStudent.hours + selectedStudent.minutes / 60;
+              const modalHoursRemaining = Math.max(
+                0,
+                hoursExtendedFromHistory - totalStudiedHours
+              );
 
-          return (
-            <div
-              className="fixed inset-0 bg-black/70 flex items-center justify-center z-1000 p-4"
-              onClick={() => setModalOpen(false)}
-            >
-              <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Header */}
-                <div className="bg-[#86c7cc] px-8 py-6 border-b-4 border-[#86c7cc]">
-                  <button
-                    onClick={() => setModalOpen(false)}
-                    className="absolute top-6 right-6 w-12 h-12 rounded-full bg-[#86c7cc] hover:bg-[#86c7cc] flex items-center justify-center transition text-white text-2xl font-bold shadow-lg"
-                  >
-                    ×
-                  </button>
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-[#86c7cc] flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                      {selectedStudent["Họ và tên"].charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <h2 className="text-3xl font-bold text-white mb-1">
-                        {selectedStudent["Họ và tên"]}
-                      </h2>
-                      <p className="text-red-100 text-sm font-medium uppercase tracking-wide">
-                        Student Profile & Academic Record
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Body - Scrollable */}
-                <div className="overflow-y-auto p-6 bg-white">
+              return (
+                <div>
                   {/* Quick Stats */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-white rounded-xl p-5 shadow-md border-l-4 border-[#86c7cc]">
-                      <div className="text-[#86c7cc] text-xs font-semibold uppercase tracking-wide mb-2">
-                        Total Study Time
-                      </div>
-                      <div className="text-3xl font-bold text-[#86c7cc]">
-                        {selectedStudent.hours}h {selectedStudent.minutes}m
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-xl p-5 shadow-md border-l-4 border-[#86c7cc]">
-                      <div className="text-[#86c7cc] text-xs font-semibold uppercase tracking-wide mb-2">
-                        Total Sessions
-                      </div>
-                      <div className="text-3xl font-bold text-[#86c7cc]">
-                        {selectedStudent.totalSessions}
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-xl p-5 shadow-md border-l-4 border-green-600">
-                      <div className="text-green-600 text-xs font-semibold uppercase tracking-wide mb-2">
-                        Hours Extended
-                      </div>
-                      <div className="text-3xl font-bold text-green-600">
-                        {hoursExtendedFromHistory.toFixed(2)}h
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-xl p-5 shadow-md border-l-4 border-[#86c7cc]">
-                      <div className="text-[#86c7cc] text-xs font-semibold uppercase tracking-wide mb-2">
-                        Remaining Hours
-                      </div>
-                      <div className="text-3xl font-bold text-[#86c7cc]">
-                        {modalHoursRemaining.toFixed(2)}h
-                      </div>
-                    </div>
+                    <Card className="border-l-4 border-[#36797f]">
+                      <Statistic
+                        title={
+                          <span className="text-[#36797f] text-xs font-semibold uppercase tracking-wide">
+                            Tổng thời gian học
+                          </span>
+                        }
+                        value={`${selectedStudent.hours}h ${selectedStudent.minutes}m`}
+                        valueStyle={{
+                          color: "#36797f",
+                          fontSize: "24px",
+                          fontWeight: "bold",
+                        }}
+                      />
+                    </Card>
+                    <Card className="border-l-4 border-[#36797f]">
+                      <Statistic
+                        title={
+                          <span className="text-[#36797f] text-xs font-semibold uppercase tracking-wide">
+                            Tổng buổi học
+                          </span>
+                        }
+                        value={selectedStudent.totalSessions}
+                        valueStyle={{
+                          color: "#36797f",
+                          fontSize: "24px",
+                          fontWeight: "bold",
+                        }}
+                      />
+                    </Card>
+                    <Card className="border-l-4 border-green-600">
+                      <Statistic
+                        title={
+                          <span className="text-green-600 text-xs font-semibold uppercase tracking-wide">
+                            Số giờ đã gia hạn
+                          </span>
+                        }
+                        value={`${hoursExtendedFromHistory.toFixed(2)}h`}
+                        valueStyle={{
+                          color: "#16a34a",
+                          fontSize: "24px",
+                          fontWeight: "bold",
+                        }}
+                      />
+                    </Card>
+                    <Card className="border-l-4 border-[#36797f]">
+                      <Statistic
+                        title={
+                          <span className="text-[#36797f] text-xs font-semibold uppercase tracking-wide">
+                            Số giờ còn lại
+                          </span>
+                        }
+                        value={`${modalHoursRemaining.toFixed(2)}h`}
+                        valueStyle={{
+                          color: "#36797f",
+                          fontSize: "24px",
+                          fontWeight: "bold",
+                        }}
+                      />
+                    </Card>
                   </div>
 
                   {/* Student Info */}
-                  <div className="bg-white rounded-xl p-5 mb-6 shadow-md border-2 border-[#86c7cc]">
-                    <h3 className="text-lg font-bold text-[#86c7cc] mb-4 pb-2 border-b-2 border-[#86c7cc]">
-                      Personal Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                  <Card
+                    className="mb-6"
+                    style={{ borderColor: "#36797f", borderWidth: "2px" }}
+                  >
+                    <Typography.Title
+                      level={4}
+                      style={{
+                        color: "#36797f",
+                        marginBottom: "16px",
+                        borderBottom: "2px solid #36797f",
+                        paddingBottom: "8px",
+                      }}
+                    >
+                      Thông tin cá nhân
+                    </Typography.Title>
+                    <Row gutter={[24, 8]}>
                       {selectedStudent["Mã học sinh"] && (
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-sm text-gray-600 font-semibold min-w-[110px]">
-                            Student Code:
-                          </span>
-                          <p className="font-bold text-[#86c7cc]">
-                            {selectedStudent["Mã học sinh"]}
-                          </p>
-                        </div>
+                        <Col span={12}>
+                          <div className="flex items-baseline gap-2">
+                            <Typography.Text
+                              strong
+                              style={{ minWidth: "110px" }}
+                            >
+                              Mã học sinh:
+                            </Typography.Text>
+                            <Typography.Text
+                              style={{ color: "#36797f", fontWeight: "bold" }}
+                            >
+                              {selectedStudent["Mã học sinh"]}
+                            </Typography.Text>
+                          </div>
+                        </Col>
                       )}
                       {selectedStudent["Ngày sinh"] && (
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-sm text-gray-600 font-semibold min-w-[110px]">
-                            Date of Birth:
-                          </span>
-                          <p className="font-bold text-[#86c7cc]">
-                            {selectedStudent["Ngày sinh"]}
-                          </p>
-                        </div>
+                        <Col span={12}>
+                          <div className="flex items-baseline gap-2">
+                            <Typography.Text
+                              strong
+                              style={{ minWidth: "110px" }}
+                            >
+                              Ngày sinh:
+                            </Typography.Text>
+                            <Typography.Text
+                              style={{ color: "#36797f", fontWeight: "bold" }}
+                            >
+                              {selectedStudent["Ngày sinh"]}
+                            </Typography.Text>
+                          </div>
+                        </Col>
                       )}
                       {selectedStudent["Số điện thoại"] && (
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-sm text-gray-600 font-semibold min-w-[110px]">
-                            Phone:
-                          </span>
-                          <p className="font-bold text-[#86c7cc]">
-                            {selectedStudent["Số điện thoại"]}
-                          </p>
-                        </div>
+                        <Col span={12}>
+                          <div className="flex items-baseline gap-2">
+                            <Typography.Text
+                              strong
+                              style={{ minWidth: "110px" }}
+                            >
+                              Số điện thoại:
+                            </Typography.Text>
+                            <Typography.Text
+                              style={{ color: "#36797f", fontWeight: "bold" }}
+                            >
+                              {selectedStudent["Số điện thoại"]}
+                            </Typography.Text>
+                          </div>
+                        </Col>
                       )}
                       {selectedStudent["Email"] && (
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-sm text-gray-600 font-semibold min-w-[110px]">
-                            Email:
-                          </span>
-                          <p className="font-bold text-[#86c7cc]">
-                            {selectedStudent["Email"]}
-                          </p>
-                        </div>
+                        <Col span={12}>
+                          <div className="flex items-baseline gap-2">
+                            <Typography.Text
+                              strong
+                              style={{ minWidth: "110px" }}
+                            >
+                              Email:
+                            </Typography.Text>
+                            <Typography.Text
+                              style={{ color: "#36797f", fontWeight: "bold" }}
+                            >
+                              {selectedStudent["Email"]}
+                            </Typography.Text>
+                          </div>
+                        </Col>
                       )}
-                    </div>
-                  </div>
+                    </Row>
+                  </Card>
 
                   {/* Sessions List */}
-                  <div>
-                    <div className="bg-white rounded-xl p-4 mb-4 shadow-md border-2 border-[#86c7cc] flex items-center justify-between">
+                  <Card
+                    className="mb-4"
+                    style={{ borderColor: "#36797f", borderWidth: "2px" }}
+                  >
+                    <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="text-xl font-bold text-[#86c7cc] mb-1">
-                          Academic Sessions
-                        </h3>
-                        <p className="text-gray-600 text-xs font-medium">
+                        <Typography.Title
+                          level={4}
+                          style={{ color: "#36797f", margin: "0 0 4px 0" }}
+                        >
+                          Buổi học
+                        </Typography.Title>
+                        <Typography.Text
+                          type="secondary"
+                          style={{ fontSize: "12px", fontWeight: "500" }}
+                        >
                           {startDate && endDate
-                            ? `${new Date(
-                                startDate
-                              ).toLocaleDateString()} - ${new Date(
-                                endDate
-                              ).toLocaleDateString()}`
-                            : `${
-                                months[new Date().getMonth()]
-                              } ${new Date().getFullYear()}`}
-                        </p>
+                            ? `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`
+                            : `${months[new Date().getMonth()]} ${new Date().getFullYear()}`}
+                        </Typography.Text>
                       </div>
-                      <button
+                      <Button
+                        type="primary"
                         onClick={() => {
                           const fromDate = startDate
                             ? new Date(startDate)
@@ -1730,10 +1870,14 @@ const StudentListView: React.FC = () => {
                             )
                           );
                         }}
-                        className="px-5 py-2 bg-[#86c7cc] text-white rounded-lg font-bold hover:bg-[#86c7cc] transition shadow-md text-xs uppercase tracking-wide"
+                        style={{
+                          backgroundColor: "#36797f",
+                          borderColor: "#36797f",
+                        }}
+                        size="small"
                       >
-                        Print Report
-                      </button>
+                        In báo cáo
+                      </Button>
                     </div>
                     {(() => {
                       const fromDate = startDate
@@ -1758,11 +1902,11 @@ const StudentListView: React.FC = () => {
                       if (events.length === 0) {
                         return (
                           <div className="bg-white rounded-xl p-10 text-center shadow-md border-2 border-gray-200">
-                            <div className="text-lg font-semibold text-[#86c7cc]">
-                              No sessions in this month
+                            <div className="text-lg font-semibold text-[#36797f]">
+                              Không có buổi học trong tháng này
                             </div>
                             <div className="text-gray-600 mt-2 text-sm">
-                              Check another month for session history
+                              Kiểm tra tháng khác để xem lịch sử buổi học
                             </div>
                           </div>
                         );
@@ -1775,13 +1919,13 @@ const StudentListView: React.FC = () => {
                               className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200"
                             >
                               {/* Session Header */}
-                              <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-l-4 border-[#86c7cc]">
+                              <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-l-4 border-[#36797f]">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-full bg-[#86c7cc] flex items-center justify-center text-white font-bold text-sm">
+                                  <div className="w-10 h-10 rounded-full bg-[#36797f] flex items-center justify-center text-white font-bold text-sm">
                                     #{index + 1}
                                   </div>
                                   <div>
-                                    <div className="font-bold text-base text-[#86c7cc]">
+                                    <div className="font-bold text-base text-[#36797f]">
                                       {event["Tên công việc"]}
                                     </div>
                                     <div className="text-xs text-gray-600 mt-0.5 font-medium">
@@ -1797,7 +1941,7 @@ const StudentListView: React.FC = () => {
                                     </div>
                                   </div>
                                 </div>
-                                <div className="text-right bg-[#86c7cc] px-3 py-1.5 rounded-lg shadow-sm">
+                                <div className="text-right bg-[#36797f] px-3 py-1.5 rounded-lg shadow-sm">
                                   <div className="text-white font-bold text-sm">
                                     {event["Giờ bắt đầu"]} -{" "}
                                     {event["Giờ kết thúc"]}
@@ -1810,18 +1954,18 @@ const StudentListView: React.FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                   <div className="flex items-center gap-2">
                                     <span className="text-gray-600 font-semibold text-sm">
-                                      👨‍🏫 Teacher:
+                                      👨‍🏫 Giáo viên:
                                     </span>
-                                    <span className="font-bold text-[#86c7cc]">
+                                    <span className="font-bold text-[#36797f]">
                                       {event["Giáo viên phụ trách"]}
                                     </span>
                                   </div>
                                   {event["Địa điểm"] && (
                                     <div className="flex items-center gap-2">
                                       <span className="text-gray-600 font-semibold text-sm">
-                                        📍 Location:
+                                        📍 Địa điểm:
                                       </span>
-                                      <span className="font-bold text-[#86c7cc]">
+                                      <span className="font-bold text-[#36797f]">
                                         {event["Địa điểm"]}
                                       </span>
                                     </div>
@@ -1831,18 +1975,18 @@ const StudentListView: React.FC = () => {
                                 {event["Phụ cấp di chuyển"] && (
                                   <div className="flex items-center gap-2 mb-3">
                                     <span className="text-gray-600 font-semibold text-sm">
-                                      💰 Travel Allowance:
+                                      💰 Phụ cấp di chuyển:
                                     </span>
-                                    <span className="font-bold text-[#86c7cc]">
+                                    <span className="font-bold text-[#36797f]">
                                       {event["Phụ cấp di chuyển"]}
                                     </span>
                                   </div>
                                 )}
 
                                 {event["Nhận xét"] && (
-                                  <div className="bg-red-50 rounded-lg p-3 border border-[#86c7cc]">
-                                    <div className="text-xs font-bold text-[#86c7cc] mb-1 uppercase tracking-wide">
-                                      Teacher's Comment:
+                                  <div className="bg-red-50 rounded-lg p-3 border border-[#36797f]">
+                                    <div className="text-xs font-bold text-[#36797f] mb-1 uppercase tracking-wide">
+                                      Nhận xét của giáo viên:
                                     </div>
                                     <div className="text-gray-700 text-sm leading-relaxed">
                                       {event["Nhận xét"]}
@@ -1855,19 +1999,31 @@ const StudentListView: React.FC = () => {
                         </div>
                       );
                     })()}
-                  </div>
+                  </Card>
 
-                  {/* Extension History - JOIN với bảng Students */}
+                  {/* Extension History */}
                   <div className="mt-6">
-                    <div className="bg-linear-to-r from-[#86c7cc] to-[#86c7cc] rounded-xl p-6 mb-4 shadow-lg">
+                    <Card
+                      style={{
+                        background:
+                          "linear-gradient(to right, #36797f, #36797f)",
+                        color: "white",
+                        marginBottom: "16px",
+                      }}
+                    >
                       <div className="flex justify-between items-center">
                         <div>
-                          <h3 className="text-2xl font-bold text-white mb-1">
-                            Extension History
-                          </h3>
-                          <p className="text-white/80 text-sm">
-                            Payment and hour deposit records
-                          </p>
+                          <Typography.Title
+                            level={3}
+                            style={{ color: "white", margin: "0 0 4px 0" }}
+                          >
+                            Lịch sử gia hạn
+                          </Typography.Title>
+                          <Typography.Text
+                            style={{ color: "white", opacity: 0.8 }}
+                          >
+                            Hồ sơ thanh toán và giờ nhập thêm
+                          </Typography.Text>
                         </div>
                         {(() => {
                           const studentHistory = extensionHistory.filter(
@@ -1879,21 +2035,52 @@ const StudentListView: React.FC = () => {
                             0
                           );
                           return (
-                            <div className="text-right bg-white/10 rounded-lg px-6 py-3 backdrop-blur-sm">
-                              <div className="text-white/80 text-xs font-medium uppercase tracking-wide">
-                                Total Hours Deposited
-                              </div>
-                              <div className="text-white text-3xl font-bold mt-1">
+                            <div
+                              className="text-right"
+                              style={{
+                                backgroundColor: "rgba(255,255,255,0.1)",
+                                padding: "12px",
+                                borderRadius: "8px",
+                                backdropFilter: "blur(4px)",
+                              }}
+                            >
+                              <Typography.Text
+                                style={{
+                                  color: "white",
+                                  opacity: 0.8,
+                                  fontSize: "12px",
+                                  fontWeight: "500",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.05em",
+                                }}
+                              >
+                                Tổng số giờ đã nhập
+                              </Typography.Text>
+                              <div
+                                style={{
+                                  color: "white",
+                                  fontSize: "36px",
+                                  fontWeight: "bold",
+                                  marginTop: "4px",
+                                }}
+                              >
                                 {totalDeposited}h
                               </div>
-                              <div className="text-white/60 text-xs mt-1">
+                              <Typography.Text
+                                style={{
+                                  color: "white",
+                                  opacity: 0.6,
+                                  fontSize: "12px",
+                                  marginTop: "4px",
+                                }}
+                              >
                                 {studentHistory.length} transaction(s)
-                              </div>
+                              </Typography.Text>
                             </div>
                           );
                         })()}
                       </div>
-                    </div>
+                    </Card>
                     {(() => {
                       // Filter theo studentId thay vì tên
                       const studentHistory = extensionHistory.filter(
@@ -1902,19 +2089,34 @@ const StudentListView: React.FC = () => {
 
                       if (studentHistory.length === 0) {
                         return (
-                          <div className="bg-white rounded-xl p-10 text-center shadow-md border-2 border-gray-200">
-                            <div className="text-lg font-semibold text-gray-600">
-                              No extension history yet
-                            </div>
-                            <div className="text-sm text-gray-500 mt-2">
-                              Click "⏰ Extend Hours" to add the first deposit
-                            </div>
-                          </div>
+                          <Card
+                            style={{
+                              textAlign: "center",
+                              padding: "40px",
+                              border: "2px solid #f3f4f6",
+                            }}
+                          >
+                            <Typography.Title
+                              level={4}
+                              style={{ color: "#6b7280" }}
+                            >
+                              Chưa có lịch sử gia hạn
+                            </Typography.Title>
+                            <Typography.Text
+                              style={{ color: "#6b7280", marginTop: "8px" }}
+                            >
+                              Nhấn "⏰ Gia hạn giờ" để thêm lần nhập đầu tiên
+                            </Typography.Text>
+                          </Card>
                         );
                       }
 
                       return (
-                        <div className="space-y-3">
+                        <Space
+                          direction="vertical"
+                          size="middle"
+                          style={{ width: "100%" }}
+                        >
                           {studentHistory.map((record, index) => {
                             // JOIN: Lấy thông tin mới nhất từ bảng Students
                             const studentInfo =
@@ -1922,482 +2124,570 @@ const StudentListView: React.FC = () => {
                               selectedStudent;
 
                             return (
-                              <div
+                              <Card
                                 key={record.id || index}
-                                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all overflow-hidden border-l-4 border-[#86c7cc]"
+                                style={{ borderLeft: "4px solid #36797f" }}
                               >
-                                <div className="p-4">
-                                  <div className="flex justify-between items-start mb-2">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">
-                                          +{record["Giờ nhập thêm"]} giờ
-                                        </span>
-                                        <span className="text-xs text-gray-500">
-                                          {record["Ngày nhập"]}{" "}
-                                          {record["Giờ nhập"]}
-                                        </span>
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mt-2">
-                                        <div>
-                                          <span className="text-gray-600">
-                                            Người nhập:
-                                          </span>
-                                          <span className="font-semibold text-gray-800 ml-2">
-                                            {record["Người nhập"]}
-                                          </span>
-                                        </div>
-                                        <div>
-                                          <span className="text-gray-600">
-                                            Giờ đã học:
-                                          </span>
-                                          <span className="font-semibold text-[#86c7cc] ml-2">
-                                            {record["Giờ đã học"]}
-                                          </span>
-                                        </div>
-                                        <div>
-                                          <span className="text-gray-600">
-                                            Giờ còn lại:
-                                          </span>
-                                          <span className="font-semibold text-green-600 ml-2">
-                                            {record["Giờ còn lại"]}h
-                                          </span>
-                                        </div>
-                                        <div>
-                                          <span className="text-gray-600">
-                                            Họ tên (live):
-                                          </span>
-                                          <span className="font-semibold text-gray-800 ml-2">
-                                            {studentInfo["Họ và tên"]}
-                                          </span>
-                                        </div>
-                                        <div>
-                                          <span className="text-gray-600">
-                                            Mã HS (live):
-                                          </span>
-                                          <span className="font-semibold text-gray-800 ml-2">
-                                            {studentInfo["Mã học sinh"] ||
-                                              "N/A"}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="flex gap-2 ml-4">
-                                      <button
-                                        onClick={() =>
-                                          handleEditExtension(record)
-                                        }
-                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
-                                        title="Edit this extension record"
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <Tag
+                                        color="green"
+                                        style={{ fontSize: "12px" }}
                                       >
-                                        ✏️ Edit
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          handleDeleteExtension(
-                                            record.id,
-                                            record.studentId
-                                          )
-                                        }
-                                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
-                                        title="Delete this extension record"
+                                        +{record["Giờ nhập thêm"]} giờ
+                                      </Tag>
+                                      <Typography.Text
+                                        type="secondary"
+                                        style={{ fontSize: "12px" }}
                                       >
-                                        🗑️ Delete
-                                      </button>
+                                        {record["Ngày nhập"]}{" "}
+                                        {record["Giờ nhập"]}
+                                      </Typography.Text>
                                     </div>
+                                    <Row
+                                      gutter={16}
+                                      style={{
+                                        fontSize: "14px",
+                                        marginTop: "8px",
+                                      }}
+                                    >
+                                      <Col span={6}>
+                                        <Typography.Text type="secondary">
+                                          Người nhập:
+                                        </Typography.Text>
+                                        <br />
+                                        <Typography.Text
+                                          strong
+                                          style={{ color: "#374151" }}
+                                        >
+                                          {record["Người nhập"]}
+                                        </Typography.Text>
+                                      </Col>
+                                      <Col span={6}>
+                                        <Typography.Text type="secondary">
+                                          Giờ đã học:
+                                        </Typography.Text>
+                                        <br />
+                                        <Typography.Text
+                                          strong
+                                          style={{ color: "#36797f" }}
+                                        >
+                                          {record["Giờ đã học"]}
+                                        </Typography.Text>
+                                      </Col>
+                                      <Col span={6}>
+                                        <Typography.Text type="secondary">
+                                          Giờ còn lại:
+                                        </Typography.Text>
+                                        <br />
+                                        <Typography.Text
+                                          strong
+                                          style={{ color: "#16a34a" }}
+                                        >
+                                          {record["Giờ còn lại"]}h
+                                        </Typography.Text>
+                                      </Col>
+                                      <Col span={6}>
+                                        <Typography.Text type="secondary">
+                                          Họ tên (live):
+                                        </Typography.Text>
+                                        <br />
+                                        <Typography.Text
+                                          strong
+                                          style={{ color: "#374151" }}
+                                        >
+                                          {studentInfo["Họ và tên"]}
+                                        </Typography.Text>
+                                      </Col>
+                                    </Row>
                                   </div>
+                                  <Space>
+                                    <Button
+                                      type="default"
+                                      icon={<EditOutlined />}
+                                      onClick={() =>
+                                        handleEditExtension(record)
+                                      }
+                                      size="small"
+                                      title="Edit this extension record"
+                                    >
+                                      Chỉnh sửa
+                                    </Button>
+                                    <Button
+                                      danger
+                                      icon={<DeleteOutlined />}
+                                      onClick={() =>
+                                        handleDeleteExtension(
+                                          record.id,
+                                          record.studentId
+                                        )
+                                      }
+                                      size="small"
+                                      title="Delete this extension record"
+                                    >
+                                      Xóa
+                                    </Button>
+                                  </Space>
                                 </div>
-                              </div>
+                              </Card>
                             );
                           })}
-                        </div>
+                        </Space>
                       );
                     })()}
                   </div>
                 </div>
-              </div>
-            </div>
-          );
-        })()}
+              );
+            })()}
+          </div>
+        )}
+      </Modal>
 
       {/* Edit Student Modal */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto modal-content-70 flex flex-col">
-            <div className="bg-[#86c7cc] text-white p-6 rounded-t-2xl shrink-0">
-              <h2 className="text-2xl font-bold">
-                {editingStudent && editingStudent.id
-                  ? "Edit Student"
-                  : "Add New Student"}
-              </h2>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-
-                // Auto-generate Student Code if adding new student
-                let studentCode = editingStudent?.["Mã học sinh"] || "";
-                if (!editingStudent?.id) {
-                  // Generate new code: HS001, HS002, etc.
-                  const existingCodes = students
-                    .map((s) => s["Mã học sinh"])
-                    .filter((code) => code && code.startsWith("HS"))
-                    .map((code) => parseInt(code.replace("HS", "")) || 0);
-                  const maxNumber =
-                    existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
-                  studentCode = `HS${String(maxNumber + 1).padStart(3, "0")}`;
-                }
-
-                const studentData: Partial<Student> = {
-                  "Họ và tên": formData.get("name") as string,
-                  "Mã học sinh": studentCode,
-                  "Ngày sinh": formData.get("dob") as string,
-                  "Số điện thoại": formData.get("phone") as string,
-                  "Trạng thái": formData.get("status") as string,
-                  "Địa chỉ": formData.get("address") as string,
-                  "Số giờ đã gia hạn":
-                    editingStudent?.["Số giờ đã gia hạn"] || 0, // Preserve existing value or 0 for new students
-                };
-                // Preserve the ID if editing an existing student
-                if (editingStudent?.id) {
-                  studentData.id = editingStudent.id;
-                }
-                handleSaveStudent(studentData);
-              }}
-              className="p-6"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    defaultValue={editingStudent?.["Họ và tên"] || ""}
-                    required
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    name="dob"
-                    defaultValue={editingStudent?.["Ngày sinh"] || ""}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Phone
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    defaultValue={editingStudent?.["Số điện thoại"] || ""}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Status
-                  </label>
-                  <input
-                    type="text"
-                    name="status"
-                    defaultValue={editingStudent?.["Trạng thái"] || ""}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Address
-                  </label>
-                  <textarea
-                    name="address"
-                    defaultValue={editingStudent?.["Địa chỉ"] || ""}
-                    rows={3}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6 justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditModalOpen(false);
-                    setEditingStudent(null);
-                  }}
-                  className="px-6 py-3 bg-gray-300 text-gray-800 rounded-lg font-semibold hover:bg-gray-400 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-[#86c7cc] text-white rounded-lg font-semibold hover:bg-[#86c7cc] transition"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
+      <Modal
+        title={
+          <div
+            style={{
+              backgroundColor: "#36797f",
+              padding: "24px",
+              borderRadius: "12px 12px 0 0",
+            }}
+          >
+            <Typography.Title level={3} style={{ color: "white", margin: 0 }}>
+              {editingStudent && editingStudent.id
+                ? "Chỉnh sửa thông tin học sinh"
+                : "Thêm học sinh mới"}
+            </Typography.Title>
           </div>
-        </div>
-      )}
+        }
+        open={isEditModalOpen}
+        onCancel={() => {
+          setEditModalOpen(false);
+          setEditingStudent(null);
+          editStudentForm.resetFields();
+        }}
+        footer={null}
+        width={600}
+        style={{ top: 20 }}
+        bodyStyle={{ padding: 0 }}
+      >
+        <Form
+          form={editStudentForm}
+          onFinish={(values) => {
+            // Auto-generate Student Code if adding new student
+            let studentCode = editingStudent?.["Mã học sinh"] || "";
+            if (!editingStudent?.id) {
+              // Generate new code: HS001, HS002, etc.
+              const existingCodes = students
+                .map((s) => s["Mã học sinh"])
+                .filter((code) => code && code.startsWith("HS"))
+                .map((code) => parseInt(code.replace("HS", "")) || 0);
+              const maxNumber =
+                existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+              studentCode = `HS${String(maxNumber + 1).padStart(3, "0")}`;
+            }
+
+            const studentData: Partial<Student> = {
+              "Họ và tên": values.name,
+              "Mã học sinh": studentCode,
+              "Ngày sinh": values.dob,
+              "Số điện thoại": values.phone,
+              "Trạng thái": values.status,
+              "Địa chỉ": values.address,
+              "Số giờ đã gia hạn": editingStudent?.["Số giờ đã gia hạn"] || 0,
+            };
+            // Preserve the ID if editing an existing student
+            if (editingStudent?.id) {
+              studentData.id = editingStudent.id;
+            }
+            handleSaveStudent(studentData);
+          }}
+          layout="vertical"
+          style={{ padding: "24px" }}
+        >
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                label="Họ và tên"
+                name="name"
+                rules={[{ required: true, message: "Vui lòng nhập họ và tên" }]}
+              >
+                <Input placeholder="Nhập họ và tên" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Ngày sinh" name="dob">
+                <Input type="date" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Số điện thoại" name="phone">
+                <Input placeholder="Nhập số điện thoại" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Trạng thái" name="status">
+                <Input placeholder="Nhập trạng thái" />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item label="Địa chỉ" name="address">
+                <Input.TextArea rows={3} placeholder="Nhập địa chỉ" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item style={{ marginBottom: 0, marginTop: "24px" }}>
+            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+              <Button
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setEditingStudent(null);
+                  editStudentForm.resetFields();
+                }}
+              >
+                Huỷ
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                style={{ backgroundColor: "#36797f", borderColor: "#36797f" }}
+              >
+                Lưu
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* Extend Hours Modal */}
-      {isExtendModalOpen && extendingStudent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full modal-content-70 overflow-hidden">
-            <div className="bg-[#86c7cc] text-white p-6 rounded-t-2xl">
-              <h2 className="text-2xl font-bold">💰 Adjust Hours Balance</h2>
-              <p className="text-red-100 text-sm mt-1">
-                Add or subtract hours from student account
-              </p>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const additionalHours =
-                  Number(formData.get("additionalHours")) || 0;
-                handleSaveExtension(additionalHours);
+      <Modal
+        title={
+          <div
+            style={{
+              backgroundColor: "#36797f",
+              padding: "20px",
+              borderRadius: "12px 12px 0 0",
+            }}
+          >
+            <Typography.Title level={3} style={{ color: "white", margin: 0 }}>
+              💰 Điều chỉnh số dư giờ
+            </Typography.Title>
+            <Typography.Text
+              style={{
+                color: "rgba(255,255,255,0.8)",
+                fontSize: "14px",
+                marginTop: "4px",
+                display: "block",
               }}
-              className="p-6"
             >
-              <div className="space-y-4">
-                {/* Họ và tên (auto) */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={extendingStudent["Họ và tên"]}
-                    disabled
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
-                  />
-                </div>
-
-                {/* Giờ nhập thêm - CHO PHÉP SỐ ÂM */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    ➕➖ Add or Subtract Hours *
-                  </label>
-                  <input
-                    type="number"
-                    name="additionalHours"
-                    step="0.5"
-                    required
-                    placeholder="+ to add, - to subtract (e.g., +50 or -10)"
-                    className="w-full p-4 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc] text-xl font-bold text-center"
-                  />
-                </div>
-
-                {/* Người nhập (auto) */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Entered By
-                  </label>
-                  <input
-                    type="text"
-                    value={currentUsername}
-                    disabled
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
-                  />
-                </div>
-
-                {/* Ngày nhập (auto) */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Date
-                  </label>
-                  <input
-                    type="text"
-                    value={new Date().toLocaleDateString("en-US")}
-                    disabled
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
-                  />
-                </div>
-
-                {/* Giờ nhập (auto) */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Time
-                  </label>
-                  <input
-                    type="text"
-                    value={new Date().toLocaleTimeString("en-US")}
-                    disabled
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExtendModalOpen(false);
-                    setExtendingStudent(null);
-                  }}
-                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-6 py-3 bg-[#86c7cc] text-white rounded-lg font-semibold hover:bg-[#86c7cc] transition shadow-lg"
-                >
-                  💾 Save Changes
-                </button>
-              </div>
-            </form>
+              Thêm hoặc bớt giờ từ tài khoản học sinh
+            </Typography.Text>
           </div>
-        </div>
-      )}
+        }
+        open={isExtendModalOpen}
+        onCancel={() => {
+          setExtendModalOpen(false);
+          setExtendingStudent(null);
+          extendHoursForm.resetFields();
+        }}
+        footer={null}
+        width={500}
+        style={{ top: 20 }}
+        bodyStyle={{ padding: 0 }}
+      >
+        <Form
+          form={extendHoursForm}
+          onFinish={(values) => {
+            const additionalHours = Number(values.additionalHours) || 0;
+            handleSaveExtension(additionalHours);
+          }}
+          layout="vertical"
+          style={{ padding: "24px" }}
+        >
+          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            {/* Họ và tên (auto) */}
+            <Form.Item label="Họ và tên" name="studentName">
+              <Input disabled />
+            </Form.Item>
+
+            {/* Giờ nhập thêm - CHO PHÉP SỐ ÂM */}
+            <Form.Item
+              label="Thêm hoặc bớt giờ"
+              name="additionalHours"
+              rules={[{ required: true, message: "Vui lòng nhập số giờ" }]}
+              extra="+ để thêm, - để bớt (ví dụ: +50 hoặc -10)"
+            >
+              <InputNumber
+                step={0.5}
+                placeholder="+ để thêm, - để bớt"
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  fontSize: "18px",
+                  textAlign: "center",
+                  fontWeight: "bold",
+                }}
+              />
+            </Form.Item>
+
+            {/* Người nhập (auto) */}
+            <Form.Item label="Người nhập">
+              <Input value={currentUsername} disabled />
+            </Form.Item>
+
+            {/* Ngày nhập (auto) */}
+            <Form.Item label="Ngày nhập">
+              <Input value={new Date().toLocaleDateString("en-US")} disabled />
+            </Form.Item>
+
+            {/* Giờ nhập (auto) */}
+            <Form.Item label="Giờ nhập">
+              <Input value={new Date().toLocaleTimeString("en-US")} disabled />
+            </Form.Item>
+          </Space>
+
+          <Form.Item style={{ marginBottom: 0, marginTop: "24px" }}>
+            <Space style={{ width: "100%", justifyContent: "space-between" }}>
+              <Button
+                onClick={() => {
+                  setExtendModalOpen(false);
+                  setExtendingStudent(null);
+                  extendHoursForm.resetFields();
+                }}
+                style={{ flex: 1 }}
+              >
+                Hủy
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                style={{
+                  backgroundColor: "#36797f",
+                  borderColor: "#36797f",
+                  flex: 1,
+                }}
+              >
+                💾 Lưu thay đổi
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* Edit Extension Modal */}
-      {isEditExtensionModalOpen && editingExtension && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full modal-content-70 overflow-hidden">
-            <div className="bg-blue-600 text-white p-6 rounded-t-2xl">
-              <h2 className="text-2xl font-bold">✏️ Edit Extension Record</h2>
-              <p className="text-blue-100 text-sm mt-1">
-                Modify hour deposit and record the reason
-              </p>
-            </div>
-
-            <form
-              key={editingExtension.id}
-              onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const newHours = Number(formData.get("newHours")) || 0;
-                const reason = (formData.get("reason") as string) || "";
-                handleSaveEditedExtension(newHours, reason);
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "50%",
+                backgroundColor: "#1890ff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: "20px",
               }}
-              className="p-6"
             >
-              <div className="space-y-4">
-                {/* Original Hours (read-only) */}
-                <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-200">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Current Hours
-                  </label>
-                  <div className="text-3xl font-bold text-[#86c7cc]">
-                    {editingExtension["Giờ nhập thêm"]} hours
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Recorded on: {editingExtension["Ngày nhập"]} at{" "}
-                    {editingExtension["Giờ nhập"]}
-                  </div>
-                </div>
-
-                {/* New Hours */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    New Hours *
-                  </label>
-                  <input
-                    type="number"
-                    name="newHours"
-                    step="0.5"
-                    min="0"
-                    required
-                    key={`hours-${editingExtension.id}`}
-                    defaultValue={editingExtension["Giờ nhập thêm"]}
-                    placeholder="Enter new hour amount"
-                    className="w-full p-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-semibold"
-                  />
-                </div>
-
-                {/* Reason */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Reason for Edit *
-                  </label>
-                  <textarea
-                    name="reason"
-                    required
-                    rows={3}
-                    placeholder="Example: Corrected entry error, updated payment amount, etc."
-                    className="w-full p-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <div className="text-xs text-gray-500 mt-1">
-                    ℹ️ This edit will be logged in the history for audit
-                    purposes
-                  </div>
-                </div>
-
-                {/* Edit History Preview */}
-                {editingExtension["Edit History"] &&
-                  editingExtension["Edit History"].length > 0 && (
-                    <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-3">
-                      <div className="text-sm font-semibold text-yellow-800 mb-2">
-                        ⚠️ Previous Edits (
-                        {editingExtension["Edit History"].length})
-                      </div>
-                      <div className="space-y-1 max-h-32 overflow-y-auto text-xs">
-                        {editingExtension["Edit History"].map(
-                          (edit: any, idx: number) => (
-                            <div key={idx} className="text-gray-700">
-                              {edit["Edited Date"]}: {edit["Old Hours"]}h →{" "}
-                              {edit["New Hours"]}h
-                              <span className="text-gray-500 italic">
-                                {" "}
-                                ({edit["Reason"]})
-                              </span>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                {/* Current User */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Edited By
-                  </label>
-                  <input
-                    type="text"
-                    value={currentUsername}
-                    disabled
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditExtensionModalOpen(false);
-                    setEditingExtension(null);
-                  }}
-                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
-                >
-                  💾 Save Changes
-                </button>
-              </div>
-            </form>
+              ✏️
+            </div>
+            <div>
+              <Typography.Title level={3} style={{ color: "white", margin: 0 }}>
+                Chỉnh sửa bản ghi gia hạn
+              </Typography.Title>
+              <Typography.Text
+                style={{ color: "rgba(255,255,255,0.8)", fontSize: "14px" }}
+              >
+                Chỉnh sửa số giờ nhập thêm và ghi lại lý do
+              </Typography.Text>
+            </div>
           </div>
+        }
+        open={isEditExtensionModalOpen}
+        onCancel={() => {
+          setEditExtensionModalOpen(false);
+          setEditingExtension(null);
+          editExtensionForm.resetFields();
+        }}
+        footer={null}
+        width={500}
+        style={{ top: 20 }}
+        bodyStyle={{ padding: 0 }}
+      >
+        <div
+          style={{
+            backgroundColor: "#1890ff",
+            padding: "24px",
+            borderRadius: "12px 12px 0 0",
+          }}
+        >
+          <Typography.Title level={3} style={{ color: "white", margin: 0 }}>
+            ✏️ Chỉnh sửa bản ghi gia hạn
+          </Typography.Title>
+          <Typography.Text
+            style={{
+              color: "rgba(255,255,255,0.8)",
+              fontSize: "14px",
+              marginTop: "4px",
+              display: "block",
+            }}
+          >
+            Chỉnh sửa số giờ nhập thêm và ghi lại lý do
+          </Typography.Text>
         </div>
-      )}
-    </>
+
+        <Form
+          form={editExtensionForm}
+          onFinish={(values) => {
+            const newHours = Number(values.newHours) || 0;
+            const reason = values.reason || "";
+            handleSaveEditedExtension(newHours, reason);
+          }}
+          layout="vertical"
+          style={{ padding: "24px" }}
+        >
+          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            {/* Original Hours (read-only) */}
+            <Card
+              style={{
+                backgroundColor: "#f9fafb",
+                border: "2px solid #d1d5db",
+              }}
+            >
+              <Typography.Text
+                strong
+                style={{ marginBottom: "8px", display: "block" }}
+              >
+                Số giờ hiện tại
+              </Typography.Text>
+              <div
+                style={{
+                  fontSize: "36px",
+                  fontWeight: "bold",
+                  color: "#36797f",
+                }}
+              >
+                {editingExtension?.["Giờ nhập thêm"]} giờ
+              </div>
+              <Typography.Text
+                type="secondary"
+                style={{ fontSize: "12px", marginTop: "4px" }}
+              >
+                Được ghi lại trên: {editingExtension?.["Ngày nhập"]} at{" "}
+                {editingExtension?.["Giờ nhập"]}
+              </Typography.Text>
+            </Card>
+
+            {/* New Hours */}
+            <Form.Item
+              label="Số giờ mới"
+              name="newHours"
+              rules={[{ required: true, message: "Vui lòng nhập số giờ mới" }]}
+            >
+              <InputNumber
+                min={0}
+                step={0.5}
+                placeholder="Nhập số giờ mới"
+                style={{ width: "100%" }}
+              />
+            </Form.Item>
+
+            {/* Reason */}
+            <Form.Item
+              label="Lý do chỉnh sửa"
+              name="reason"
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng cung cấp lý do chỉnh sửa",
+                },
+              ]}
+              extra="Ví dụ: Sửa lỗi nhập liệu, cập nhật số tiền thanh toán, v.v."
+            >
+              <Input.TextArea
+                rows={3}
+                placeholder="Ví dụ: Sửa lỗi nhập liệu, cập nhật số tiền thanh toán, v.v."
+              />
+            </Form.Item>
+
+            {/* Edit History Preview */}
+            {editingExtension?.["Edit History"] &&
+              editingExtension["Edit History"].length > 0 && (
+                <Card
+                  style={{
+                    backgroundColor: "#fef3c7",
+                    border: "2px solid #f59e0b",
+                  }}
+                >
+                  <Typography.Text
+                    strong
+                    style={{
+                      color: "#92400e",
+                      marginBottom: "8px",
+                      display: "block",
+                    }}
+                  >
+                    ⚠️ Các lần chỉnh sửa trước (
+                    {editingExtension["Edit History"].length})
+                  </Typography.Text>
+                  <div
+                    style={{
+                      maxHeight: "128px",
+                      overflowY: "auto",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {editingExtension["Edit History"].map(
+                      (edit: any, idx: number) => (
+                        <div
+                          key={idx}
+                          style={{ color: "#374151", marginBottom: "4px" }}
+                        >
+                          {edit["Edited Date"]}: {edit["Old Hours"]}h →{" "}
+                          {edit["New Hours"]}h
+                          <span
+                            style={{ color: "#6b7280", fontStyle: "italic" }}
+                          >
+                            {" "}
+                            ({edit["Reason"]})
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </Card>
+              )}
+
+            {/* Current User */}
+            <Form.Item label="Người chỉnh sửa">
+              <Input value={currentUsername} disabled />
+            </Form.Item>
+          </Space>
+
+          <Form.Item style={{ marginBottom: 0, marginTop: "24px" }}>
+            <Space style={{ width: "100%", justifyContent: "space-between" }}>
+              <Button
+                onClick={() => {
+                  setEditExtensionModalOpen(false);
+                  setEditingExtension(null);
+                  editExtensionForm.resetFields();
+                }}
+                style={{ flex: 1 }}
+              >
+                Huỷ
+              </Button>
+              <Button type="primary" htmlType="submit" style={{ flex: 1 }}>
+                💾 Lưu thay đổi
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </WrapperContent>
   );
 };
 

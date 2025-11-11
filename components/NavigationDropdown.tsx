@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 
 interface NavigationDropdownProps {
   currentView:
+    | "landing"
     | "schedule"
     | "students"
     | "teachers"
@@ -149,7 +150,7 @@ const NavigationDropdown: React.FC<NavigationDropdownProps> = ({
       {/* Dropdown Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-linear-to-r from-[#86c7cc] to-[#86c7cc] text-white px-4 py-3 rounded-lg font-bold shadow-2xl hover:opacity-90 transition-all flex items-center gap-2 min-w-[200px] justify-between"
+        className="bg-linear-to-r from-[#36797f] to-[#36797f] text-white px-4 py-3 rounded-lg font-bold shadow-2xl hover:opacity-90 transition-all flex items-center gap-2 min-w-[200px] justify-between"
         title="Navigation Menu"
       >
         <span className="text-black">{currentViewLabel}</span>

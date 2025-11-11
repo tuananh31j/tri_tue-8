@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { isAdmin } from "../config/admins";
-import type { ScheduleEvent } from "../types";
-import PageHeader from "../layouts/PageHeader";
+import { useAuth } from "../../contexts/AuthContext";
+import { isAdmin } from "../../config/admins";
+import type { ScheduleEvent } from "../../types";
+import PageHeader from "../../layouts/PageHeader";
 import { DATABASE_URL_BASE } from "@/firebase";
 
 const TEACHER_LIST_URL = `${DATABASE_URL_BASE}/datasheet/Gi%C3%A1o_vi%C3%AAn.json`;
@@ -356,14 +356,17 @@ const TeacherListView: React.FC = () => {
   ]);
 
   // Group teachers by Biên chế
-  const groupedTeachers = displayTeachers.reduce((acc, teacher) => {
-    const bienChe = teacher["Biên chế"] || "Chưa phân loại";
-    if (!acc[bienChe]) {
-      acc[bienChe] = [];
-    }
-    acc[bienChe].push(teacher);
-    return acc;
-  }, {} as Record<string, typeof displayTeachers>);
+  const groupedTeachers = displayTeachers.reduce(
+    (acc, teacher) => {
+      const bienChe = teacher["Biên chế"] || "Chưa phân loại";
+      if (!acc[bienChe]) {
+        acc[bienChe] = [];
+      }
+      acc[bienChe].push(teacher);
+      return acc;
+    },
+    {} as Record<string, typeof displayTeachers>
+  );
 
   const sortedGroups = Object.keys(groupedTeachers).sort();
 
@@ -533,7 +536,7 @@ const TeacherListView: React.FC = () => {
                         display: flex;
                         align-items: flex-start;
                         justify-content: space-between;
-                        border-bottom: 4px solid #86c7cc;
+                        border-bottom: 4px solid #36797f;
                         padding-bottom: 20px;
                         margin-bottom: 30px;
                     }
@@ -541,7 +544,7 @@ const TeacherListView: React.FC = () => {
                     .header-center { flex: 1; text-align: center; padding: 0 20px; }
                     .header-right { text-align: right; min-width: 140px; }
                     h1 {
-                        color: #86c7cc;
+                        color: #36797f;
                         margin: 15px 0 8px 0;
                         font-size: 42px;
                         font-weight: bold;
@@ -559,13 +562,13 @@ const TeacherListView: React.FC = () => {
                         font-weight: normal;
                     }
                     h2 {
-                        color: #86c7cc;
+                        color: #36797f;
                         font-size: 22px;
                         margin-top: 35px;
                         margin-bottom: 18px;
                         font-weight: bold;
                         text-transform: uppercase;
-                        border-bottom: 3px solid #86c7cc;
+                        border-bottom: 3px solid #36797f;
                         padding-bottom: 8px;
                     }
                     .info-grid {
@@ -590,7 +593,7 @@ const TeacherListView: React.FC = () => {
                         font-size: 15px;
                     }
                     th {
-                        background: #86c7cc;
+                        background: #36797f;
                         color: white;
                         font-weight: bold;
                         font-size: 16px;
@@ -603,10 +606,10 @@ const TeacherListView: React.FC = () => {
                     .summary-title {
                         font-size: 24px;
                         font-weight: bold;
-                        color: #86c7cc;
+                        color: #36797f;
                         text-transform: uppercase;
                         margin-bottom: 25px;
-                        border-bottom: 3px solid #86c7cc;
+                        border-bottom: 3px solid #36797f;
                         padding-bottom: 8px;
                     }
                     .summary-grid {
@@ -622,7 +625,7 @@ const TeacherListView: React.FC = () => {
                     .summary-value {
                         font-size: 42px;
                         font-weight: bold;
-                        color: #86c7cc;
+                        color: #36797f;
                     }
                     .summary-label {
                         color: #333;
@@ -632,7 +635,7 @@ const TeacherListView: React.FC = () => {
                     .footer {
                         margin-top: 60px;
                         padding-top: 25px;
-                        border-top: 3px solid #86c7cc;
+                        border-top: 3px solid #36797f;
                         display: grid;
                         grid-template-columns: 1fr 1fr;
                         gap: 50px;
@@ -701,8 +704,8 @@ const TeacherListView: React.FC = () => {
                         </div>
                         <div class="summary-item">
                             <div class="summary-value">${totalHours.hours}h ${
-      totalHours.minutes
-    }m</div>
+                              totalHours.minutes
+                            }m</div>
                             <div class="summary-label">Total Time</div>
                         </div>
                         <div class="summary-item">
@@ -806,7 +809,7 @@ const TeacherListView: React.FC = () => {
         <div className="flex justify-end mb-4">
           <button
             onClick={handleAddTeacher}
-            className="px-6 py-3 bg-[#86c7cc] text-white rounded-lg font-semibold hover:bg-[#86c7cc] transition shadow-lg flex items-center gap-2 z-10 relative"
+            className="px-6 py-3 bg-[#36797f] text-white rounded-lg font-semibold hover:bg-[#36797f] transition shadow-lg flex items-center gap-2 z-10 relative"
           >
             <span className="text-xl text-white font-bold">
               + Add New Teacher
@@ -822,7 +825,7 @@ const TeacherListView: React.FC = () => {
               placeholder="🔍 Tìm kiếm theo tên, mã giáo viên, số điện thoại, email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 pl-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc] text-base"
+              className="w-full px-4 py-3 pl-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f] text-base"
             />
             <svg
               className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
@@ -849,7 +852,7 @@ const TeacherListView: React.FC = () => {
           {searchTerm && (
             <p className="mt-2 text-sm text-gray-600">
               Tìm thấy{" "}
-              <span className="font-bold text-[#86c7cc]">
+              <span className="font-bold text-[#36797f]">
                 {displayTeachers.length}
               </span>{" "}
               giáo viên
@@ -867,7 +870,7 @@ const TeacherListView: React.FC = () => {
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-transparent"
               >
                 {months.map((month, index) => (
                   <option key={index} value={index}>
@@ -883,7 +886,7 @@ const TeacherListView: React.FC = () => {
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-transparent"
               >
                 {[2023, 2024, 2025, 2026].map((year) => (
                   <option key={year} value={year}>
@@ -899,7 +902,7 @@ const TeacherListView: React.FC = () => {
               <select
                 value={selectedBienChe}
                 onChange={(e) => setSelectedBienChe(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-transparent"
               >
                 <option value="all">All Status</option>
                 {[
@@ -923,7 +926,7 @@ const TeacherListView: React.FC = () => {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-transparent"
               />
             </div>
           </div>
@@ -936,7 +939,7 @@ const TeacherListView: React.FC = () => {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-transparent"
               />
             </div>
           </div>
@@ -963,35 +966,37 @@ const TeacherListView: React.FC = () => {
             {/* Summary Statistics */}
             <div
               style={{
-                background: "linear-gradient(to right, #86c7cc, #86c7cc)",
+                background: "linear-gradient(to right, #36797f, #36797f)",
               }}
               className="text-white rounded-xl shadow-lg p-8"
             >
               <h2 className="text-2xl font-bold mb-6 text-center">Tổng quan</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold">
+                  <div className="text-primary text-3xl font-bold">
                     {displayTeachers.length}
                   </div>
-                  <div className="text-sm mt-1">Tổng giáo viên</div>
+                  <div className="text-primary text-sm mt-1">
+                    Tổng giáo viên
+                  </div>
                 </div>
                 <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold">
+                  <div className="text-primary text-3xl font-bold">
                     {sortedGroups.length}
                   </div>
-                  <div className="text-sm mt-1">Loại biên chế</div>
+                  <div className="text-primary text-sm mt-1">Loại biên chế</div>
                 </div>
                 <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold">
+                  <div className="text-primary text-3xl font-bold">
                     {displayTeachers.reduce(
                       (sum, t) => sum + t.totalSessions,
                       0
                     )}
                   </div>
-                  <div className="text-sm mt-1">Tổng buổi dạy</div>
+                  <div className="text-primary text-sm mt-1">Tổng buổi dạy</div>
                 </div>
                 <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold">
+                  <div className="text-primary text-3xl font-bold">
                     {Math.floor(
                       displayTeachers.reduce(
                         (sum, t) => sum + t.hours * 60 + t.minutes,
@@ -1000,7 +1005,7 @@ const TeacherListView: React.FC = () => {
                     )}
                     h
                   </div>
-                  <div className="text-sm mt-1">Tổng giờ dạy</div>
+                  <div className="text-primary text-sm mt-1">Tổng giờ dạy</div>
                 </div>
               </div>
             </div>
@@ -1012,18 +1017,18 @@ const TeacherListView: React.FC = () => {
                   {/* Group Header */}
                   <div
                     style={{
-                      background: "linear-gradient(to right, #86c7cc, #86c7cc)",
+                      background: "linear-gradient(to right, #36797f, #36797f)",
                     }}
                     className="text-white px-6 py-4 rounded-t-xl shadow-lg sticky top-0 z-10"
                   >
                     <div className="flex items-center justify-between">
                       <h2 className="text-xl font-bold flex items-center gap-3">
-                        <span className="bg-white text-[#86c7cc] rounded-full px-4 py-1 text-lg font-bold">
+                        <span className="bg-white text-[#36797f] rounded-full px-4 py-1 text-lg font-bold">
                           {teachersInGroup.length}
                         </span>
                         {bienChe}
                       </h2>
-                      <div className="text-sm bg-[#86c7cc] px-3 py-1 rounded-full">
+                      <div className="text-sm bg-[#36797f] px-3 py-1 rounded-full">
                         {teachersInGroup.length} giáo viên
                       </div>
                     </div>
@@ -1087,12 +1092,12 @@ const TeacherListView: React.FC = () => {
                                     "-"}
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-center">
-                                  <span className="text-sm font-bold text-[#86c7cc]">
+                                  <span className="text-sm font-bold text-[#36797f]">
                                     {teacher.hours}h {teacher.minutes}p
                                   </span>
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-center">
-                                  <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-[#86c7cc]">
+                                  <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-[#36797f]">
                                     {teacher.totalSessions} sessions
                                   </span>
                                 </td>
@@ -1113,7 +1118,7 @@ const TeacherListView: React.FC = () => {
                                         setSelectedTeacher(teacher);
                                         setModalOpen(true);
                                       }}
-                                      className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-[#86c7cc]/20 text-[#86c7cc] bg-white hover:bg-[#86c7cc] hover:text-white hover:border-[#86c7cc] font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
+                                      className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-[#36797f]/20 text-[#36797f] bg-white hover:bg-[#36797f] hover:text-white hover:border-[#36797f] font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
                                       title="View Details"
                                     >
                                       👁️ View
@@ -1162,7 +1167,7 @@ const TeacherListView: React.FC = () => {
             className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modal-content-70 flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-linear-to-r from-green-600 to-[#86c7cc] text-white p-6 rounded-t-2xl shrink-0">
+            <div className="bg-linear-to-r from-green-600 to-[#36797f] text-white p-6 rounded-t-2xl shrink-0">
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-2xl font-bold mb-2">
@@ -1187,14 +1192,14 @@ const TeacherListView: React.FC = () => {
             <div className="p-6">
               {/* Teacher Info */}
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-linear-to-br from-red-100 to-red-100 p-4 rounded-lg text-center">
-                  <div className="text-3xl font-bold text-[#86c7cc]">
+                <div className="p-4 rounded-lg text-center">
+                  <div className="text-primary text-3xl font-bold text-[#36797f]">
                     {selectedTeacher.hours}h {selectedTeacher.minutes}p
                   </div>
                   <div className="text-gray-600 mt-2">Tổng giờ dạy</div>
                 </div>
                 <div className="bg-linear-to-br from-red-100 to-red-100 p-4 rounded-lg text-center">
-                  <div className="text-3xl font-bold text-[#86c7cc]">
+                  <div className="text-primary text-3xl font-bold text-[#36797f]">
                     {selectedTeacher.totalSessions}
                   </div>
                   <div className="text-gray-600 mt-2">Tổng số buổi dạy</div>
@@ -1218,7 +1223,7 @@ const TeacherListView: React.FC = () => {
                         )
                       )
                     }
-                    className="px-4 py-2 bg-[#86c7cc] text-white rounded-lg hover:bg-[#86c7cc] transition font-semibold"
+                    className="px-4 py-2 bg-[#36797f] text-white rounded-lg hover:bg-[#36797f] transition font-semibold"
                   >
                     🖨️ In phiếu báo
                   </button>
@@ -1241,7 +1246,7 @@ const TeacherListView: React.FC = () => {
                       {events.map((event, idx) => (
                         <div
                           key={idx}
-                          className="bg-gray-50 p-4 rounded-lg border-l-4 border-[#86c7cc]"
+                          className="bg-gray-50 p-4 rounded-lg border-l-4 border-[#36797f]"
                         >
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-semibold text-gray-800">
@@ -1279,7 +1284,7 @@ const TeacherListView: React.FC = () => {
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modal-content-70 flex flex-col">
-            <div className="bg-[#86c7cc] text-white p-6 rounded-t-2xl shrink-0">
+            <div className="bg-[#36797f] text-white p-6 rounded-t-2xl shrink-0">
               <h2 className="text-2xl font-bold">
                 {editingTeacher && editingTeacher.id
                   ? "Edit Teacher"
@@ -1344,7 +1349,7 @@ const TeacherListView: React.FC = () => {
                     name="name"
                     defaultValue={editingTeacher?.["Họ và tên"] || ""}
                     required
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
                   />
                 </div>
                 <div>
@@ -1359,7 +1364,7 @@ const TeacherListView: React.FC = () => {
                       editingTeacher?.["Số điện thoại"] ||
                       ""
                     }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
                   />
                 </div>
                 <div>
@@ -1374,7 +1379,7 @@ const TeacherListView: React.FC = () => {
                       editingTeacher?.["Email công ty"] ||
                       ""
                     }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
                   />
                 </div>
                 <div>
@@ -1391,7 +1396,7 @@ const TeacherListView: React.FC = () => {
                         ? "Leave blank to keep current password"
                         : "Enter password"
                     }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
                   />
                 </div>
                 <div>
@@ -1401,7 +1406,7 @@ const TeacherListView: React.FC = () => {
                   <select
                     name="status"
                     defaultValue={editingTeacher?.["Biên chế"] || ""}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
                   >
                     <option value="">Select Status</option>
                     <option value="Full-time">Full-time</option>
@@ -1416,7 +1421,7 @@ const TeacherListView: React.FC = () => {
                   <select
                     name="position"
                     defaultValue={editingTeacher?.["Vị trí"] || "Teacher"}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
                     required
                   >
                     <option value="Teacher">Teacher</option>
@@ -1431,7 +1436,7 @@ const TeacherListView: React.FC = () => {
                     type="text"
                     name="bank"
                     defaultValue={editingTeacher?.["Ngân hàng"] || ""}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
                   />
                 </div>
                 <div>
@@ -1442,7 +1447,7 @@ const TeacherListView: React.FC = () => {
                     type="text"
                     name="account"
                     defaultValue={editingTeacher?.["STK"] || ""}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -1453,7 +1458,7 @@ const TeacherListView: React.FC = () => {
                     name="address"
                     defaultValue={editingTeacher?.["Địa chỉ"] || ""}
                     rows={3}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
                   />
                 </div>
               </div>
@@ -1471,7 +1476,7 @@ const TeacherListView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-[#86c7cc] text-white rounded-lg font-semibold hover:bg-[#86c7cc] transition"
+                  className="px-6 py-3 bg-[#36797f] text-white rounded-lg font-semibold hover:bg-[#36797f] transition"
                 >
                   Save
                 </button>

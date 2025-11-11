@@ -1,14 +1,6 @@
 import React, { useState } from "react";
 
-interface TeacherOnboardingProps {
-  onSubmit: (fullName: string) => Promise<void>;
-  userEmail: string;
-}
-
-const TeacherOnboarding: React.FC<TeacherOnboardingProps> = ({
-  onSubmit,
-  userEmail,
-}) => {
+const TeacherOnboarding = () => {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -24,7 +16,7 @@ const TeacherOnboarding: React.FC<TeacherOnboardingProps> = ({
     try {
       setError("");
       setLoading(true);
-      await onSubmit(fullName.trim());
+      // await onSubmit(fullName.trim());
     } catch (err: any) {
       setError(err.message || "Có lỗi xảy ra");
       setLoading(false);
@@ -38,11 +30,11 @@ const TeacherOnboarding: React.FC<TeacherOnboardingProps> = ({
         <div className="text-center mb-4 sm:mb-6">
           {/* Logo */}
           <img
-            src="/logo.jpg"
+            src="/img/logo.png"
             alt="Trí Tuệ 8+ Logo"
             className="mx-auto mb-4 w-36 h-36"
           />
-          <h2 className="text-xl sm:text-2xl font-bold text-[#86c7cc] mb-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-[#36797f] mb-2">
             Chào mừng giáo viên!
           </h2>
           <p className="text-sm sm:text-base text-gray-600">
@@ -56,7 +48,7 @@ const TeacherOnboarding: React.FC<TeacherOnboardingProps> = ({
             Email đăng nhập:
           </p>
           <p className="text-sm sm:text-base font-semibold text-gray-800 break-all">
-            {userEmail}
+            {/* {userEmail} */}
           </p>
         </div>
 
@@ -77,7 +69,7 @@ const TeacherOnboarding: React.FC<TeacherOnboardingProps> = ({
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Nhập họ và tên đầy đủ"
-              className="w-full p-2.5 sm:p-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc] outline-none"
+              className="w-full p-2.5 sm:p-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f] outline-none"
               disabled={loading}
               autoFocus
             />
@@ -89,7 +81,7 @@ const TeacherOnboarding: React.FC<TeacherOnboardingProps> = ({
           <button
             type="submit"
             disabled={loading || !fullName.trim()}
-            className="w-full bg-gradient-to-r from-[#86c7cc] to-[#86c7cc] text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 text-sm sm:text-base rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-[#36797f] to-[#36797f] text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 text-sm sm:text-base rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

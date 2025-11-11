@@ -5,8 +5,8 @@
 
 // Brand colors - Primary identity colors
 export const BRAND_COLORS = {
-  primary: '#86c7cc',
-  secondary: '#86c7cc',
+  primary: '#36797f',
+  secondary: '#36797f',
   light: '#f8e8e9',
   dark: '#4a0f12',
 } as const;
@@ -80,6 +80,6 @@ export const STATUS_COLORS = {
 
 // Gradient classes
 export const GRADIENTS = {
-  brand: 'bg-linear-to-r from-[#86c7cc] to-[#86c7cc]',
-  brandVertical: 'bg-linear-to-b from-[#86c7cc] to-[#86c7cc]',
+  brand: 'bg-linear-to-r from-[#36797f] to-[#36797f]',
+  brandVertical: 'bg-linear-to-b from-[#36797f] to-[#36797f]',
 } as const;

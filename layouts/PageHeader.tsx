@@ -27,7 +27,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
 }) => {
   return (
     <div
-      className={`bg-[#86c7cc] shadow-lg ${
+      className={`bg-[#36797f] shadow-lg ${
         sticky ? "sticky top-0 z-50" : ""
       } ${className}`}
     >
@@ -35,7 +35,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
         <div className="flex items-center gap-3 sm:gap-4">
           {/* Logo */}
           <img
-            src="/logo.jpg"
+            src="/img/logo.png"
             alt="Trí Tuệ 8+ Logo"
             className="mb-4 w-24 h-24"
           />

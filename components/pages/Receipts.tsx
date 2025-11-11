@@ -4,8 +4,8 @@ import React, { useState, useRef } from "react";
 import domtoimage from "dom-to-image-more";
 
 const COLORS = {
-  default: "#86c7cc",
-  dark: "#86c7cc",
+  default: "#36797f",
+  dark: "#36797f",
   light: "#a2e1e6",
 };
 
@@ -143,7 +143,7 @@ export const TuitionReceipt: React.FC<{
         <button
           onClick={handleExport}
           disabled={isExporting}
-          className="px-6 py-2 bg-[#86c7cc] text-white rounded-lg font-semibold hover:bg-[#86c7cc] transition shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-2 bg-[#36797f] text-white rounded-lg font-semibold hover:bg-[#36797f] transition shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isExporting ? (
             <>
@@ -196,7 +196,7 @@ export const TuitionReceipt: React.FC<{
           }}
         >
           <img
-            src="/logo.jpg"
+            src="/img/logo.png"
             alt="Background Logo"
             onError={(e) => console.error("Logo load failed:", e)}
             onLoad={() => console.log("Logo loaded successfully")}
@@ -217,7 +217,7 @@ export const TuitionReceipt: React.FC<{
           className="p-8 relative"
           style={{ zIndex: 10, position: "relative" }}
         >
-          <h2 className="text-center text-3xl font-bold text-[#86c7cc]">
+          <h2 className="text-center text-3xl font-bold text-[#36797f]">
             PHIẾU THU HỌC PHÍ THÁNG {data.month}
           </h2>
           <div
@@ -323,7 +323,7 @@ export const SalarySlip: React.FC<{
         <button
           onClick={handleExport}
           disabled={isExporting}
-          className="px-6 py-2 bg-[#86c7cc] text-white rounded-lg font-semibold hover:bg-[#86c7cc] transition shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-2 bg-[#36797f] text-white rounded-lg font-semibold hover:bg-[#36797f] transition shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isExporting ? (
             <>
@@ -395,7 +395,7 @@ export const SalarySlip: React.FC<{
           className="p-6 relative"
           style={{ zIndex: 10, position: "relative" }}
         >
-          <h2 className="text-center text-2xl font-bold text-[#86c7cc]">
+          <h2 className="text-center text-2xl font-bold text-[#36797f]">
             PHIẾU LƯƠNG THÁNG {data.month}
           </h2>
           <p className="text-center font-semibold text-lg mt-2">
@@ -492,370 +492,355 @@ const Receipts: React.FC = () => {
   };
 
   return (
-    <section className="min-h-screen bg-linear-to-br from-red-50 via-white to-red-100 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <h1 className="text-3xl font-bold text-[#86c7cc] text-center">
-            📄 Tạo Phiếu Thu - Phiếu Lương
-          </h1>
-          <p className="text-center text-gray-600 mt-2">
-            Nhập thông tin và xuất ảnh phiếu
-          </p>
-        </div>
-
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-lg mb-8">
-          <div className="flex border-b">
-            <button
-              onClick={() => setActiveTab("tuition")}
-              className={`flex-1 py-4 px-6 font-semibold text-lg transition ${
-                activeTab === "tuition"
-                  ? "border-b-4 border-[#86c7cc] text-[#86c7cc] bg-red-50"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              💰 Phiếu Thu Học Phí
-            </button>
-            <button
-              onClick={() => setActiveTab("salary")}
-              className={`flex-1 py-4 px-6 font-semibold text-lg transition ${
-                activeTab === "salary"
-                  ? "border-b-4 border-[#86c7cc] text-[#86c7cc] bg-red-50"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              💵 Phiếu Lương Giáo Viên
-            </button>
-          </div>
-
-          <div className="p-6">
-            {activeTab === "tuition" ? (
-              <div className="space-y-8">
-                {/* Form */}
-                <div className="space-y-4">
-                  <h3 className="text-xl font-bold text-[#86c7cc] mb-4">
-                    📝 Nhập thông tin học phí
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Tên học sinh
-                      </label>
-                      <input
-                        type="text"
-                        value={tuitionData.studentName}
-                        onChange={(e) =>
-                          setTuitionData({
-                            ...tuitionData,
-                            studentName: e.target.value,
-                          })
-                        }
-                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                        placeholder="VD: Con Phạm Hữu Minh"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Tháng
-                      </label>
-                      <input
-                        type="text"
-                        value={tuitionData.month}
-                        onChange={(e) =>
-                          setTuitionData({
-                            ...tuitionData,
-                            month: e.target.value,
-                          })
-                        }
-                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                        placeholder="VD: 10"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Tổng số buổi học
-                      </label>
-                      <input
-                        type="number"
-                        value={tuitionData.totalSessions}
-                        onChange={(e) =>
-                          setTuitionData({
-                            ...tuitionData,
-                            totalSessions: Number(e.target.value),
-                          })
-                        }
-                        onBlur={calculateTuitionTotal}
-                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                        placeholder="VD: 9"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Học phí/buổi (VNĐ)
-                      </label>
-                      <input
-                        type="text"
-                        value={tuitionData.pricePerSession}
-                        onChange={(e) =>
-                          setTuitionData({
-                            ...tuitionData,
-                            pricePerSession: e.target.value,
-                          })
-                        }
-                        onBlur={calculateTuitionTotal}
-                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                        placeholder="VD: 150,000"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Tổng học phí (VNĐ)
-                      </label>
-                      <input
-                        type="text"
-                        value={tuitionData.totalAmount}
-                        readOnly
-                        className="w-full p-3 border-2 border-gray-300 rounded-lg bg-gray-50 font-bold text-[#86c7cc]"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Ghi chú
-                    </label>
-                    <textarea
-                      value={tuitionData.note}
-                      onChange={(e) =>
-                        setTuitionData({ ...tuitionData, note: e.target.value })
-                      }
-                      rows={3}
-                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                      placeholder="Ghi chú cho phụ huynh..."
-                    />
-                  </div>
-                </div>
-
-                {/* Preview */}
-                <div>
-                  <h3 className="text-xl font-bold text-[#86c7cc] mb-4">
-                    👁️ Xem trước phiếu thu
-                  </h3>
-                  <TuitionReceipt
-                    data={{
-                      ...tuitionData,
-                      pricePerSession: `${tuitionData.pricePerSession} Đ`,
-                      totalAmount: `${tuitionData.totalAmount} Đ`,
-                    }}
-                    onExport={() => {
-                      alert("✅ Đã xuất ảnh thành công!");
-                    }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Form */}
-                <div className="space-y-4">
-                  <h3 className="text-xl font-bold text-[#86c7cc] mb-4">
-                    📝 Nhập thông tin lương
-                  </h3>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Tên giáo viên
-                    </label>
-                    <input
-                      type="text"
-                      value={salaryData.teacherName}
-                      onChange={(e) =>
-                        setSalaryData({
-                          ...salaryData,
-                          teacherName: e.target.value,
-                        })
-                      }
-                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                      placeholder="VD: Nguyễn Văn A"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Tháng
-                    </label>
-                    <input
-                      type="text"
-                      value={salaryData.month}
-                      onChange={(e) =>
-                        setSalaryData({
-                          ...salaryData,
-                          month: e.target.value,
-                        })
-                      }
-                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                      placeholder="VD: 10"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Ca TH
-                      </label>
-                      <input
-                        type="text"
-                        value={salaryData.caTH}
-                        onChange={(e) =>
-                          setSalaryData({ ...salaryData, caTH: e.target.value })
-                        }
-                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Lương TH (VNĐ)
-                      </label>
-                      <input
-                        type="text"
-                        value={salaryData.luongTH}
-                        onChange={(e) =>
-                          setSalaryData({
-                            ...salaryData,
-                            luongTH: e.target.value,
-                          })
-                        }
-                        onBlur={calculateSalaryTotal}
-                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Ca THCS
-                      </label>
-                      <input
-                        type="text"
-                        value={salaryData.caTHCS}
-                        onChange={(e) =>
-                          setSalaryData({
-                            ...salaryData,
-                            caTHCS: e.target.value,
-                          })
-                        }
-                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Lương THCS (VNĐ)
-                      </label>
-                      <input
-                        type="text"
-                        value={salaryData.luongTHCS}
-                        onChange={(e) =>
-                          setSalaryData({
-                            ...salaryData,
-                            luongTHCS: e.target.value,
-                          })
-                        }
-                        onBlur={calculateSalaryTotal}
-                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Ca THPT
-                      </label>
-                      <input
-                        type="text"
-                        value={salaryData.caTHPT}
-                        onChange={(e) =>
-                          setSalaryData({
-                            ...salaryData,
-                            caTHPT: e.target.value,
-                          })
-                        }
-                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Lương THPT (VNĐ)
-                      </label>
-                      <input
-                        type="text"
-                        value={salaryData.luongTHPT}
-                        onChange={(e) =>
-                          setSalaryData({
-                            ...salaryData,
-                            luongTHPT: e.target.value,
-                          })
-                        }
-                        onBlur={calculateSalaryTotal}
-                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Tổng lương (VNĐ)
-                    </label>
-                    <input
-                      type="text"
-                      value={salaryData.tongLuong}
-                      readOnly
-                      className="w-full p-3 border-2 border-gray-300 rounded-lg bg-gray-50 font-bold text-[#86c7cc]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Ghi chú
-                    </label>
-                    <textarea
-                      value={salaryData.note}
-                      onChange={(e) =>
-                        setSalaryData({ ...salaryData, note: e.target.value })
-                      }
-                      rows={3}
-                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#86c7cc] focus:border-[#86c7cc]"
-                      placeholder="Ghi chú cho giáo viên..."
-                    />
-                  </div>
-                </div>
-
-                {/* Preview */}
-                <div>
-                  <h3 className="text-xl font-bold text-[#86c7cc] mb-4">
-                    👁️ Xem trước phiếu lương
-                  </h3>
-                  <SalarySlip
-                    data={salaryData}
-                    onExport={() => {
-                      alert("✅ Đã xuất ảnh thành công!");
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+    <div className="bg-white rounded-xl shadow-lg mb-8">
+      <div className="flex border-b">
+        <button
+          onClick={() => setActiveTab("tuition")}
+          className={`flex-1 py-4 px-6 font-semibold text-lg transition ${
+            activeTab === "tuition"
+              ? "border-b-4 border-[#36797f] text-[#36797f] bg-blue-50"
+              : "text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          💰 Phiếu Thu Học Phí
+        </button>
+        <button
+          onClick={() => setActiveTab("salary")}
+          className={`flex-1 py-4 px-6 font-semibold text-lg transition ${
+            activeTab === "salary"
+              ? "border-b-4 border-[#36797f] text-[#36797f] bg-blue-50"
+              : "text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          💵 Phiếu Lương Giáo Viên
+        </button>
       </div>
-    </section>
+
+      <div className="p-6">
+        {activeTab === "tuition" ? (
+          <div className="space-y-8">
+            {/* Form */}
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold text-[#36797f] mb-4">
+                📝 Nhập thông tin học phí
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tên học sinh
+                  </label>
+                  <input
+                    type="text"
+                    value={tuitionData.studentName}
+                    onChange={(e) =>
+                      setTuitionData({
+                        ...tuitionData,
+                        studentName: e.target.value,
+                      })
+                    }
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                    placeholder="VD: Con Phạm Hữu Minh"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tháng
+                  </label>
+                  <input
+                    type="text"
+                    value={tuitionData.month}
+                    onChange={(e) =>
+                      setTuitionData({
+                        ...tuitionData,
+                        month: e.target.value,
+                      })
+                    }
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                    placeholder="VD: 10"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tổng số buổi học
+                  </label>
+                  <input
+                    type="number"
+                    value={tuitionData.totalSessions}
+                    onChange={(e) =>
+                      setTuitionData({
+                        ...tuitionData,
+                        totalSessions: Number(e.target.value),
+                      })
+                    }
+                    onBlur={calculateTuitionTotal}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                    placeholder="VD: 9"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Học phí/buổi (VNĐ)
+                  </label>
+                  <input
+                    type="text"
+                    value={tuitionData.pricePerSession}
+                    onChange={(e) =>
+                      setTuitionData({
+                        ...tuitionData,
+                        pricePerSession: e.target.value,
+                      })
+                    }
+                    onBlur={calculateTuitionTotal}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                    placeholder="VD: 150,000"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tổng học phí (VNĐ)
+                  </label>
+                  <input
+                    type="text"
+                    value={tuitionData.totalAmount}
+                    readOnly
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg bg-gray-50 font-bold text-[#36797f]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Ghi chú
+                </label>
+                <textarea
+                  value={tuitionData.note}
+                  onChange={(e) =>
+                    setTuitionData({ ...tuitionData, note: e.target.value })
+                  }
+                  rows={3}
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                  placeholder="Ghi chú cho phụ huynh..."
+                />
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div>
+              <h3 className="text-xl font-bold text-[#36797f] mb-4">
+                👁️ Xem trước phiếu thu
+              </h3>
+              <TuitionReceipt
+                data={{
+                  ...tuitionData,
+                  pricePerSession: `${tuitionData.pricePerSession} Đ`,
+                  totalAmount: `${tuitionData.totalAmount} Đ`,
+                }}
+                onExport={() => {
+                  alert("✅ Đã xuất ảnh thành công!");
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Form */}
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold text-[#36797f] mb-4">
+                📝 Nhập thông tin lương
+              </h3>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Tên giáo viên
+                </label>
+                <input
+                  type="text"
+                  value={salaryData.teacherName}
+                  onChange={(e) =>
+                    setSalaryData({
+                      ...salaryData,
+                      teacherName: e.target.value,
+                    })
+                  }
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                  placeholder="VD: Nguyễn Văn A"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Tháng
+                </label>
+                <input
+                  type="text"
+                  value={salaryData.month}
+                  onChange={(e) =>
+                    setSalaryData({
+                      ...salaryData,
+                      month: e.target.value,
+                    })
+                  }
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                  placeholder="VD: 10"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Ca TH
+                  </label>
+                  <input
+                    type="text"
+                    value={salaryData.caTH}
+                    onChange={(e) =>
+                      setSalaryData({ ...salaryData, caTH: e.target.value })
+                    }
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Lương TH (VNĐ)
+                  </label>
+                  <input
+                    type="text"
+                    value={salaryData.luongTH}
+                    onChange={(e) =>
+                      setSalaryData({
+                        ...salaryData,
+                        luongTH: e.target.value,
+                      })
+                    }
+                    onBlur={calculateSalaryTotal}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Ca THCS
+                  </label>
+                  <input
+                    type="text"
+                    value={salaryData.caTHCS}
+                    onChange={(e) =>
+                      setSalaryData({
+                        ...salaryData,
+                        caTHCS: e.target.value,
+                      })
+                    }
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Lương THCS (VNĐ)
+                  </label>
+                  <input
+                    type="text"
+                    value={salaryData.luongTHCS}
+                    onChange={(e) =>
+                      setSalaryData({
+                        ...salaryData,
+                        luongTHCS: e.target.value,
+                      })
+                    }
+                    onBlur={calculateSalaryTotal}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Ca THPT
+                  </label>
+                  <input
+                    type="text"
+                    value={salaryData.caTHPT}
+                    onChange={(e) =>
+                      setSalaryData({
+                        ...salaryData,
+                        caTHPT: e.target.value,
+                      })
+                    }
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Lương THPT (VNĐ)
+                  </label>
+                  <input
+                    type="text"
+                    value={salaryData.luongTHPT}
+                    onChange={(e) =>
+                      setSalaryData({
+                        ...salaryData,
+                        luongTHPT: e.target.value,
+                      })
+                    }
+                    onBlur={calculateSalaryTotal}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Tổng lương (VNĐ)
+                </label>
+                <input
+                  type="text"
+                  value={salaryData.tongLuong}
+                  readOnly
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg bg-gray-50 font-bold text-[#36797f]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Ghi chú
+                </label>
+                <textarea
+                  value={salaryData.note}
+                  onChange={(e) =>
+                    setSalaryData({ ...salaryData, note: e.target.value })
+                  }
+                  rows={3}
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
+                  placeholder="Ghi chú cho giáo viên..."
+                />
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div>
+              <h3 className="text-xl font-bold text-[#36797f] mb-4">
+                👁️ Xem trước phiếu lương
+              </h3>
+              <SalarySlip
+                data={salaryData}
+                onExport={() => {
+                  alert("✅ Đã xuất ảnh thành công!");
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

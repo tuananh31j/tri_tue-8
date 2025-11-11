@@ -1,0 +1,48 @@
+import { Button, Spin } from "antd";
+import React from "react";
+import { RollbackOutlined } from "@ant-design/icons";
+import { useAdminTitle } from "@/hooks/useAdminTitle";
+
+const WrapperContent: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  handleNavigateBack?: () => void;
+  toolbar?: React.ReactNode;
+  isLoading?: boolean;
+  className?: string;
+}> = ({
+  children,
+  handleNavigateBack,
+  toolbar,
+  isLoading,
+  className,
+  title,
+}) => {
+  useAdminTitle(title);
+
+  return (
+    <div className={`space-y-3 ${className}`}>
+      <div className="flex items-center justify-between">
+        <div>
+          {handleNavigateBack && (
+            <Button
+              icon={<RollbackOutlined />}
+              onClick={handleNavigateBack}
+            ></Button>
+          )}
+        </div>
+        {toolbar}
+      </div>
+
+      {!isLoading ? (
+        children
+      ) : (
+        <div className="flex h-full items-center justify-center">
+          <Spin />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default WrapperContent;

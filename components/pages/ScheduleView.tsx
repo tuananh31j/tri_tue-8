@@ -5,14 +5,13 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import type { ScheduleEvent, FilterType } from "../types";
-import TimePickerModal from "./TimePickerModal";
-import { KanbanModal } from "./KanbanModal";
-import FloatingActionButton from "./FloatingActionButton";
-import NavigationDropdown from "./NavigationDropdown";
-import { app, DATABASE_URL_BASE } from "../firebase";
-import { SUBJECT_COLORS, GRADIENTS } from "../constants/colors";
+import { useAuth } from "../../contexts/AuthContext";
+import type { ScheduleEvent, FilterType } from "../../types";
+import TimePickerModal from "../TimePickerModal";
+import { KanbanModal } from "../KanbanModal";
+import FloatingActionButton from "../FloatingActionButton";
+import { app, DATABASE_URL_BASE } from "../../firebase";
+import { SUBJECT_COLORS, GRADIENTS } from "../../constants/colors";
 
 const URL_BASE = `${DATABASE_URL_BASE}/datasheet`;
 const SCHEDULE_URL = `${URL_BASE}/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
@@ -443,7 +442,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       <Header currentDate={currentDate} setCurrentDate={setCurrentDate} />
 
       {/* Navigation Dropdown chỉ hiển thị nếu hideNavigation=false (dùng standalone) */}
-      {!hideNavigation && <NavigationDropdown currentView="schedule" />}
 
       <div className="bg-paper border border-line rounded-none md:rounded-2xl shadow-medium overflow-hidden mt-2">
         <div className="relative overflow-x-auto">
@@ -657,13 +655,13 @@ const Header: React.FC<{
   };
 
   return (
-    <div className={`bg-[#86c7cc] shadow-lg sticky top-0 z-50`}>
+    <div className={`bg-[#36797f] shadow-lg sticky top-0 z-50`}>
       {/* Logo và Title */}
       <div className="flex flex-col sm:flex-row items-center gap-4 p-4 sm:p-6">
         <div className="flex items-center gap-4">
           {/* Logo */}
           <img
-            src="/logo.jpg"
+            src="/img/logo.png"
             alt="Trí Tuệ 8+ Logo"
             className="mx-auto mb-4 w-24 h-24"
           />
@@ -686,7 +684,7 @@ const Header: React.FC<{
         />
         <button
           onClick={() => setCurrentDate(new Date())}
-          className="h-10 px-4 rounded-lg bg-white text-[#86c7cc] font-semibold transition hover:-translate-y-0.5 hover:shadow-lg text-sm"
+          className="h-10 px-4 rounded-lg bg-white text-[#36797f] font-semibold transition hover:-translate-y-0.5 hover:shadow-lg text-sm"
         >
           Today
         </button>
@@ -736,14 +734,17 @@ const DayTaskListModal: React.FC<{
   });
 
   // Group events by teacher
-  const eventsByTeacher = dayEvents.reduce((acc, event) => {
-    const teacher = event["Giáo viên phụ trách"] || "Chưa phân công";
-    if (!acc[teacher]) {
-      acc[teacher] = [];
-    }
-    acc[teacher].push(event);
-    return acc;
-  }, {} as Record<string, ScheduleEvent[]>);
+  const eventsByTeacher = dayEvents.reduce(
+    (acc, event) => {
+      const teacher = event["Giáo viên phụ trách"] || "Chưa phân công";
+      if (!acc[teacher]) {
+        acc[teacher] = [];
+      }
+      acc[teacher].push(event);
+      return acc;
+    },
+    {} as Record<string, ScheduleEvent[]>
+  );
 
   // Sort events within each teacher group by start time
   Object.keys(eventsByTeacher).forEach((teacher) => {
@@ -934,13 +935,13 @@ const TaskDetailModal: React.FC<{
   const borderColor = isWork
     ? "border-green-600"
     : isExam
-    ? "border-brand"
-    : "border-study";
+      ? "border-brand"
+      : "border-study";
   const textColor = isWork
     ? "text-green-600"
     : isExam
-    ? "text-brand"
-    : "text-study";
+      ? "text-brand"
+      : "text-study";
 
   return (
     <ModalWrapper isOpen={isOpen} onClose={onClose} size="xl" fullHeight>
@@ -1148,10 +1149,10 @@ const AddTaskModal: React.FC<{
           eventType === "LichHoc"
             ? "study"
             : eventType === "LichLamViec"
-            ? "work"
-            : eventType === "CV"
-            ? "study"
-            : "exam";
+              ? "work"
+              : eventType === "CV"
+                ? "study"
+                : "exam";
         setTaskType(taskType);
 
         // Extract subject name from task name if exists
@@ -1288,8 +1289,8 @@ const AddTaskModal: React.FC<{
         taskType === "study"
           ? "LichHoc"
           : taskType === "work"
-          ? "LichLamViec"
-          : "LichThi",
+            ? "LichLamViec"
+            : "LichThi",
       Ngày: taskDate,
       "Địa điểm": taskLocation,
       "Giáo viên phụ trách": selectedTeacher?.name || "", // Save name for backward compatibility
