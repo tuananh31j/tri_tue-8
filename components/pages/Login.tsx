@@ -63,7 +63,7 @@ const Login: React.FC = () => {
         {/* Login Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 border-2 border-[#36797f]">
           <h2 className="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-2">
-            Đăng nhập giáo viên
+            Đăng nhập hệ thống
           </h2>
           <p className="text-center text-sm text-gray-600 mb-4 sm:mb-6">
             Nhập thông tin tài khoản của bạn được cung cấp bởi quản trị viên
@@ -152,7 +152,7 @@ const Login: React.FC = () => {
                   height: "48px",
                 }}
               >
-                {loading ? "Logging in..." : "LOGIN"}
+                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
               </Button>
             </Form.Item>
 
