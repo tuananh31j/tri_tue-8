@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function NavUser({
   user,
@@ -26,11 +27,14 @@ export function NavUser({
     avatar: string;
   };
 }) {
+  const { signOut } = useAuth();
   const { isMobile } = useSidebar();
   const [isLoading, setLoading] = useState(false);
 
   const handleLogout = async () => {
     setLoading(true);
+    await signOut();
+    setLoading(false);
   };
 
   return (
@@ -42,10 +46,6 @@ export function NavUser({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">AV</AvatarFallback>
-              </Avatar>
               <div className="text-foreground grid flex-1 text-left text-sm leading-tight hover:text-white">
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="text-muted-foreground truncate text-xs hover:text-white">
@@ -61,7 +61,7 @@ export function NavUser({
             align="end"
             sideOffset={4}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
+            <DropdownMenuLabel className="p-0 font-normal bg-white">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
@@ -76,7 +76,7 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
+            <DropdownMenuGroup className="bg-white">
               {/* <DropdownMenuItem>
                                 <IconUserCircle />
                                 Account
@@ -91,7 +91,7 @@ export function NavUser({
                             </DropdownMenuItem> */}
             </DropdownMenuGroup>
             {/* <DropdownMenuSeparator /> */}
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={handleLogout} className="bg-white">
               {isLoading ? (
                 <IconLoader2 className="animate-spin" />
               ) : (
