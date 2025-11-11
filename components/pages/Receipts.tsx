@@ -376,7 +376,7 @@ export const SalarySlip: React.FC<{
           }}
         >
           <img
-            src="/public/logo.jpg"
+            src="/img/logo.png"
             alt="Background Logo"
             style={{
               width: "auto",

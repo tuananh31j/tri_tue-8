@@ -8,9 +8,11 @@ const MainLayout = () => {
     <div className="mx-auto flex min-h-screen max-w-7xl flex-col bg-white px-4 lg:px-0">
       {/* Header/Navigation */}
       <Header />
-      <Suspense>
-        <Outlet />
-      </Suspense>
+      <div className="flex flex-col flex-1">
+        <Suspense>
+          <Outlet />
+        </Suspense>
+      </div>
       {/* Footer */}
       <Footer />
     </div>

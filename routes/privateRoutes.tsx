@@ -8,6 +8,7 @@ import TeacherListView from "@/components/pages/TeacherListView";
 import ScheduleViewAntd from "@/components/pages/ScheduleViewAntd";
 import AdminLayout from "@/layouts/AdminLayout";
 import PageHeader from "@/layouts/PageHeader";
+import Authoriation from "@/routes/Authoriation";
 
 const privateRoutes = [
   {
@@ -20,7 +21,11 @@ const privateRoutes = [
       },
       {
         path: "invoice",
-        element: <InvoicePage />,
+        element: (
+          <Authoriation>
+            <InvoicePage />
+          </Authoriation>
+        ),
       },
       {
         path: "students",
@@ -28,7 +33,11 @@ const privateRoutes = [
       },
       {
         path: "teachers",
-        element: <TeacherListView />,
+        element: (
+          <Authoriation>
+            <TeacherListView />
+          </Authoriation>
+        ),
       },
       {
         path: "admin-calendar",

@@ -44,8 +44,23 @@ interface AttendanceRecord {
   timestamp: string;
 }
 
+interface HomeworkInfo {
+  totalExercises: number;
+  description: string;
+  assignedBy: string;
+}
+
+interface StudentAttendance {
+  studentName: string;
+  present: boolean;
+  score?: number;
+  submittedBy: string;
+  timestamp: string;
+}
+
 const AttendanceView: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
+
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<{ [key: string]: boolean }>({});
   const [loading, setLoading] = useState(true);
@@ -55,11 +70,17 @@ const AttendanceView: React.FC = () => {
   );
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Homework fields
+  const [totalExercises, setTotalExercises] = useState<number>(0);
+  const [homeworkDescription, setHomeworkDescription] = useState<string>("");
+  const [scores, setScores] = useState<{ [key: string]: number }>({});
+
   // Fetch students
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const response = await fetch(`${STUDENT_LIST_URL}?_=${Date.now()}`, {
+        const timestamp = new Date().getTime();
+        const response = await fetch(`${STUDENT_LIST_URL}?_=${timestamp}`, {
           cache: "no-cache",
         });
         const data = await response.json();
@@ -110,27 +131,59 @@ const AttendanceView: React.FC = () => {
   // Load existing attendance for selected date
   useEffect(() => {
     const loadAttendance = async () => {
+      console.log(currentUser, "sdfsdfsdfsd", userProfile, selectedDate);
       try {
-        const response = await fetch(`${ATTENDANCE_URL}?_=${Date.now()}`, {
+        if (!currentUser) return;
+
+        const dateUrl = `${DATABASE_URL_BASE}/Di%E1%BB%87m_danh/${selectedDate}.json`;
+        const response = await fetch(dateUrl, {
           cache: "no-cache",
         });
         const data = await response.json();
 
         if (data) {
-          const todayAttendance: { [key: string]: boolean } = {};
-          Object.values(data).forEach((record: any) => {
-            if (record.date === selectedDate) {
-              todayAttendance[record.studentId] = record.present;
-            }
-          });
-          setAttendance(todayAttendance);
+          // Load homework info
+          if (data.homework) {
+            setTotalExercises(data.homework.totalExercises || 0);
+            setHomeworkDescription(data.homework.description || "");
+          } else {
+            setTotalExercises(0);
+            setHomeworkDescription("");
+          }
+
+          // Load student attendance
+          if (data.students) {
+            const todayAttendance: { [key: string]: boolean } = {};
+            const todayScores: { [key: string]: number } = {};
+
+            Object.entries(data.students).forEach(
+              ([studentId, studentData]: [string, any]) => {
+                todayAttendance[studentId] = studentData.present || false;
+                if (studentData.score !== undefined) {
+                  todayScores[studentId] = studentData.score;
+                }
+              }
+            );
+
+            setAttendance(todayAttendance);
+            setScores(todayScores);
+          } else {
+            setAttendance({});
+            setScores({});
+          }
+        } else {
+          // No data for this date
+          setAttendance({});
+          setScores({});
+          setTotalExercises(0);
+          setHomeworkDescription("");
         }
       } catch (error) {
         console.error("Error loading attendance:", error);
       }
     };
     loadAttendance();
-  }, [selectedDate]);
+  }, [selectedDate, currentUser, userProfile]);
 
   const handleCheckboxChange = (studentId: string, checked: boolean) => {
     setAttendance((prev) => ({
@@ -156,68 +209,62 @@ const AttendanceView: React.FC = () => {
       const submittedBy =
         userProfile?.teacherName || currentUser?.email || "Unknown";
 
-      // Prepare attendance records
+      if (!currentUser) {
+        alert("⚠️ You must be logged in to submit attendance");
+        return;
+      }
 
-      const records: AttendanceRecord[] = Object.entries(attendance)
-        .map(([studentId, value]) => {
-          if (!value) return;
-          const student = students.find((s) => s.id === studentId);
-          return {
-            studentId,
-            studentName: student?.["Họ và tên"] || "Unknown",
-            studentCode: student?.["Mã học sinh"],
-            date: selectedDate,
-            present: attendance[studentId],
+      // Prepare homework data
+      const homeworkData: HomeworkInfo = {
+        totalExercises: totalExercises || 0,
+        description: homeworkDescription || "",
+        assignedBy: submittedBy,
+      };
+
+      // Prepare student attendance data
+      const studentsData: { [key: string]: StudentAttendance } = {};
+
+      filteredStudents.forEach((student) => {
+        if (attendance[student.id]) {
+          studentsData[student.id] = {
+            studentName: student["Họ và tên"],
+            present: attendance[student.id],
+            score: scores[student.id],
             submittedBy,
             timestamp: now.toISOString(),
           };
-        })
-        .filter(Boolean) as AttendanceRecord[];
-
-      console.log(
-        "Submitting attendance records:",
-        records,
-        students,
-        attendance
-      );
-
-      // Delete existing records for this date first
-      const existingResponse = await fetch(
-        `${ATTENDANCE_URL}?_=${Date.now()}`,
-        {
-          cache: "no-cache",
         }
-      );
-      const existingData = await existingResponse.json();
+      });
 
-      if (existingData) {
-        const deletePromises = Object.entries(existingData)
-          .filter(([_, record]: [string, any]) => record.date === selectedDate)
-          .map(([id, _]) =>
-            fetch(`${DATABASE_URL_BASE}/Di%E1%BB%87m_danh/${id}.json`, {
-              method: "DELETE",
-            })
-          );
-        await Promise.all(deletePromises);
+      // Prepare the complete data structure for this date
+      const dateData = {
+        homework: homeworkData,
+        students: studentsData,
+      };
+
+      console.log("Submitting attendance for date:", selectedDate, dateData);
+
+      // Save to Firebase under the date node
+      const dateUrl = `${DATABASE_URL_BASE}/Di%E1%BB%87m_danh/${selectedDate}.json`;
+      const response = await fetch(dateUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dateData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save attendance: ${response.status}`);
       }
 
-      // Save new attendance records
-      const savePromises = records.map((record) =>
-        fetch(ATTENDANCE_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(record),
-        })
-      );
-
-      await Promise.all(savePromises);
-
+      const presentCount = Object.values(studentsData).length;
       alert(
         `✅ Điểm danh thành công cho ngày ${new Date(
           selectedDate
-        ).toLocaleDateString("vi-VN")}!\nĐã điểm danh ${
-          records.length
-        } học sinh.`
+        ).toLocaleDateString(
+          "vi-VN"
+        )}!\nĐã điểm danh ${presentCount} học sinh.\nBài tập: ${
+          totalExercises || 0
+        } bài.`
       );
     } catch (error) {
       console.error("Error submitting attendance:", error);
@@ -244,12 +291,12 @@ const AttendanceView: React.FC = () => {
 
   return (
     <>
-      <WrapperContent title="Lịch làm việc">
+      <WrapperContent title="Điểm danh">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Date Selector & Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* Date Selector */}
-            <Card title="📅 Select Date" size="small">
+            <Card title="📅 Chọn ngày" size="small">
               <DatePicker
                 value={dayjs(selectedDate)}
                 onChange={(date) =>
@@ -268,16 +315,16 @@ const AttendanceView: React.FC = () => {
             </Card>
 
             {/* Stats */}
-            <Card title="Attendance Statistics" size="small">
+            <Card title="Thống kê điểm danh" size="small">
               <Space direction="horizontal" size="large">
                 <Statistic
-                  title="Present"
+                  title="Có mặt"
                   value={presentCount}
                   valueStyle={{ color: "#3f8600" }}
                   prefix={<CheckCircleOutlined />}
                 />
                 <Statistic
-                  title="Absent"
+                  title="Vắng"
                   value={absentCount}
                   valueStyle={{ color: "#cf1322" }}
                   prefix={<CloseCircleOutlined />}
@@ -286,9 +333,9 @@ const AttendanceView: React.FC = () => {
             </Card>
 
             {/* Search */}
-            <Card title="🔍 Search Student" size="small">
+            <Card title="🔍 Tìm kiếm học sinh" size="small">
               <Input
-                placeholder="Search by name, code..."
+                placeholder="Tìm kiếm theo tên, mã học sinh..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 prefix={<SearchOutlined />}
@@ -297,12 +344,41 @@ const AttendanceView: React.FC = () => {
             </Card>
           </div>
 
+          {/* Homework Information */}
+          <Card title="📚 Thông tin bài tập về nhà" className="mb-6" size="small">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Số bài tập
+                </label>
+                <Input
+                  type="number"
+                  value={totalExercises}
+                  onChange={(e) => setTotalExercises(Number(e.target.value))}
+                  placeholder="Nhập số bài tập"
+                  size="large"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Mô tả
+                </label>
+                <Input
+                  value={homeworkDescription}
+                  onChange={(e) => setHomeworkDescription(e.target.value)}
+                  placeholder="Ví dụ: Trang 42-45, bài tập 1-5"
+                  size="large"
+                />
+              </div>
+            </div>
+          </Card>
+
           {/* Attendance Table */}
           {loading ? (
             <Card>
               <div className="text-center py-20">
                 <Spin size="large" />
-                <p className="mt-4 text-gray-600">Loading students...</p>
+                <p className="mt-4 text-gray-600">Đang tải học sinh...</p>
               </div>
             </Card>
           ) : (
@@ -315,6 +391,7 @@ const AttendanceView: React.FC = () => {
                   code: student["Mã học sinh"] || "-",
                   phone: student["Số điện thoại"] || "-",
                   present: attendance[student.id] || false,
+                  score: scores[student.id] || 0,
                   id: student.id,
                 }))}
                 columns={[
@@ -326,25 +403,25 @@ const AttendanceView: React.FC = () => {
                     align: "center",
                   },
                   {
-                    title: "Student Name",
+                    title: "Tên học sinh",
                     dataIndex: "name",
                     key: "name",
                     render: (text) => <strong>{text}</strong>,
                   },
                   {
-                    title: "Student Code",
+                    title: "Mã học sinh",
                     dataIndex: "code",
                     key: "code",
                   },
                   {
-                    title: "Phone",
+                    title: "Số điện thoại",
                     dataIndex: "phone",
                     key: "phone",
                   },
                   {
                     title: (
                       <div className="flex items-center justify-center gap-2">
-                        <span>Present</span>
+                        <span>Có mặt</span>
                         <Checkbox
                           checked={
                             filteredStudents.length > 0 &&
@@ -366,6 +443,30 @@ const AttendanceView: React.FC = () => {
                       />
                     ),
                   },
+                  {
+                    title: "Điểm",
+                    dataIndex: "score",
+                    key: "score",
+                    align: "center",
+                    width: 120,
+                    render: (score, record) => (
+                      <Input
+                        type="number"
+                        value={score}
+                        onChange={(e) =>
+                          setScores({
+                            ...scores,
+                            [record.id]: Number(e.target.value),
+                          })
+                        }
+                        placeholder="0-10"
+                        min={0}
+                        max={10}
+                        disabled={!attendance[record.id]}
+                        size="small"
+                      />
+                    ),
+                  },
                 ]}
                 pagination={false}
                 scroll={{ x: 800 }}
@@ -381,13 +482,13 @@ const AttendanceView: React.FC = () => {
                     <span className="font-semibold">
                       {filteredStudents.length}
                     </span>{" "}
-                    students |
+                    học sinh |
                     <span className="text-green-600 font-semibold ml-2">
-                      {presentCount} present
+                      {presentCount} có mặt
                     </span>{" "}
                     |
                     <span className="text-red-600 font-semibold ml-2">
-                      {absentCount} absent
+                      {absentCount} vắng
                     </span>
                   </div>
                   <Button
@@ -398,7 +499,7 @@ const AttendanceView: React.FC = () => {
                     loading={submitting}
                     icon={<CheckCircleOutlined />}
                   >
-                    {submitting ? "Submitting..." : "Submit Attendance"}
+                    {submitting ? "Đang gửi..." : "Gửi điểm danh"}
                   </Button>
                 </div>
               </div>

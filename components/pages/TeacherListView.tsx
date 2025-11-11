@@ -793,16 +793,8 @@ const TeacherListView: React.FC = () => {
     }, 500);
   };
 
-  if (userProfile.role != "admin") return null;
-
   return (
     <>
-      {/* Page Header */}
-      <PageHeader
-        title="TEACHER LIST"
-        subtitle="Trí Tuệ 8+ - Teacher Management"
-      />
-
       {/* Filters */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Add New Teacher button */}
@@ -812,7 +804,7 @@ const TeacherListView: React.FC = () => {
             className="px-6 py-3 bg-[#36797f] text-white rounded-lg font-semibold hover:bg-[#36797f] transition shadow-lg flex items-center gap-2 z-10 relative"
           >
             <span className="text-xl text-white font-bold">
-              + Add New Teacher
+              + Thêm giáo viên mới
             </span>
           </button>
         </div>
@@ -865,7 +857,7 @@ const TeacherListView: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Month
+                Tháng
               </label>
               <select
                 value={selectedMonth}
@@ -881,7 +873,7 @@ const TeacherListView: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Year
+                Năm
               </label>
               <select
                 value={selectedYear}
@@ -897,14 +889,14 @@ const TeacherListView: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Employment Status
+                Tình trạng biên chế
               </label>
               <select
                 value={selectedBienChe}
                 onChange={(e) => setSelectedBienChe(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-transparent"
               >
-                <option value="all">All Status</option>
+                <option value="all">Tất cả trạng thái</option>
                 {[
                   ...new Set(
                     teachers.map((t) => t["Biên chế"] || "Unclassified")
@@ -920,7 +912,7 @@ const TeacherListView: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                From Date
+                Từ ngày
               </label>
               <input
                 type="date"
@@ -933,7 +925,7 @@ const TeacherListView: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                To Date
+                Đến ngày
               </label>
               <input
                 type="date"
@@ -1043,25 +1035,25 @@ const TeacherListView: React.FC = () => {
                               #
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Full Name
+                              Họ tên
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Phone
+                              Số điện thoại
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
                               Email
                             </th>
                             <th className="px-4 py-3 text-center text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Total Hours
+                              Tổng giờ dạy
                             </th>
                             <th className="px-4 py-3 text-center text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Sessions
+                              Buổi dạy
                             </th>
                             <th className="px-4 py-3 text-center text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Travel Allowance
+                              Trợ cấp đi lại
                             </th>
                             <th className="px-4 py-3 text-center text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Actions
+                              Hành động
                             </th>
                           </tr>
                         </thead>
@@ -1098,7 +1090,7 @@ const TeacherListView: React.FC = () => {
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-center">
                                   <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-[#36797f]">
-                                    {teacher.totalSessions} sessions
+                                    {teacher.totalSessions} Buổi
                                   </span>
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-center">
@@ -1121,7 +1113,7 @@ const TeacherListView: React.FC = () => {
                                       className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-[#36797f]/20 text-[#36797f] bg-white hover:bg-[#36797f] hover:text-white hover:border-[#36797f] font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
                                       title="View Details"
                                     >
-                                      👁️ View
+                                      👁️ Xem
                                     </button>
                                     <button
                                       onClick={(e) =>
@@ -1130,7 +1122,7 @@ const TeacherListView: React.FC = () => {
                                       className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-blue-200 text-blue-600 bg-white hover:bg-blue-600 hover:text-white hover:border-blue-600 font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
                                       title="Edit"
                                     >
-                                      ✏️ Edit
+                                      ✏️ Sửa
                                     </button>
                                     <button
                                       onClick={(e) =>
@@ -1139,7 +1131,7 @@ const TeacherListView: React.FC = () => {
                                       className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-red-200 text-red-600 bg-white hover:bg-red-600 hover:text-white hover:border-red-600 font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
                                       title="Delete"
                                     >
-                                      🗑️ Delete
+                                      🗑️ Xóa
                                     </button>
                                   </div>
                                 </td>
@@ -1287,8 +1279,8 @@ const TeacherListView: React.FC = () => {
             <div className="bg-[#36797f] text-white p-6 rounded-t-2xl shrink-0">
               <h2 className="text-2xl font-bold">
                 {editingTeacher && editingTeacher.id
-                  ? "Edit Teacher"
-                  : "Add New Teacher"}
+                  ? "Chỉnh sửa giáo viên"
+                  : "Thêm giáo viên mới"}
               </h2>
             </div>
 
@@ -1328,7 +1320,7 @@ const TeacherListView: React.FC = () => {
                   teacherData["Password"] = newPassword.trim();
                 } else if (!editingTeacher?.id) {
                   // For new teachers, password is required
-                  alert("Password is required for new teachers");
+                  alert("Mật khẩu bắt buộc nhập");
                   return;
                 }
                 // Preserve the ID if editing an existing teacher
@@ -1342,7 +1334,7 @@ const TeacherListView: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Full Name *
+                    Họ tên *
                   </label>
                   <input
                     type="text"
@@ -1354,7 +1346,7 @@ const TeacherListView: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Phone
+                    Số điện thoại
                   </label>
                   <input
                     type="tel"
@@ -1384,7 +1376,7 @@ const TeacherListView: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Password *
+                    Mật khẩu *
                   </label>
                   <input
                     type="password"
@@ -1401,16 +1393,16 @@ const TeacherListView: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Employment Status
+                    Tình trạng biên chế
                   </label>
                   <select
                     name="status"
                     defaultValue={editingTeacher?.["Biên chế"] || ""}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
                   >
-                    <option value="">Select Status</option>
-                    <option value="Full-time">Full-time</option>
-                    <option value="Part-time">Part-time</option>
+                    <option value="">Chọn tình trạng</option>
+                    <option value="Full-time">Toàn thời gian</option>
+                    <option value="Part-time">Bán thời gian</option>
                   </select>
                 </div>
                 {/* Position field */}
@@ -1424,13 +1416,13 @@ const TeacherListView: React.FC = () => {
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
                     required
                   >
-                    <option value="Teacher">Teacher</option>
-                    <option value="Admin">Admin</option>
+                    <option value="Teacher">Giáo viên</option>
+                    <option value="Admin">Quản trị viên</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Bank
+                    Ngân hàng
                   </label>
                   <input
                     type="text"
@@ -1441,7 +1433,7 @@ const TeacherListView: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Account Number
+                    Số tài khoản
                   </label>
                   <input
                     type="text"
@@ -1452,7 +1444,7 @@ const TeacherListView: React.FC = () => {
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Address
+                    Địa chỉ
                   </label>
                   <textarea
                     name="address"
@@ -1472,13 +1464,13 @@ const TeacherListView: React.FC = () => {
                   }}
                   className="px-6 py-3 bg-gray-300 text-gray-800 rounded-lg font-semibold hover:bg-gray-400 transition"
                 >
-                  Cancel
+                  Hủy
                 </button>
                 <button
                   type="submit"
                   className="px-6 py-3 bg-[#36797f] text-white rounded-lg font-semibold hover:bg-[#36797f] transition"
                 >
-                  Save
+                  Lưu
                 </button>
               </div>
             </form>

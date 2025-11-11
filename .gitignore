@@ -4,3 +4,7 @@
 /dist
 /mock-data
 
+# Firebase Admin SDK Service Account Keys
+serviceAccountKey.json
+scripts/serviceAccountKey.json
+**/serviceAccountKey.json

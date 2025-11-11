@@ -36,6 +36,7 @@ import {
 import dayjs from "dayjs";
 import WrapperContent from "@/components/WrapperContent";
 import Loader from "@/components/Loader";
+import { Empty } from "antd/lib";
 
 const STUDENT_LIST_URL = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh.json`;
 const SCHEDULE_URL = `${DATABASE_URL_BASE}/datasheet/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
@@ -178,6 +179,34 @@ const StudentListView: React.FC = () => {
     };
     fetchExtensionHistory();
   }, []);
+
+  // Update edit student form when editingStudent changes
+  useEffect(() => {
+    if (editingStudent && isEditModalOpen) {
+      editStudentForm.setFieldsValue({
+        name: editingStudent["Họ và tên"] || "",
+        dob: editingStudent["Ngày sinh"] || "",
+        phone: editingStudent["Số điện thoại"] || "",
+        status: editingStudent["Trạng thái"] || "",
+        address: editingStudent["Địa chỉ"] || "",
+      });
+    } else if (!editingStudent && isEditModalOpen) {
+      // Reset form when adding new student
+      editStudentForm.resetFields();
+    }
+  }, [editingStudent, isEditModalOpen, editStudentForm]);
+
+  // Update extend hours form when extendingStudent changes
+  useEffect(() => {
+    if (extendingStudent && isExtendModalOpen) {
+      extendHoursForm.setFieldsValue({
+        studentName: extendingStudent["Họ và tên"] || "",
+        additionalHours: 0,
+      });
+    } else if (!extendingStudent && isExtendModalOpen) {
+      extendHoursForm.resetFields();
+    }
+  }, [extendingStudent, isExtendModalOpen, extendHoursForm]);
 
   // Update edit extension form when editingExtension changes
   useEffect(() => {
@@ -384,9 +413,8 @@ const StudentListView: React.FC = () => {
           alert("⚠️ You must be logged in to delete students");
           return;
         }
-        const authToken = await currentUser.getIdToken();
 
-        const url = `${DATABASE_URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh/${student.id}.json?auth=${authToken}`;
+        const url = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh/${student.id}.json`;
         const response = await fetch(url, {
           method: "DELETE",
         });
@@ -419,12 +447,11 @@ const StudentListView: React.FC = () => {
           alert("⚠️ You must be logged in to add students");
           return;
         }
-        const authToken = await currentUser.getIdToken();
         const { id, ...dataWithoutId } = studentData as any;
 
         console.log("📤 Sending new student data:", dataWithoutId);
 
-        const response = await fetch(`${STUDENT_LIST_URL}?auth=${authToken}`, {
+        const response = await fetch(`${STUDENT_LIST_URL}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dataWithoutId),
@@ -472,8 +499,7 @@ const StudentListView: React.FC = () => {
           alert("⚠️ You must be logged in to update students");
           return;
         }
-        const authToken = await currentUser.getIdToken();
-        const url = `${DATABASE_URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Fc_sinh/${studentData.id}.json?auth=${authToken}`;
+        const url = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh/${studentData.id}.json`;
         console.log("📤 Updating student:", studentData.id, studentData);
         const response = await fetch(url, {
           method: "PUT",
@@ -681,8 +707,7 @@ const StudentListView: React.FC = () => {
       if (!currentUser) {
         throw new Error("You must be logged in to update student hours");
       }
-      const authToken = await currentUser.getIdToken();
-      const studentUrl = `${DATABASE_URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Fc_sinh/${studentId}.json?auth=${authToken}`;
+      const studentUrl = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh/${studentId}.json`;
       const studentUpdateResponse = await fetch(studentUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -787,7 +812,7 @@ const StudentListView: React.FC = () => {
       console.log("📊 Updated total extended hours:", totalExtended);
 
       // Update student's total extended hours
-      const studentUrl = `${DATABASE_URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Fc_sinh/${studentId}.json`;
+      const studentUrl = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh/${studentId}.json`;
       const updateResponse = await fetch(studentUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -930,7 +955,10 @@ const StudentListView: React.FC = () => {
         });
 
         // Cập nhật tổng vào bảng Danh_sách_học_sinh
-        const studentUrl = `${DATABASE_URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Fc_sinh/${extendingStudent.id}.json`;
+        if (!currentUser) {
+          throw new Error("You must be logged in to update student hours");
+        }
+        const studentUrl = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh/${extendingStudent.id}.json`;
         const updateResponse = await fetch(studentUrl, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -1006,7 +1034,9 @@ const StudentListView: React.FC = () => {
       }
     } catch (error) {
       console.error("❌ Error saving extension:", error);
-      alert("❌ Failed to save extension. Check console for details.");
+      alert(
+        "❌ Không lưu được tiện ích mở rộng. Kiểm tra bảng điều khiển để biết thêm chi tiết."
+      );
     }
   };
 
@@ -1610,13 +1640,7 @@ const StudentListView: React.FC = () => {
                   ),
                 },
               ]}
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) =>
-                  `${range[0]}-${range[1]} of ${total} students`,
-              }}
+              pagination={false}
               scroll={{ x: 1200 }}
             />
           </Card>
@@ -1624,9 +1648,7 @@ const StudentListView: React.FC = () => {
 
         {!loading && displayStudents.length === 0 && (
           <Card>
-            <div className="text-center py-20">
-              <p className="text-xl text-gray-600">Chưa có học sinh nào</p>
-            </div>
+            <Empty description="Chưa có học sinh nào" />
           </Card>
         )}
       </div>
@@ -1652,7 +1674,6 @@ const StudentListView: React.FC = () => {
         footer={null}
         width={1000}
         style={{ top: 20 }}
-        bodyStyle={{ padding: 0 }}
       >
         {selectedStudent && (
           <div className="p-6">
@@ -2270,7 +2291,6 @@ const StudentListView: React.FC = () => {
         footer={null}
         width={600}
         style={{ top: 20 }}
-        bodyStyle={{ padding: 0 }}
       >
         <Form
           form={editStudentForm}

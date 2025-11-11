@@ -1,7 +1,10 @@
 import HomePage from "@/components/pages/HomePage";
 import Login from "@/components/pages/Login";
+import NotFoundPage from "@/components/pages/NotFoundPage";
 import TeacherOnboarding from "@/components/TeacherOnboarding";
 import MainLayout from "@/layouts/MainLayout";
+import { Empty } from "antd";
+import { Navigate } from "react-router-dom";
 
 const publicRoutes = [
   {
@@ -12,15 +15,36 @@ const publicRoutes = [
         index: true,
         element: <HomePage />,
       },
+      {
+        path: "about",
+        element: <Empty />,
+      },
+      {
+        path: "courses",
+        element: <Empty />,
+      },
+      {
+        path: "contact",
+        element: <Empty />,
+      },
     ],
   },
   {
-    path: "/login",
+    path: "login",
     element: <Login />,
   },
   {
-    path: "/onboarding",
+    path: "onboarding",
     element: <TeacherOnboarding />,
+  },
+
+  {
+    path: "*",
+    element: <Navigate to={"/404"} />,
+  },
+  {
+    path: "/404",
+    element: <NotFoundPage />,
   },
 ];
 

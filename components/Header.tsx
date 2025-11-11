@@ -13,7 +13,7 @@ const Header = () => {
                         to='/'
                         className={({ isActive }) =>
                             isActive
-                                ? 'text-primary border-primary border-b-2 font-semibold'
+                                ? 'text-primary border-primary border-b-2 '
                                 : 'hover:text-primary text-gray-700'
                         }
                     >
@@ -23,7 +23,7 @@ const Header = () => {
                         to='/courses'
                         className={({ isActive }) =>
                             isActive
-                                ? 'text-primary border-primary border-b-2 font-semibold'
+                                ? 'text-primary border-primary border-b-2 '
                                 : 'hover:text-primary text-gray-700'
                         }
                     >
@@ -33,7 +33,7 @@ const Header = () => {
                         to='/about'
                         className={({ isActive }) =>
                             isActive
-                                ? 'text-primary border-primary border-b-2 font-semibold'
+                                ? 'text-primary border-primary border-b-2 '
                                 : 'hover:text-primary text-gray-700'
                         }
                     >
@@ -43,7 +43,7 @@ const Header = () => {
                         to='/contact'
                         className={({ isActive }) =>
                             isActive
-                                ? 'text-primary border-primary border-b-2 font-semibold'
+                                ? 'text-primary border-primary border-b-2 '
                                 : 'hover:text-primary text-gray-700'
                         }
                     >

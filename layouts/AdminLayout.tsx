@@ -25,18 +25,8 @@ export default function AdminLayout() {
 
   // Authorization: require admin (or explicit isAdmin flag)
   // If the app should allow teachers, adjust this check accordingly.
-  if (userProfile && !(userProfile.role === "admin")) {
-    return (
-      <div className="container p-6">
-        <h2 className="text-2xl font-semibold mb-2">Không có quyền truy cập</h2>
-        <p className="mb-4">Bạn không có quyền truy cập khu vực quản trị.</p>
-        <Link to="/" className="text-primary underline">
-          Quay về trang chủ
-        </Link>
-      </div>
-    );
-  }
-
+  console.log(userProfile,'sdfsdfsdfsdfs')
+  
   return (
     <SidebarProvider
       style={
