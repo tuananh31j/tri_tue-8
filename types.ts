@@ -13,6 +13,7 @@ export type ScheduleEvent = {
     "Student IDs"?: string[]; // Student IDs to prevent duplicate creation
     "Phụ cấp di chuyển"?: string;
     "Nhận xét"?: string;
+    subjectName?: string; // NEW - Subject name for the event
 };
 
 export type FilterType = 'all' | 'study' | 'work';

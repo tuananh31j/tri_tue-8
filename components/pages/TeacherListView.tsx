@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { isAdmin } from "../../config/admins";
 import type { ScheduleEvent } from "../../types";
-import PageHeader from "../../layouts/PageHeader";
 import { DATABASE_URL_BASE } from "@/firebase";
 import {
   Button,
@@ -20,6 +18,7 @@ import {
   Row,
   Col,
   Divider,
+  message,
 } from "antd";
 import {
   SearchOutlined,
@@ -29,14 +28,32 @@ import {
   DeleteOutlined,
   PrinterOutlined,
   CloseOutlined,
+  ClearOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import Loader from "@/components/Loader";
-import { Spin } from "antd/lib";
+import WrapperContent from "@/components/WrapperContent";
 
 const { Option } = Select;
 const { TextArea } = Input;
 const { Title, Text } = Typography;
+
+// Custom debounce hook
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 const TEACHER_LIST_URL = `${DATABASE_URL_BASE}/datasheet/Gi%C3%A1o_vi%C3%AAn.json`;
 const SCHEDULE_URL = `${DATABASE_URL_BASE}/datasheet/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
@@ -76,6 +93,9 @@ const TeacherListView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedBienChe, setSelectedBienChe] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Debounce search term to prevent excessive re-renders
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Ant Design Form instance
   const [form] = Form.useForm();
@@ -357,9 +377,9 @@ const TeacherListView: React.FC = () => {
       });
     }
 
-    // Filter by search term
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
+    // Filter by search term (using debounced value)
+    if (debouncedSearchTerm) {
+      const search = debouncedSearchTerm.toLowerCase();
       filtered = filtered.filter((teacher) => {
         const teacherName = getTeacherName(teacher).toLowerCase();
         const phone = (
@@ -405,25 +425,47 @@ const TeacherListView: React.FC = () => {
     startDate,
     endDate,
     selectedBienChe,
-    searchTerm,
+    debouncedSearchTerm, // Use debounced value instead of raw searchTerm
     currentUser,
     userProfile,
   ]);
 
-  // Group teachers by Biên chế
-  const groupedTeachers = displayTeachers.reduce(
-    (acc, teacher) => {
-      const bienChe = teacher["Biên chế"] || "Chưa phân loại";
-      if (!acc[bienChe]) {
-        acc[bienChe] = [];
-      }
-      acc[bienChe].push(teacher);
-      return acc;
-    },
-    {} as Record<string, typeof displayTeachers>
+  // Group teachers by Biên chế (memoized for performance)
+  const groupedTeachers = useMemo(() => {
+    return displayTeachers.reduce(
+      (acc, teacher) => {
+        const bienChe = teacher["Biên chế"] || "Chưa phân loại";
+        if (!acc[bienChe]) {
+          acc[bienChe] = [];
+        }
+        acc[bienChe].push(teacher);
+        return acc;
+      },
+      {} as Record<string, typeof displayTeachers>
+    );
+  }, [displayTeachers]);
+
+  const sortedGroups = useMemo(
+    () => Object.keys(groupedTeachers).sort(),
+    [groupedTeachers]
   );
 
-  const sortedGroups = Object.keys(groupedTeachers).sort();
+  // Memoized statistics for better performance
+  const totalStats = useMemo(
+    () => ({
+      totalTeachers: displayTeachers.length,
+      totalGroups: sortedGroups.length,
+      totalSessions: displayTeachers.reduce(
+        (sum, t) => sum + t.totalSessions,
+        0
+      ),
+      totalHours: Math.floor(
+        displayTeachers.reduce((sum, t) => sum + t.hours * 60 + t.minutes, 0) /
+          60
+      ),
+    }),
+    [displayTeachers, sortedGroups]
+  );
 
   const handleEditTeacher = (e: React.MouseEvent, teacher: Teacher) => {
     e.stopPropagation();
@@ -480,7 +522,7 @@ const TeacherListView: React.FC = () => {
         });
 
         if (duplicateTeacher) {
-          alert("Email đã tồn tại");
+          message.error("Email đã tồn tại");
           return;
         }
       }
@@ -591,6 +633,18 @@ const TeacherListView: React.FC = () => {
     setEditingTeacher(null);
     setEditModalOpen(true);
   };
+
+  // Memoized search handler to prevent unnecessary re-renders
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchTerm(e.target.value);
+    },
+    []
+  );
+
+  const handleClearSearch = useCallback(() => {
+    setSearchTerm("");
+  }, []);
 
   const months = [
     "January",
@@ -916,439 +970,424 @@ const TeacherListView: React.FC = () => {
   };
 
   return (
-    <>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Add New Teacher button */}
-        <div className="flex justify-end mb-4">
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            size="large"
-            onClick={handleAddTeacher}
-            style={{ backgroundColor: "#36797f" }}
-          >
-            <span className="font-bold">Thêm giáo viên mới</span>
-          </Button>
-        </div>
+    <WrapperContent
+      title="Quản lý giáo viên"
+      toolbar={
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          size="large"
+          onClick={handleAddTeacher}
+          style={{ backgroundColor: "#36797f" }}
+        >
+          Thêm giáo viên mới
+        </Button>
+      }
+    >
+      {/* Search Box */}
+      <Card className="mb-6" title="Tìm kiếm giáo viên">
+        <Input
+          placeholder="🔍 Tìm kiếm theo tên, mã giáo viên, số điện thoại, email..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          prefix={<SearchOutlined />}
+          suffix={
+            searchTerm && (
+              <ClearOutlined
+                onClick={handleClearSearch}
+                style={{ cursor: "pointer", color: "#999" }}
+              />
+            )
+          }
+          size="large"
+          allowClear
+        />
+        {debouncedSearchTerm && (
+          <Text type="secondary" className="mt-2 block">
+            Tìm thấy{" "}
+            <Text strong style={{ color: "#36797f" }}>
+              {displayTeachers.length}
+            </Text>{" "}
+            giáo viên
+          </Text>
+        )}
+      </Card>
 
-        {/* Search Box */}
-        <Card className="mb-6">
-          <Input
-            placeholder="🔍 Tìm kiếm theo tên, mã giáo viên, số điện thoại, email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            prefix={<SearchOutlined />}
-            suffix={
-              searchTerm && (
-                <CloseOutlined
-                  onClick={() => setSearchTerm("")}
-                  style={{ cursor: "pointer", color: "#999" }}
-                />
-              )
-            }
-            size="large"
-            allowClear
-          />
-          {searchTerm && (
-            <Text type="secondary" className="mt-2 block">
-              Tìm thấy{" "}
-              <Text strong style={{ color: "#36797f" }}>
-                {displayTeachers.length}
-              </Text>{" "}
-              giáo viên
-            </Text>
-          )}
-        </Card>
-
-        {/* Filters */}
-        <Card title={<Text strong>Bộ lọc</Text>} className="mb-6">
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} md={6}>
-              <div>
-                <Text strong className="block mb-2">
-                  Tháng
-                </Text>
-                <Select
-                  value={selectedMonth}
-                  onChange={(value) => setSelectedMonth(value)}
-                  style={{ width: "100%" }}
-                  size="large"
-                >
-                  {months.map((month, index) => (
-                    <Option key={index} value={index}>
-                      {month}
-                    </Option>
-                  ))}
-                </Select>
-              </div>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <div>
-                <Text strong className="block mb-2">
-                  Năm
-                </Text>
-                <Select
-                  value={selectedYear}
-                  onChange={(value) => setSelectedYear(value)}
-                  style={{ width: "100%" }}
-                  size="large"
-                >
-                  {[2023, 2024, 2025, 2026].map((year) => (
-                    <Option key={year} value={year}>
-                      {year}
-                    </Option>
-                  ))}
-                </Select>
-              </div>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <div>
-                <Text strong className="block mb-2">
-                  Tình trạng biên chế
-                </Text>
-                <Select
-                  value={selectedBienChe}
-                  onChange={(value) => setSelectedBienChe(value)}
-                  style={{ width: "100%" }}
-                  size="large"
-                >
-                  <Option value="all">Tất cả trạng thái</Option>
-                  {[
-                    ...new Set(
-                      teachers.map((t) => t["Biên chế"] || "Unclassified")
-                    ),
-                  ]
-                    .sort()
-                    .map((bienChe) => (
-                      <Option key={bienChe} value={bienChe}>
-                        {bienChe}
-                      </Option>
-                    ))}
-                </Select>
-              </div>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <div>
-                <Text strong className="block mb-2">
-                  Từ ngày
-                </Text>
-                <DatePicker
-                  value={startDate ? dayjs(startDate) : null}
-                  onChange={(date) =>
-                    setStartDate(date ? date.format("YYYY-MM-DD") : "")
-                  }
-                  style={{ width: "100%" }}
-                  size="large"
-                />
-              </div>
-            </Col>
-          </Row>
-          <Row gutter={[16, 16]} className="mt-4">
-            <Col xs={24} sm={12} md={6}>
-              <div>
-                <Text strong className="block mb-2">
-                  Đến ngày
-                </Text>
-                <DatePicker
-                  value={endDate ? dayjs(endDate) : null}
-                  onChange={(date) =>
-                    setEndDate(date ? date.format("YYYY-MM-DD") : "")
-                  }
-                  style={{ width: "100%" }}
-                  size="large"
-                />
-              </div>
-            </Col>
-          </Row>
-          {(startDate || endDate) && (
-            <Button
-              danger
-              onClick={() => {
-                setStartDate("");
-                setEndDate("");
-              }}
-              className="mt-4"
-            >
-              Xóa bộ lọc ngày
-            </Button>
-          )}
-        </Card>
-
-        {/* Teachers Grid */}
-        {loading ? (
-          <div className="flex h-full items-center justify-center">
-            <Loader />
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {/* Summary Statistics */}
-            <Card
-              style={{
-                background: "linear-gradient(to right, #36797f, #36797f)",
-              }}
-              className="shadow-lg"
-            >
-              <Title
-                level={3}
-                className="text-center mb-6"
-                style={{ color: "white" }}
+      {/* Filters */}
+      <Card title={<Text strong>Bộ lọc</Text>} className="mb-6">
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <Text strong className="block mb-2">
+                Tháng
+              </Text>
+              <Select
+                value={selectedMonth}
+                onChange={(value) => setSelectedMonth(value)}
+                style={{ width: "100%" }}
+                size="large"
               >
-                Tổng quan
-              </Title>
-              <Row gutter={[16, 16]}>
-                <Col xs={12} md={6}>
-                  <Card
-                    className="text-center"
-                    style={{
-                      backgroundColor: "rgba(255, 255, 255, 0.2)",
-                      border: "none",
-                    }}
-                  >
-                    <Statistic
-                      value={displayTeachers.length}
-                      valueStyle={{
-                        color: "white",
-                        fontSize: 32,
-                        fontWeight: "bold",
-                      }}
-                    />
-                    <Text style={{ color: "white", fontSize: 12 }}>
-                      Tổng giáo viên
-                    </Text>
-                  </Card>
-                </Col>
-                <Col xs={12} md={6}>
-                  <Card
-                    className="text-center"
-                    style={{
-                      backgroundColor: "rgba(255, 255, 255, 0.2)",
-                      border: "none",
-                    }}
-                  >
-                    <Statistic
-                      value={sortedGroups.length}
-                      valueStyle={{
-                        color: "white",
-                        fontSize: 32,
-                        fontWeight: "bold",
-                      }}
-                    />
-                    <Text style={{ color: "white", fontSize: 12 }}>
-                      Loại biên chế
-                    </Text>
-                  </Card>
-                </Col>
-                <Col xs={12} md={6}>
-                  <Card
-                    className="text-center"
-                    style={{
-                      backgroundColor: "rgba(255, 255, 255, 0.2)",
-                      border: "none",
-                    }}
-                  >
-                    <Statistic
-                      value={displayTeachers.reduce(
-                        (sum, t) => sum + t.totalSessions,
-                        0
-                      )}
-                      valueStyle={{
-                        color: "white",
-                        fontSize: 32,
-                        fontWeight: "bold",
-                      }}
-                    />
-                    <Text style={{ color: "white", fontSize: 12 }}>
-                      Tổng buổi dạy
-                    </Text>
-                  </Card>
-                </Col>
-                <Col xs={12} md={6}>
-                  <Card
-                    className="text-center"
-                    style={{
-                      backgroundColor: "rgba(255, 255, 255, 0.2)",
-                      border: "none",
-                    }}
-                  >
-                    <Statistic
-                      value={`${Math.floor(
-                        displayTeachers.reduce(
-                          (sum, t) => sum + t.hours * 60 + t.minutes,
-                          0
-                        ) / 60
-                      )}h`}
-                      valueStyle={{
-                        color: "white",
-                        fontSize: 32,
-                        fontWeight: "bold",
-                      }}
-                    />
-                    <Text style={{ color: "white", fontSize: 12 }}>
-                      Tổng giờ dạy
-                    </Text>
-                  </Card>
-                </Col>
-              </Row>
-            </Card>
+                {months.map((month, index) => (
+                  <Option key={index} value={index}>
+                    {month}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <Text strong className="block mb-2">
+                Năm
+              </Text>
+              <Select
+                value={selectedYear}
+                onChange={(value) => setSelectedYear(value)}
+                style={{ width: "100%" }}
+                size="large"
+              >
+                {[2023, 2024, 2025, 2026].map((year) => (
+                  <Option key={year} value={year}>
+                    {year}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <Text strong className="block mb-2">
+                Tình trạng biên chế
+              </Text>
+              <Select
+                value={selectedBienChe}
+                onChange={(value) => setSelectedBienChe(value)}
+                style={{ width: "100%" }}
+                size="large"
+              >
+                <Option value="all">Tất cả trạng thái</Option>
+                {[
+                  ...new Set(
+                    teachers.map((t) => t["Biên chế"] || "Unclassified")
+                  ),
+                ]
+                  .sort()
+                  .map((bienChe) => (
+                    <Option key={bienChe} value={bienChe}>
+                      {bienChe}
+                    </Option>
+                  ))}
+              </Select>
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <Text strong className="block mb-2">
+                Từ ngày
+              </Text>
+              <DatePicker
+                value={startDate ? dayjs(startDate) : null}
+                onChange={(date) =>
+                  setStartDate(date ? date.format("YYYY-MM-DD") : "")
+                }
+                style={{ width: "100%" }}
+                size="large"
+              />
+            </div>
+          </Col>
+        </Row>
+        <Row gutter={[16, 16]} className="mt-4">
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <Text strong className="block mb-2">
+                Đến ngày
+              </Text>
+              <DatePicker
+                value={endDate ? dayjs(endDate) : null}
+                onChange={(date) =>
+                  setEndDate(date ? date.format("YYYY-MM-DD") : "")
+                }
+                style={{ width: "100%" }}
+                size="large"
+              />
+            </div>
+          </Col>
+        </Row>
+        {(startDate || endDate) && (
+          <Button
+            danger
+            onClick={() => {
+              setStartDate("");
+              setEndDate("");
+            }}
+            className="mt-4"
+          >
+            Xóa bộ lọc ngày
+          </Button>
+        )}
+      </Card>
 
-            {sortedGroups.map((bienChe) => {
-              const teachersInGroup = groupedTeachers[bienChe];
-
-              const columns = [
-                {
-                  title: "#",
-                  key: "index",
-                  width: 60,
-                  render: (_: any, __: any, index: number) => index + 1,
-                },
-                {
-                  title: "Họ tên",
-                  key: "name",
-                  render: (_: any, teacher: any) => (
-                    <Text strong>{getTeacherName(teacher)}</Text>
-                  ),
-                },
-                {
-                  title: "Số điện thoại",
-                  dataIndex: "SĐT",
-                  key: "phone",
-                  render: (_: any, teacher: any) =>
-                    teacher["SĐT"] || teacher["Số điện thoại"] || "-",
-                },
-                {
-                  title: "Email",
-                  key: "email",
-                  render: (_: any, teacher: any) =>
-                    teacher["Email"] || teacher["Email công ty"] || "-",
-                },
-                {
-                  title: "Tổng giờ dạy",
-                  key: "hours",
-                  align: "center" as const,
-                  render: (_: any, teacher: any) => (
-                    <Text strong style={{ color: "#36797f" }}>
-                      {teacher.hours}h {teacher.minutes}p
-                    </Text>
-                  ),
-                },
-                {
-                  title: "Buổi dạy",
-                  key: "sessions",
-                  align: "center" as const,
-                  render: (_: any, teacher: any) => (
-                    <Tag color="red" style={{ fontWeight: "bold" }}>
-                      {teacher.totalSessions} Buổi
-                    </Tag>
-                  ),
-                },
-                {
-                  title: "Trợ cấp đi lại",
-                  key: "allowance",
-                  align: "center" as const,
-                  render: (_: any, teacher: any) => (
-                    <Text strong style={{ color: "#52c41a" }}>
-                      {teacher.totalTravelAllowance
-                        ? teacher.totalTravelAllowance.toLocaleString("vi-VN")
-                        : "0"}{" "}
-                      VNĐ
-                    </Text>
-                  ),
-                },
-                {
-                  title: "Hành động",
-                  key: "actions",
-                  align: "center" as const,
-                  render: (_: any, teacher: any) => (
-                    <Space direction="vertical">
-                      <Button
-                        type="default"
-                        icon={<EyeOutlined />}
-                        size="small"
-                        onClick={() => {
-                          setSelectedTeacher(teacher);
-                          setModalOpen(true);
-                        }}
-                        style={{ borderColor: "#36797f", color: "#36797f" }}
-                      >
-                        Xem
-                      </Button>
-                      <Button
-                        type="default"
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={(e) => handleEditTeacher(e, teacher)}
-                        style={{ borderColor: "#1890ff", color: "#1890ff" }}
-                      >
-                        Sửa
-                      </Button>
-                      <Button
-                        danger
-                        icon={<DeleteOutlined />}
-                        size="small"
-                        onClick={(e) => handleDeleteTeacher(e, teacher)}
-                      >
-                        Xóa
-                      </Button>
-                    </Space>
-                  ),
-                },
-              ];
-
-              return (
+      {/* Teachers Grid */}
+      {loading ? (
+        <div className="flex h-full items-center justify-center">
+          <Loader />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-y-6 mb-12">
+          {/* Summary Statistics */}
+          <Card
+            style={{
+              background: "linear-gradient(to right, #36797f, #36797f)",
+            }}
+            className="shadow-lg"
+          >
+            <Title
+              level={3}
+              className="text-center mb-6"
+              style={{ color: "white" }}
+            >
+              Tổng quan
+            </Title>
+            <Row gutter={[16, 16]}>
+              <Col xs={12} md={6}>
                 <Card
-                  key={bienChe}
-                  className="mb-6"
-                  title={
-                    <div className="flex items-center justify-between">
-                      <Space>
-                        <Tag
-                          color="#36797f"
-                          style={{
-                            fontSize: 16,
-                            padding: "4px 16px",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {teachersInGroup.length}
-                        </Tag>
-                        <Text strong style={{ fontSize: 18 }}>
-                          {bienChe}
-                        </Text>
-                      </Space>
-                      <Tag
-                        style={{
-                          backgroundColor: "#36797f",
-                          color: "white",
-                          fontSize: 12,
-                        }}
-                      >
-                        {teachersInGroup.length} giáo viên
-                      </Tag>
-                    </div>
-                  }
-                  headStyle={{
-                    background: "linear-gradient(to right, #36797f, #36797f)",
-                    color: "white",
+                  className="text-center"
+                  style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    border: "none",
                   }}
                 >
-                  <Table
-                    columns={columns}
-                    dataSource={teachersInGroup}
-                    pagination={false}
-                    scroll={{ y: 600 }}
-                    rowKey={(record) =>
-                      record["Mã giáo viên"] ||
-                      record["Họ và tên"] ||
-                      Math.random().toString()
-                    }
-                    rowClassName="hover:bg-red-50"
+                  <Statistic
+                    value={totalStats.totalTeachers}
+                    valueStyle={{
+                      color: "white",
+                      fontSize: 32,
+                      fontWeight: "bold",
+                    }}
                   />
+                  <Text style={{ color: "white", fontSize: 12 }}>
+                    Tổng giáo viên
+                  </Text>
                 </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              </Col>
+              <Col xs={12} md={6}>
+                <Card
+                  className="text-center"
+                  style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    border: "none",
+                  }}
+                >
+                  <Statistic
+                    value={totalStats.totalGroups}
+                    valueStyle={{
+                      color: "white",
+                      fontSize: 32,
+                      fontWeight: "bold",
+                    }}
+                  />
+                  <Text style={{ color: "white", fontSize: 12 }}>
+                    Loại biên chế
+                  </Text>
+                </Card>
+              </Col>
+              <Col xs={12} md={6}>
+                <Card
+                  className="text-center"
+                  style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    border: "none",
+                  }}
+                >
+                  <Statistic
+                    value={totalStats.totalSessions}
+                    valueStyle={{
+                      color: "white",
+                      fontSize: 32,
+                      fontWeight: "bold",
+                    }}
+                  />
+                  <Text style={{ color: "white", fontSize: 12 }}>
+                    Tổng buổi dạy
+                  </Text>
+                </Card>
+              </Col>
+              <Col xs={12} md={6}>
+                <Card
+                  className="text-center"
+                  style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    border: "none",
+                  }}
+                >
+                  <Statistic
+                    value={`${totalStats.totalHours}h`}
+                    valueStyle={{
+                      color: "white",
+                      fontSize: 32,
+                      fontWeight: "bold",
+                    }}
+                  />
+                  <Text style={{ color: "white", fontSize: 12 }}>
+                    Tổng giờ dạy
+                  </Text>
+                </Card>
+              </Col>
+            </Row>
+          </Card>
+
+          {sortedGroups.map((bienChe) => {
+            const teachersInGroup = groupedTeachers[bienChe];
+
+            const columns = [
+              {
+                title: "#",
+                key: "index",
+                width: 60,
+                render: (_: any, __: any, index: number) => index + 1,
+              },
+              {
+                title: "Họ tên",
+                key: "name",
+                render: (_: any, teacher: any) => (
+                  <Text strong>{getTeacherName(teacher)}</Text>
+                ),
+              },
+              {
+                title: "Số điện thoại",
+                dataIndex: "SĐT",
+                key: "phone",
+                render: (_: any, teacher: any) =>
+                  teacher["SĐT"] || teacher["Số điện thoại"] || "-",
+              },
+              {
+                title: "Email",
+                key: "email",
+                render: (_: any, teacher: any) =>
+                  teacher["Email"] || teacher["Email công ty"] || "-",
+              },
+              {
+                title: "Tổng giờ dạy",
+                key: "hours",
+                align: "center" as const,
+                render: (_: any, teacher: any) => (
+                  <Text strong style={{ color: "#36797f" }}>
+                    {teacher.hours}h {teacher.minutes}p
+                  </Text>
+                ),
+              },
+              {
+                title: "Buổi dạy",
+                key: "sessions",
+                align: "center" as const,
+                render: (_: any, teacher: any) => (
+                  <Tag color="red" style={{ fontWeight: "bold" }}>
+                    {teacher.totalSessions} Buổi
+                  </Tag>
+                ),
+              },
+              {
+                title: "Trợ cấp đi lại",
+                key: "allowance",
+                align: "center" as const,
+                render: (_: any, teacher: any) => (
+                  <Text strong style={{ color: "#52c41a" }}>
+                    {teacher.totalTravelAllowance
+                      ? teacher.totalTravelAllowance.toLocaleString("vi-VN")
+                      : "0"}{" "}
+                    VNĐ
+                  </Text>
+                ),
+              },
+              {
+                title: "Hành động",
+                key: "actions",
+                align: "center" as const,
+                render: (_: any, teacher: any) => (
+                  <Space direction="vertical">
+                    <Button
+                      type="default"
+                      icon={<EyeOutlined />}
+                      size="small"
+                      onClick={() => {
+                        setSelectedTeacher(teacher);
+                        setModalOpen(true);
+                      }}
+                      style={{ borderColor: "#36797f", color: "#36797f" }}
+                    >
+                      Xem
+                    </Button>
+                    <Button
+                      type="default"
+                      icon={<EditOutlined />}
+                      size="small"
+                      onClick={(e) => handleEditTeacher(e, teacher)}
+                      style={{ borderColor: "#1890ff", color: "#1890ff" }}
+                    >
+                      Sửa
+                    </Button>
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      size="small"
+                      onClick={(e) => handleDeleteTeacher(e, teacher)}
+                    >
+                      Xóa
+                    </Button>
+                  </Space>
+                ),
+              },
+            ];
+
+            return (
+              <Card
+                key={bienChe}
+                className="mb-6"
+                title={
+                  <div className="flex items-center justify-between">
+                    <Space>
+                      <Text
+                        className="text-white"
+                        color="white"
+                        strong
+                        style={{ fontSize: 18, color: "white" }}
+                      >
+                        {bienChe}
+                      </Text>
+                    </Space>
+                    <Tag
+                      style={{
+                        backgroundColor: "#36797f",
+                        color: "white",
+                        fontSize: 12,
+                      }}
+                    >
+                      {teachersInGroup.length} giáo viên
+                    </Tag>
+                  </div>
+                }
+                headStyle={{
+                  background: "linear-gradient(to right, #36797f, #36797f)",
+                  color: "white",
+                }}
+              >
+                <Table
+                  columns={columns}
+                  dataSource={teachersInGroup}
+                  pagination={false}
+                  scroll={{ y: 600 }}
+                  rowKey={(record) =>
+                    record["Mã giáo viên"] ||
+                    record["Họ và tên"] ||
+                    Math.random().toString()
+                  }
+                  rowClassName="hover:bg-red-50"
+                />
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Teacher Detail Modal */}
       <Modal
@@ -1655,7 +1694,7 @@ const TeacherListView: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </>
+    </WrapperContent>
   );
 };
 

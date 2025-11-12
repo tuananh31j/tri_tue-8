@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import React, { useState } from "react";
+import React, { useLayoutEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Form, Input, Button, Alert, Spin } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
@@ -10,6 +10,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
 
   const handleEmailPasswordSubmit = async (values: any) => {
     setError("");
@@ -43,6 +44,12 @@ const Login: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useLayoutEffect(() => {
+    if (currentUser) {
+      navigate("/workspace");
+    }
+  }, [currentUser]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -127,9 +134,7 @@ const Login: React.FC = () => {
                 </span>
               }
               name="password"
-              rules={[
-                { required: true, message: "Vui lòng điền mật khẩu" },
-              ]}
+              rules={[{ required: true, message: "Vui lòng điền mật khẩu" }]}
             >
               <Input.Password
                 prefix={<LockOutlined />}

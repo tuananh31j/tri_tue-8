@@ -1,16 +1,13 @@
-import Receipts from "@/components/pages/Receipts";
+import Receipts from "@/components/Receipts";
 import WrapperContent from "@/components/WrapperContent";
+import { message } from "antd";
 import React from "react";
 
 const InvoicePage = () => {
   return (
     <>
       <WrapperContent title="Hóa đơn & Biên nhận">
-        <section className="container">
-          <div id="receipts-root" className="mt-6">
-            <Receipts />
-          </div>
-        </section>
+        <Receipts />
       </WrapperContent>
     </>
   );

@@ -5,8 +5,6 @@ import { KanbanModal } from "../KanbanModal";
 import { DATABASE_URL_BASE } from "../../firebase";
 import { SUBJECT_COLORS } from "../../constants/colors";
 
-// 🎨 ANT DESIGN IMPORTS
-import * as AntD from "antd";
 import {
   Calendar,
   Badge,
@@ -31,6 +29,7 @@ import {
   Col,
   Typography,
   ConfigProvider,
+  Table,
 } from "antd";
 import {
   PlusOutlined,
@@ -44,12 +43,14 @@ import {
   LeftOutlined,
   RightOutlined,
   CheckCircleOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/vi";
 import Card from "antd/es/card/Card";
 import WrapperContent from "@/components/WrapperContent";
-
+import { LibraryBig } from "lucide-react";
+import { Empty } from "antd/lib";
 dayjs.locale("vi");
 
 const { Title, Text, Paragraph } = Typography;
@@ -60,6 +61,42 @@ const SCHEDULE_URL = `${URL_BASE}/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
 const KANBAN_URL = `${URL_BASE}/Kanban.json`;
 const STUDENT_LIST_URL = `${URL_BASE}/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh.json`;
 const TEACHER_LIST_URL = `${URL_BASE}/Gi%C3%A1o_vi%C3%AAn.json`;
+
+const subjectMap: Record<string, string> = {
+  Mathematics: "Toán",
+  Literature: "Ngữ văn",
+  English: "Tiếng Anh",
+  Physics: "Vật lý",
+  Chemistry: "Hóa học",
+  Biology: "Sinh học",
+  History: "Lịch sử",
+  Geography: "Địa lý",
+  CivicEducation: "Giáo dục công dân",
+  Informatics: "Tin học",
+  Technology: "Công nghệ",
+  PhysicalEducation: "Thể dục",
+  Music: "Âm nhạc",
+  Art: "Mỹ thuật",
+  DefenseEducation: "Giáo dục quốc phòng",
+  Science: "Khoa học tự nhiên",
+  SocialScience: "Khoa học xã hội",
+  Ethics: "Đạo đức",
+  CareerOrientation: "Hướng nghiệp",
+  Reading: "Đọc hiểu",
+  Writing: "Tập làm văn",
+  MathematicalLogic: "Toán tư duy",
+  ComputerScience: "Khoa học máy tính",
+  Programming: "Lập trình",
+  STEM: "STEM",
+  LifeSkills: "Kỹ năng sống",
+  EnvironmentalEducation: "Giáo dục môi trường",
+  MoralEducation: "Giáo dục đạo đức",
+  Astronomy: "Thiên văn học",
+  Economics: "Kinh tế học",
+  Psychology: "Tâm lý học",
+  Philosophy: "Triết học",
+  none: "--",
+};
 
 const getMonday = (d: Date): Date => {
   const date = new Date(d);
@@ -146,7 +183,6 @@ const ScheduleViewAntd: React.FC<ScheduleViewProps> = ({
   const [allEvents, setAllEvents] = useState<ScheduleEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeFilter, setActiveFilter] = useState<FilterType>(initialFilter);
-
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(
     null
   );
@@ -361,308 +397,278 @@ const ScheduleViewAntd: React.FC<ScheduleViewProps> = ({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  return (
-    <WrapperContent title="Lịch">
-      <ConfigProvider
-        theme={{
-          token: {
-            colorPrimary: "#36797f",
-            borderRadius: 8,
-          },
-        }}
-      >
-        <div className="p-4">
-          {/* Header */}
-          <Card className="mb-4" style={{ background: "#36797f" }}>
-            <Row gutter={[16, 16]} align="middle" justify="space-between">
-              <Col xs={24} md={12}>
-                <Space align="center">
-                  <Title level={2} style={{ color: "white", margin: 0 }}>
-                    📅 Lịch Học & Công Việc
-                  </Title>
-                </Space>
-              </Col>
-              <Col xs={24} md={12}>
-                <Space
-                  wrap
-                  style={{ width: "100%", justifyContent: "flex-end" }}
-                >
-                  <DatePicker
-                    value={dayjs(currentDate)}
-                    onChange={(date) => date && setCurrentDate(date.toDate())}
-                    format="DD/MM/YYYY"
-                  />
-                  <Button
-                    type="primary"
-                    onClick={() => setCurrentDate(new Date())}
-                  >
-                    Hôm nay
-                  </Button>
-                  <Button
-                    icon={<LeftOutlined />}
-                    onClick={() => changeWeek(-7)}
-                  >
-                    Tuần trước
-                  </Button>
-                  <Button
-                    icon={<RightOutlined />}
-                    onClick={() => changeWeek(7)}
-                  >
-                    Tuần sau
-                  </Button>
-                </Space>
-              </Col>
-            </Row>
-          </Card>
-
-          {/* Schedule Grid */}
-          <Card>
-            <div className="overflow-x-auto">
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th
-                      style={{
-                        padding: "12px",
-                        border: "1px solid #f0f0f0",
-                        minWidth: "100px",
-                      }}
-                    ></th>
-                    {[
-                      "Thứ 2",
-                      "Thứ 3",
-                      "Thứ 4",
-                      "Thứ 5",
-                      "Thứ 6",
-                      "Thứ 7",
-                      "Chủ nhật",
-                    ].map((day, i) => {
-                      const isToday =
-                        weekDates[i].getTime() === today.getTime();
-                      return (
-                        <th
-                          key={day}
-                          style={{
-                            padding: "12px",
-                            border: "1px solid #f0f0f0",
-                            background: isToday ? "#e6f7ff" : "#fafafa",
-                            fontWeight: "bold",
-                            minWidth: "180px",
-                          }}
-                        >
-                          <div>{day}</div>
-                          <div style={{ fontSize: "12px", color: "#666" }}>
-                            {formatDate(weekDates[i])}
-                          </div>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {["Sáng", "Chiều", "Tối"].map((session, sessionIndex) => (
-                    <tr key={session}>
-                      <td
-                        style={{
-                          padding: "12px",
-                          border: "1px solid #f0f0f0",
-                          background: "#fafafa",
-                          fontWeight: "600",
-                          textAlign: "right",
-                        }}
-                      >
-                        {session}
-                      </td>
-                      {weekDates.map((date, dayIndex) => {
-                        const eventsInSlot = eventsForWeek
-                          .filter((event) => {
-                            const eventDate = new Date(event["Ngày"]);
-                            if (
-                              eventDate.getFullYear() !== date.getFullYear() ||
-                              eventDate.getMonth() !== date.getMonth() ||
-                              eventDate.getDate() !== date.getDate()
-                            ) {
-                              return false;
-                            }
-
-                            const startHour = parseInt(
-                              (event["Giờ bắt đầu"] || "0:0").split(":")[0]
-                            );
-                            if (session === "Sáng") return startHour < 12;
-                            if (session === "Chiều")
-                              return startHour >= 12 && startHour < 18;
-                            if (session === "Tối") return startHour >= 18;
-                            return false;
-                          })
-                          .sort((a, b) =>
-                            (a["Giờ bắt đầu"] || "00:00").localeCompare(
-                              b["Giờ bắt đầu"] || "00:00"
-                            )
-                          );
-
-                        return (
-                          <td
-                            key={`${session}-${dayIndex}`}
-                            style={{
-                              padding: "8px",
-                              border: "1px solid #f0f0f0",
-                              minHeight: "120px",
-                              verticalAlign: "top",
-                              cursor: "pointer",
-                              position: "relative",
-                            }}
-                          >
-                            {eventsInSlot.length > 0 && (
-                              <Badge
-                                count={eventsInSlot.length}
-                                style={{
-                                  position: "absolute",
-                                  top: "4px",
-                                  right: "4px",
-                                }}
-                              />
-                            )}
-                            <Space
-                              direction="vertical"
-                              style={{ width: "100%" }}
-                              size="small"
-                            >
-                              {eventsInSlot.map((event) => {
-                                const colors = getSubjectColor(
-                                  event["Tên công việc"]
-                                );
-
-                                console.log(colors, "vbgfbfgb");
-                                return (
-                                  <Card
-                                    key={event.id}
-                                    size="small"
-                                    hoverable
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCardClick(event);
-                                    }}
-                                    style={{
-                                      borderLeft: `4px solid ${colors.antdColor}`,
-                                    }}
-                                    actions={[
-                                      <Tooltip title="Sửa">
-                                        <EditOutlined
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleOpenEditModal(event);
-                                          }}
-                                        />
-                                      </Tooltip>,
-                                      <Tooltip title="Xóa">
-                                        <Popconfirm
-                                          title="Xác nhận xóa"
-                                          description="Bạn có chắc muốn xóa lịch học này?"
-                                          onConfirm={(e) => {
-                                            e?.stopPropagation();
-                                            handleDeleteEvent(event);
-                                          }}
-                                          onCancel={(e) => e?.stopPropagation()}
-                                          okText="Xóa"
-                                          cancelText="Hủy"
-                                        >
-                                          <DeleteOutlined
-                                            onClick={(e) => e.stopPropagation()}
-                                          />
-                                        </Popconfirm>
-                                      </Tooltip>,
-                                    ]}
-                                  >
-                                    <div
-                                      className="line-clamp-3"
-                                      style={{
-                                        fontSize: "12px",
-                                        fontWeight: "bold",
-                                      }}
-                                    >
-                                      {event["Tên công việc"]}
-                                    </div>
-                                    <div
-                                      style={{
-                                        fontSize: "11px",
-                                        color: "#666",
-                                      }}
-                                    >
-                                      {event["Giờ bắt đầu"]} -{" "}
-                                      {event["Giờ kết thúc"]}
-                                    </div>
-                                  </Card>
-                                );
-                              })}
-                            </Space>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          {/* Floating Action Button */}
-          <FloatButton
-            icon={<PlusOutlined />}
-            type="primary"
-            style={{ right: 24, bottom: 24 }}
-            onClick={handleOpenAddModal}
-          />
-
-          {/* Modals */}
-          <DayTaskListModal
-            isOpen={isDayListModalOpen}
-            onClose={() => setDayListModalOpen(false)}
-            date={selectedDate}
-            allEvents={allEvents}
-            onEventClick={(event) => {
-              setSelectedEvent(event);
-              setDayListModalOpen(false);
-              setDetailModalOpen(true);
-            }}
-            onAddTask={handleOpenAddModal}
-            onDelete={handleDeleteEvent}
-            onEdit={(event) => {
-              setEditingEvent(event);
-              setDayListModalOpen(false);
-              setAddModalOpen(true);
-            }}
-          />
-
-          <TaskDetailModal
-            isOpen={isDetailModalOpen}
-            onClose={() => setDetailModalOpen(false)}
-            event={selectedEvent}
-            onViewKanban={handleViewKanban}
-            onEdit={handleOpenEditModal}
-          />
-
-          <AddTaskModal
-            isOpen={isAddModalOpen}
-            onClose={() => {
-              setAddModalOpen(false);
-              setEditingEvent(null);
-              form.resetFields();
-            }}
-            onSaveTask={handleSaveTask}
-            eventToEdit={editingEvent}
-            form={form}
-            students={students}
-            teachers={teachers}
-          />
-
-          <KanbanModal
-            isOpen={isKanbanModalOpen}
-            onClose={() => setKanbanModalOpen(false)}
-            event={selectedEvent}
-            onUpdate={fetchEvents}
-          />
+  // Table columns for Ant Design Table
+  const tableColumns = [
+    {
+      title: "",
+      dataIndex: "session",
+      key: "session",
+      width: 100,
+      fixed: "left" as const,
+      render: (session: string) => (
+        <div
+          style={{ fontWeight: "600", textAlign: "right", paddingRight: 12 }}
+        >
+          {session}
         </div>
-      </ConfigProvider>
+      ),
+    },
+    ...weekDates.map((date, dayIndex) => ({
+      title: () => {
+        const dayNames = [
+          "Thứ 2",
+          "Thứ 3",
+          "Thứ 4",
+          "Thứ 5",
+          "Thứ 6",
+          "Thứ 7",
+          "Chủ nhật",
+        ];
+        const isToday = date.getTime() === today.getTime();
+        return (
+          <div
+            style={{
+              padding: "12px 0",
+              background: isToday ? "#e6f7ff" : "#fafafa",
+              fontWeight: "bold",
+              minWidth: "180px",
+              textAlign: "center",
+            }}
+          >
+            <div>{dayNames[dayIndex]}</div>
+            <div style={{ fontSize: "12px", color: "#666" }}>
+              {formatDate(date)}
+            </div>
+          </div>
+        );
+      },
+      dataIndex: `day_${dayIndex}`,
+      key: `day_${dayIndex}`,
+      width: 180,
+      render: (_: any, record: any, rowIndex: number) => {
+        const session = record.session;
+        const currentDate = weekDates[dayIndex];
+        const eventsInSlot = eventsForWeek
+          .filter((event) => {
+            const eventDate = new Date(event["Ngày"]);
+            if (
+              eventDate.getFullYear() !== currentDate.getFullYear() ||
+              eventDate.getMonth() !== currentDate.getMonth() ||
+              eventDate.getDate() !== currentDate.getDate()
+            ) {
+              return false;
+            }
+
+            const startHour = parseInt(
+              (event["Giờ bắt đầu"] || "0:0").split(":")[0]
+            );
+            if (session === "Sáng") return startHour < 12;
+            if (session === "Chiều") return startHour >= 12 && startHour < 18;
+            if (session === "Tối") return startHour >= 18;
+            return false;
+          })
+          .sort((a, b) =>
+            (a["Giờ bắt đầu"] || "00:00").localeCompare(
+              b["Giờ bắt đầu"] || "00:00"
+            )
+          );
+
+        return (
+          <div
+            style={{
+              padding: "8px",
+              minHeight: "120px",
+              position: "relative",
+              cursor: "pointer",
+            }}
+            onClick={() => handleSlotClick(currentDate, session)}
+          >
+            {eventsInSlot.length > 0 && (
+              <Badge
+                count={eventsInSlot.length}
+                style={{
+                  position: "absolute",
+                  top: "4px",
+                  right: "4px",
+                }}
+              />
+            )}
+            <Space direction="vertical" style={{ width: "100%" }} size="small">
+              {eventsInSlot.map((event) => {
+                const colors = getSubjectColor(event["Tên công việc"]);
+
+                return (
+                  <Card
+                    key={event.id}
+                    size="small"
+                    hoverable
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCardClick(event);
+                    }}
+                    style={{
+                      borderLeft: `4px solid ${colors.antdColor}`,
+                    }}
+                    actions={[
+                      <Tooltip title="Sửa">
+                        <EditOutlined
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditModal(event);
+                          }}
+                        />
+                      </Tooltip>,
+                      <Tooltip title="Xóa">
+                        <Popconfirm
+                          title="Xác nhận xóa"
+                          description="Bạn có chắc muốn xóa lịch học này?"
+                          onConfirm={(e) => {
+                            e?.stopPropagation();
+                            handleDeleteEvent(event);
+                          }}
+                          onCancel={(e) => e?.stopPropagation()}
+                          okText="Xóa"
+                          cancelText="Hủy"
+                        >
+                          <DeleteOutlined
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </Popconfirm>
+                      </Tooltip>,
+                    ]}
+                  >
+                    <div
+                      className="line-clamp-3"
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {event.subjectName ||
+                        subjectMap[
+                          event["Tên công việc"].split(" - ").at(-1) || "none"
+                        ] ||
+                        "--"}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "#666",
+                      }}
+                    >
+                      {event["Giờ bắt đầu"]} - {event["Giờ kết thúc"]}
+                    </div>
+                  </Card>
+                );
+              })}
+            </Space>
+          </div>
+        );
+      },
+    })),
+  ];
+
+  // Table data source
+  const tableData = [
+    { key: "morning", session: "Sáng" },
+    { key: "afternoon", session: "Chiều" },
+    { key: "evening", session: "Tối" },
+  ];
+
+  return (
+    <WrapperContent
+      title="Lịch Học & Công Việc"
+      toolbar={
+        <Space wrap style={{ width: "100%", justifyContent: "flex-end" }}>
+          <DatePicker
+            value={dayjs(currentDate)}
+            onChange={(date) => date && setCurrentDate(date.toDate())}
+            format="DD/MM/YYYY"
+          />
+          <Button type="primary" onClick={() => setCurrentDate(new Date())}>
+            Hôm nay
+          </Button>
+          <Button icon={<LeftOutlined />} onClick={() => changeWeek(-7)}>
+            Tuần trước
+          </Button>
+          <Button icon={<RightOutlined />} onClick={() => changeWeek(7)}>
+            Tuần sau
+          </Button>
+        </Space>
+      }
+    >
+      <div className="p-4">
+        {/* Header */}
+
+        {/* Schedule Grid */}
+        <Card>
+          <Table
+            scroll={{ y: 55 * 10, x: 1200 }}
+            columns={tableColumns}
+            dataSource={tableData}
+            pagination={false}
+            size="small"
+            bordered
+          />
+        </Card>
+
+        {/* Floating Action Button */}
+        <FloatButton
+          icon={<PlusOutlined />}
+          type="primary"
+          style={{ right: 24, bottom: 24 }}
+          onClick={handleOpenAddModal}
+        />
+
+        {/* Modals */}
+        <DayTaskListModal
+          isOpen={isDayListModalOpen}
+          onClose={() => setDayListModalOpen(false)}
+          date={selectedDate}
+          allEvents={allEvents}
+          onEventClick={(event) => {
+            setSelectedEvent(event);
+            setDayListModalOpen(false);
+            setDetailModalOpen(true);
+          }}
+          onAddTask={handleOpenAddModal}
+          onDelete={handleDeleteEvent}
+          onEdit={(event) => {
+            setEditingEvent(event);
+            setDayListModalOpen(false);
+            setAddModalOpen(true);
+          }}
+        />
+
+        <TaskDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={() => setDetailModalOpen(false)}
+          event={selectedEvent}
+          onViewKanban={handleViewKanban}
+          onEdit={handleOpenEditModal}
+        />
+
+        <AddTaskModal
+          isOpen={isAddModalOpen}
+          onClose={() => {
+            setAddModalOpen(false);
+            setEditingEvent(null);
+            form.resetFields();
+          }}
+          onSaveTask={handleSaveTask}
+          eventToEdit={editingEvent}
+          form={form}
+          students={students}
+          teachers={teachers}
+        />
+
+        <KanbanModal
+          isOpen={isKanbanModalOpen}
+          onClose={() => setKanbanModalOpen(false)}
+          event={selectedEvent}
+          onUpdate={fetchEvents}
+        />
+      </div>
     </WrapperContent>
   );
 };
@@ -687,11 +693,16 @@ const DayTaskListModal: React.FC<{
   onDelete,
   onEdit,
 }) => {
+  const { userProfile } = useAuth();
   if (!date) return null;
-
+  const isAdmin = React.useMemo(
+    () => userProfile?.role === "admin",
+    [userProfile]
+  );
   const dayEvents = allEvents.filter((event) => {
     if (!event["Ngày"]) return false;
     const eventDate = new Date(event["Ngày"]);
+    if (!isAdmin && event["Teacher ID"] !== userProfile?.uid) return false;
     return eventDate.toDateString() === date.toDateString();
   });
 
@@ -715,7 +726,22 @@ const DayTaskListModal: React.FC<{
     });
   });
 
-  const teachers = Object.keys(eventsByTeacher).sort();
+  // const teachers = Object.keys(eventsByTeacher).sort();
+
+  const teachers = Object.values(eventsByTeacher)
+    .flat()
+    .map((item) => ({
+      email: item["Email giáo viên"],
+      name: item["Giáo viên phụ trách"],
+      teacherId: item["Teacher ID"],
+    }))
+    .filter((item) => {
+      if (isAdmin) return true;
+      return item.teacherId === userProfile?.uid;
+    })
+    .sort();
+
+  console.log(teachers, "sfsdfffff");
 
   return (
     <Modal
@@ -753,14 +779,11 @@ const DayTaskListModal: React.FC<{
       </Paragraph>
 
       {dayEvents.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 0" }}>
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>📭</div>
-          <Paragraph>Chưa có lịch học nào trong ngày này</Paragraph>
-        </div>
+        <Empty description="Không có lịch học nào cho ngày này." />
       ) : (
         <Space direction="vertical" style={{ width: "100%" }} size="large">
           {teachers.map((teacher) => (
-            <Card key={teacher} size="small">
+            <Card key={teacher.teacherId} size="small">
               <Space direction="vertical" style={{ width: "100%" }}>
                 <Space>
                   <Avatar
@@ -769,16 +792,16 @@ const DayTaskListModal: React.FC<{
                   />
                   <div>
                     <Text strong style={{ fontSize: "16px" }}>
-                      {teacher}
+                      {teacher.name} - {teacher.email}
                     </Text>
                     <div style={{ fontSize: "12px", color: "#666" }}>
-                      {eventsByTeacher[teacher].length} buổi học
+                      {eventsByTeacher[teacher.teacherId].length} buổi học
                     </div>
                   </div>
                 </Space>
                 <Divider style={{ margin: "8px 0" }} />
                 <List
-                  dataSource={eventsByTeacher[teacher]}
+                  dataSource={eventsByTeacher[teacher.teacherId]}
                   renderItem={(event) => {
                     const colors = getSubjectColor(event["Tên công việc"]);
                     return (
@@ -815,9 +838,9 @@ const DayTaskListModal: React.FC<{
                             </Avatar>
                           }
                           title={
-                            <a onClick={() => onEventClick(event)}>
+                            <p onClick={() => onEventClick(event)}>
                               {event["Tên công việc"]}
-                            </a>
+                            </p>
                           }
                           description={
                             <Space direction="vertical" size="small">
@@ -912,7 +935,7 @@ const TaskDetailModal: React.FC<{
             </>
           }
         >
-          {event["Địa điểm"]}
+          {event["Địa điểm"] || "--"}
         </Descriptions.Item>
         <Descriptions.Item
           label={
@@ -921,7 +944,18 @@ const TaskDetailModal: React.FC<{
             </>
           }
         >
-          {event["Giáo viên phụ trách"]}
+          {event["Giáo viên phụ trách"] || "--"}
+        </Descriptions.Item>
+        <Descriptions.Item
+          label={
+            <>
+              <BookOutlined /> Môn học
+            </>
+          }
+        >
+          {event.subjectName ||
+            subjectMap[event["Tên công việc"].split(" - ").at(-1) || "none"] ||
+            "--"}
         </Descriptions.Item>
         {event["Học sinh"] && event["Học sinh"].length > 0 && (
           <Descriptions.Item
@@ -983,7 +1017,9 @@ const AddTaskModal: React.FC<{
           comment: eventToEdit["Nhận xét"],
           startTime: eventToEdit["Giờ bắt đầu"],
           endTime: eventToEdit["Giờ kết thúc"],
-          teacher: teachers.find((t => t.id === eventToEdit["Teacher ID"]))?.email || "",
+          teacher:
+            teachers.find((t) => t.id === eventToEdit["Teacher ID"])?.email ||
+            "",
           students: eventToEdit["Học sinh"] || [],
         });
         setStartTime(eventToEdit["Giờ bắt đầu"] || "00:00");
@@ -1016,6 +1052,7 @@ const AddTaskModal: React.FC<{
       "Phụ cấp di chuyển": values.travelAllowance || "",
       "Nhận xét": values.comment || "",
       "Email giáo viên": values.teacher || "",
+      subjectName: values.subjectName || "",
     };
     console.log(eventData, "sdfsdfsdfsd", values);
     onSaveTask(eventData, eventToEdit?.id);

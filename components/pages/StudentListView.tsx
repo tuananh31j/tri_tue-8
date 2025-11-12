@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import type { ScheduleEvent } from "../../types";
-import PageHeader from "../../layouts/PageHeader";
 import { DATABASE_URL_BASE } from "@/firebase";
 import {
   Button,
@@ -413,7 +412,7 @@ const StudentListView: React.FC = () => {
       try {
         // Get auth token
         if (!currentUser) {
-          alert("⚠️ You must be logged in to delete students");
+          message.error("Bạn phải đăng nhập để xóa học sinh");
           return;
         }
 
@@ -423,11 +422,11 @@ const StudentListView: React.FC = () => {
         });
         if (response.ok) {
           setStudents(students.filter((s) => s.id !== student.id));
-          alert("Student deleted successfully!");
+          message.success("Xóa học sinh thành công!");
         }
       } catch (error) {
         console.error("Error deleting student:", error);
-        alert("Failed to delete student");
+        message.error("Xóa học sinh thất bại. Vui lòng thử lại.");
       }
     }
   };
@@ -447,7 +446,7 @@ const StudentListView: React.FC = () => {
       if (isNew) {
         // Add new student - Remove id field from studentData
         if (!currentUser) {
-          alert("⚠️ You must be logged in to add students");
+          message.error("Bạn phải đăng nhập để thêm học sinh");
           return;
         }
         const { id, ...dataWithoutId } = studentData as any;
@@ -473,7 +472,7 @@ const StudentListView: React.FC = () => {
           setStudents([...students, newStudent]);
           setEditModalOpen(false);
           setEditingStudent(null);
-          alert("✅ Student added successfully!");
+          message.success("Thêm học sinh thành công!");
         } else {
           const errorText = await response.text();
           console.error(
@@ -481,8 +480,8 @@ const StudentListView: React.FC = () => {
             response.status,
             errorText
           );
-          alert(
-            `❌ Failed to add student. Status: ${response.status}\n${errorText}`
+          message.error(
+            `Xảy ra lỗi khi thêm học sinh. Trạng thái: ${response.status}\n${errorText}`
           );
         }
       } else {
@@ -499,7 +498,7 @@ const StudentListView: React.FC = () => {
 
         // Update existing student
         if (!currentUser) {
-          alert("⚠️ You must be logged in to update students");
+          message.error("Bạn phải đăng nhập để cập nhật học sinh");
           return;
         }
         const url = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh/${studentData.id}.json`;
@@ -605,11 +604,11 @@ const StudentListView: React.FC = () => {
           setEditingStudent(null);
 
           if (hoursChanged) {
-            alert(
-              `✅ Học sinh đã cập nhật và thay đổi Giờ mở rộng đã được ghi lại!\nCũ: ${oldHours}h → Mới: ${newHours}h`
+            message.success(
+              `Học sinh đã cập nhật và thay đổi Giờ mở rộng đã được ghi lại!\nCũ: ${oldHours}h → Mới: ${newHours}h`
             );
           } else {
-            alert("✅ Học sinh đã được cập nhật thành công!");
+            message.success("Học sinh đã được cập nhật thành công!");
           }
         } else {
           const errorText = await response.text();
@@ -618,12 +617,12 @@ const StudentListView: React.FC = () => {
             response.status,
             errorText
           );
-          alert(`❌ Không cập nhật được học sinh. Status: ${response.status}`);
+          message.error(`Không cập nhật được học sinh. Status: ${response.status}`);
         }
       }
     } catch (error) {
       console.error("Error saving student:", error);
-      alert("❌ Lỗi khi lưu học sinh: " + error);
+      message.error("Lỗi khi lưu học sinh: " + error);
     }
   };
 
@@ -762,10 +761,10 @@ const StudentListView: React.FC = () => {
 
       setEditExtensionModalOpen(false);
       setEditingExtension(null);
-      alert("✅ Extension record updated successfully!");
+      message.success("Tiện ích mở rộng đã được cập nhật thành công!");
     } catch (error) {
       console.error("Error updating extension:", error);
-      alert("❌ Không cập nhật được tiện ích mở rộng: " + error);
+      message.error("Không cập nhật được tiện ích mở rộng: " + error);
     }
   };
 
@@ -865,10 +864,10 @@ const StudentListView: React.FC = () => {
         setExtensionHistory(historyArray);
       }
 
-      alert("✅ Bản ghi mở rộng đã được xóa thành công!");
+      message.success("Bản ghi mở rộng đã được xóa thành công!");
     } catch (error) {
       console.error("Error deleting extension:", error);
-      alert("❌ Không xóa được bản ghi mở rộng: " + error);
+      message.error("Không xóa được bản ghi mở rộng: " + error);
     }
   };
 
@@ -883,7 +882,7 @@ const StudentListView: React.FC = () => {
       });
 
       if (!extendingStudent.id) {
-        alert("❌ Lỗi: Học sinh không có ID!");
+        message.error("Lỗi: Học sinh không có ID!");
         console.error("❌ Học sinh thiếu ID:", extendingStudent);
         return;
       }
@@ -898,7 +897,7 @@ const StudentListView: React.FC = () => {
       const currentStudent = students.find((s) => s.id === extendingStudent.id);
 
       if (!currentStudent) {
-        alert("❌ Không tìm thấy học sinh trong danh sách!");
+        message.error("Không tìm thấy học sinh trong danh sách!");
         console.error(
           "❌ Student not found in students array. ID:",
           extendingStudent.id
@@ -1020,8 +1019,8 @@ const StudentListView: React.FC = () => {
 
           const action = additionalHours >= 0 ? "Thêm" : "Trừ";
           const absHours = Math.abs(additionalHours);
-          alert(
-            `✅ Thành công ${action} ${absHours} giờ cho ${extendingStudent["Họ và tên"]}!\nTổng mới: ${totalExtended}h`
+          message.success(
+            `Thành công ${action} ${absHours} giờ cho ${extendingStudent["Họ và tên"]}!\nTổng mới: ${totalExtended}h`
           );
         } else {
           const errorText = await updateResponse.text();
@@ -1030,15 +1029,15 @@ const StudentListView: React.FC = () => {
             updateResponse.status,
             errorText
           );
-          alert(
-            `❌ Không cập nhật được học sinh. Status: ${updateResponse.status}`
+          message.error(
+            `Không cập nhật được học sinh. Status: ${updateResponse.status}`
           );
         }
       }
     } catch (error) {
       console.error("❌ Error saving extension:", error);
-      alert(
-        "❌ Không lưu được tiện ích mở rộng. Kiểm tra bảng điều khiển để biết thêm chi tiết."
+      message.error(
+        "Không lưu được tiện ích mở rộng. Kiểm tra bảng điều khiển để biết thêm chi tiết."
       );
     }
   };
@@ -1406,258 +1405,255 @@ const StudentListView: React.FC = () => {
   };
 
   return (
-    <WrapperContent title="Quản lý học sinh">
+    <WrapperContent
+      title="Quản lý học sinh"
+      toolbar={
+        <Button
+          type="primary"
+          size="large"
+          onClick={handleAddStudent}
+          icon={<PlusOutlined />}
+        >
+          Thêm mới học sinh
+        </Button>
+      }
+    >
       {/* Filters */}
-      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex justify-end mb-4">
+      {/* Search Box */}
+      <Card title="Tìm kiếm học sinh" className="mb-6">
+        <Input
+          placeholder="Nhập tên học sinh"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          prefix={<SearchOutlined />}
+          suffix={
+            searchTerm ? (
+              <Button
+                type="text"
+                icon={<ClearOutlined />}
+                onClick={() => setSearchTerm("")}
+                size="small"
+              />
+            ) : null
+          }
+          size="large"
+        />
+        {searchTerm && (
+          <p className="mt-2 text-sm text-gray-600">
+            Tìm thấy{" "}
+            <span className="font-bold text-[#36797f]">
+              {displayStudents.length}
+            </span>{" "}
+            học sinh
+          </p>
+        )}
+      </Card>
+
+      <Card title="Filters" className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Từ ngày
+            </label>
+            <DatePicker
+              value={startDate ? dayjs(startDate) : null}
+              onChange={(date) =>
+                setStartDate(date ? date.format("YYYY-MM-DD") : "")
+              }
+              className="w-full"
+              size="large"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Đến ngày
+            </label>
+            <DatePicker
+              value={endDate ? dayjs(endDate) : null}
+              onChange={(date) =>
+                setEndDate(date ? date.format("YYYY-MM-DD") : "")
+              }
+              className="w-full"
+              size="large"
+            />
+          </div>
+        </div>
+        <div className="mt-4">
           <Button
-            type="primary"
-            size="large"
-            onClick={handleAddStudent}
-            icon={<PlusOutlined />}
+            onClick={() => {
+              setStartDate("");
+              setEndDate("");
+            }}
+            icon={<ClearOutlined />}
           >
-            Thêm mới học sinh
+            Xóa bộ lọc
           </Button>
         </div>
+      </Card>
 
-        {/* Search Box */}
-        <Card title="🔍 Tìm kiếm học sinh" className="mb-6">
-          <Input
-            placeholder="Nhập tên học sinh"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            prefix={<SearchOutlined />}
-            suffix={
-              searchTerm ? (
-                <Button
-                  type="text"
-                  icon={<ClearOutlined />}
-                  onClick={() => setSearchTerm("")}
-                  size="small"
-                />
-              ) : null
-            }
-            size="large"
+      {/* Students Table */}
+      {loading ? (
+        <div className="flex h-full items-center justify-center">
+          <Loader />
+        </div>
+      ) : (
+        <Card>
+          <Table
+            dataSource={displayStudents.map((student, index) => ({
+              key: student.id,
+              index: index + 1,
+              name: student["Họ và tên"],
+              code: student["Mã học sinh"] || "-",
+              phone: student["Số điện thoại"] || "-",
+              email: student["Email"] || "-",
+              hours: `${student.hours}h ${student.minutes}p`,
+              hoursExtended: `${student.hoursExtended || 0}h`,
+              hoursRemaining: `${student.hoursRemaining ? student.hoursRemaining.toFixed(2) : "0.00"}h`,
+              sessions: student.totalSessions,
+              student,
+            }))}
+            columns={[
+              {
+                title: "#",
+                dataIndex: "index",
+                key: "index",
+                width: 60,
+                align: "center",
+                fixed: "left",
+              },
+              {
+                title: "Họ và tên",
+                dataIndex: "name",
+                fixed: "left",
+                key: "name",
+                render: (text) => <strong>{text}</strong>,
+              },
+              {
+                title: "Mã học sinh",
+                dataIndex: "code",
+                key: "code",
+              },
+              {
+                title: "Số điện thoại",
+                dataIndex: "phone",
+                key: "phone",
+              },
+              {
+                title: "Email",
+                dataIndex: "email",
+                key: "email",
+              },
+              {
+                title: "Số giờ học",
+                dataIndex: "hours",
+                key: "hours",
+                align: "center",
+                render: (text) => (
+                  <Tag color="blue" style={{ fontWeight: "bold" }}>
+                    {text}
+                  </Tag>
+                ),
+              },
+              {
+                title: "Số giờ gia hạn",
+                dataIndex: "hoursExtended",
+                key: "hoursExtended",
+                align: "center",
+                render: (text) => (
+                  <Tag color="orange" style={{ fontWeight: "bold" }}>
+                    {text}
+                  </Tag>
+                ),
+              },
+              {
+                title: "Số giờ còn lại",
+                dataIndex: "hoursRemaining",
+                key: "hoursRemaining",
+                align: "center",
+                render: (text) => (
+                  <Tag color="green" style={{ fontWeight: "bold" }}>
+                    {text}
+                  </Tag>
+                ),
+              },
+              {
+                title: "Buổi học",
+                dataIndex: "sessions",
+                key: "sessions",
+                align: "center",
+                render: (sessions) => (
+                  <Tag color="purple">{sessions} sessions</Tag>
+                ),
+              },
+              {
+                title: "Cài đặt",
+                key: "actions",
+                align: "center",
+                fixed: "right",
+                width: 100,
+                render: (_, record) => (
+                  <Space align="start" direction="vertical" size="small">
+                    <Button
+                      type="default"
+                      size="small"
+                      icon={<EyeOutlined />}
+                      onClick={() => handleStudentClick(record.student)}
+                      title="View Details"
+                    >
+                      Chi tiết
+                    </Button>
+                    <Button
+                      type="default"
+                      size="small"
+                      icon={<ClockCircleOutlined />}
+                      onClick={() => handleExtendHours(record.student)}
+                      title="Extend Hours"
+                      style={{ borderColor: "#52c41a", color: "#52c41a" }}
+                    >
+                      Gia hạn
+                    </Button>
+                    <Button
+                      type="default"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={(e) => handleEditStudent(e, record.student)}
+                      title="Edit"
+                      style={{ borderColor: "#1890ff", color: "#1890ff" }}
+                    >
+                      Chỉnh sửa
+                    </Button>
+                    <Popconfirm
+                      title="Xóa học sinh"
+                      description="Bạn có chắc chắn muốn xóa học sinh này không?"
+                      onConfirm={(e) => handleDeleteStudent(e, record.student)}
+                      okText="Yes"
+                      cancelText="No"
+                    >
+                      <Button
+                        type="default"
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        danger
+                        title="Delete"
+                      >
+                        Xoá
+                      </Button>
+                    </Popconfirm>
+                  </Space>
+                ),
+              },
+            ]}
+            pagination={false}
+            scroll={{ x: 1200 }}
           />
-          {searchTerm && (
-            <p className="mt-2 text-sm text-gray-600">
-              Tìm thấy{" "}
-              <span className="font-bold text-[#36797f]">
-                {displayStudents.length}
-              </span>{" "}
-              học sinh
-            </p>
-          )}
         </Card>
+      )}
 
-        <Card title="Filters" className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Từ ngày
-              </label>
-              <DatePicker
-                value={startDate ? dayjs(startDate) : null}
-                onChange={(date) =>
-                  setStartDate(date ? date.format("YYYY-MM-DD") : "")
-                }
-                className="w-full"
-                size="large"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Đến ngày
-              </label>
-              <DatePicker
-                value={endDate ? dayjs(endDate) : null}
-                onChange={(date) =>
-                  setEndDate(date ? date.format("YYYY-MM-DD") : "")
-                }
-                className="w-full"
-                size="large"
-              />
-            </div>
-          </div>
-          <div className="mt-4">
-            <Button
-              onClick={() => {
-                setStartDate("");
-                setEndDate("");
-              }}
-              icon={<ClearOutlined />}
-            >
-              Xóa bộ lọc
-            </Button>
-          </div>
+      {!loading && displayStudents.length === 0 && (
+        <Card>
+          <Empty description="Chưa có học sinh nào" />
         </Card>
-
-        {/* Students Table */}
-        {loading ? (
-          <div className="flex h-full items-center justify-center">
-            <Loader />
-          </div>
-        ) : (
-          <Card>
-            <Table
-              dataSource={displayStudents.map((student, index) => ({
-                key: student.id,
-                index: index + 1,
-                name: student["Họ và tên"],
-                code: student["Mã học sinh"] || "-",
-                phone: student["Số điện thoại"] || "-",
-                email: student["Email"] || "-",
-                hours: `${student.hours}h ${student.minutes}p`,
-                hoursExtended: `${student.hoursExtended || 0}h`,
-                hoursRemaining: `${student.hoursRemaining ? student.hoursRemaining.toFixed(2) : "0.00"}h`,
-                sessions: student.totalSessions,
-                student,
-              }))}
-              columns={[
-                {
-                  title: "#",
-                  dataIndex: "index",
-                  key: "index",
-                  width: 60,
-                  align: "center",
-                  fixed: "left",
-                },
-                {
-                  title: "Họ và tên",
-                  dataIndex: "name",
-                  fixed: "left",
-                  key: "name",
-                  render: (text) => <strong>{text}</strong>,
-                },
-                {
-                  title: "Mã học sinh",
-                  dataIndex: "code",
-                  key: "code",
-                },
-                {
-                  title: "Số điện thoại",
-                  dataIndex: "phone",
-                  key: "phone",
-                },
-                {
-                  title: "Email",
-                  dataIndex: "email",
-                  key: "email",
-                },
-                {
-                  title: "Số giờ học",
-                  dataIndex: "hours",
-                  key: "hours",
-                  align: "center",
-                  render: (text) => (
-                    <Tag color="blue" style={{ fontWeight: "bold" }}>
-                      {text}
-                    </Tag>
-                  ),
-                },
-                {
-                  title: "Số giờ gia hạn",
-                  dataIndex: "hoursExtended",
-                  key: "hoursExtended",
-                  align: "center",
-                  render: (text) => (
-                    <Tag color="orange" style={{ fontWeight: "bold" }}>
-                      {text}
-                    </Tag>
-                  ),
-                },
-                {
-                  title: "Số giờ còn lại",
-                  dataIndex: "hoursRemaining",
-                  key: "hoursRemaining",
-                  align: "center",
-                  render: (text) => (
-                    <Tag color="green" style={{ fontWeight: "bold" }}>
-                      {text}
-                    </Tag>
-                  ),
-                },
-                {
-                  title: "Buổi học",
-                  dataIndex: "sessions",
-                  key: "sessions",
-                  align: "center",
-                  render: (sessions) => (
-                    <Tag color="purple">{sessions} sessions</Tag>
-                  ),
-                },
-                {
-                  title: "Cài đặt",
-                  key: "actions",
-                  align: "center",
-                  fixed: "right",
-                  width: 100,
-                  render: (_, record) => (
-                    <Space align="start" direction="vertical" size="small">
-                      <Button
-                        type="default"
-                        size="small"
-                        icon={<EyeOutlined />}
-                        onClick={() => handleStudentClick(record.student)}
-                        title="View Details"
-                      >
-                        Chi tiết
-                      </Button>
-                      <Button
-                        type="default"
-                        size="small"
-                        icon={<ClockCircleOutlined />}
-                        onClick={() => handleExtendHours(record.student)}
-                        title="Extend Hours"
-                        style={{ borderColor: "#52c41a", color: "#52c41a" }}
-                      >
-                        Gia hạn
-                      </Button>
-                      <Button
-                        type="default"
-                        size="small"
-                        icon={<EditOutlined />}
-                        onClick={(e) => handleEditStudent(e, record.student)}
-                        title="Edit"
-                        style={{ borderColor: "#1890ff", color: "#1890ff" }}
-                      >
-                        Chỉnh sửa
-                      </Button>
-                      <Popconfirm
-                        title="Xóa học sinh"
-                        description="Bạn có chắc chắn muốn xóa học sinh này không?"
-                        onConfirm={(e) =>
-                          handleDeleteStudent(e, record.student)
-                        }
-                        okText="Yes"
-                        cancelText="No"
-                      >
-                        <Button
-                          type="default"
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          danger
-                          title="Delete"
-                        >
-                          Xoá
-                        </Button>
-                      </Popconfirm>
-                    </Space>
-                  ),
-                },
-              ]}
-              pagination={false}
-              scroll={{ x: 1200 }}
-            />
-          </Card>
-        )}
-
-        {!loading && displayStudents.length === 0 && (
-          <Card>
-            <Empty description="Chưa có học sinh nào" />
-          </Card>
-        )}
-      </div>
+      )}
 
       {/* Student Detail Modal */}
       <Modal

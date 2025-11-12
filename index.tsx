@@ -6,13 +6,21 @@ import { AuthProvider } from "./contexts/AuthContext";
 import AntdThemeContext from "@/contexts/AntdThemeContext";
 import "./index.css";
 import { ErrorBoundary } from "react-error-boundary";
-import { Result } from "antd/lib";
+import { message, Result } from "antd/lib";
 import "@ant-design/v5-patch-for-react-19";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
+
+message.config({
+  top: 100,
+  duration: 2,
+  maxCount: 3,
+  rtl: true,
+  prefixCls: "my-message",
+});
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(

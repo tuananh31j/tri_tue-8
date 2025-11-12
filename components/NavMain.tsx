@@ -23,18 +23,18 @@ export function NavMain({
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
         <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-2">
+          <SidebarMenuItem className="flex items-center hover:bg-none gap-2">
             <SidebarMenuButton
               variant="default"
-              tooltip="Quick Create"
-              className="text-primary-foreground hover:bg-primary/90 active:bg-primary/90 active:text-primary-foreground min-w-8 h-full duration-200 ease-linear hover:text-white dark:text-white"
+              tooltip="Logo"
+              className="text-primary-foreground hover:bg-none active:text-primary-foreground min-w-8 h-full duration-200 ease-linear dark:text-white"
             >
               <Link
                 to="/"
                 className="font-medium items-center flex gap-2 text-black"
               >
                 <img src="/img/logo.png" alt="Logo" className="h-16 w-auto" />
-                <p className="text-primary font-extrabold text-2xl hover:text-white">
+                <p className="text-primary font-extrabold text-2xl">
                   Trí tuệ 8+
                 </p>
               </Link>

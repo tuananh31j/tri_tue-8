@@ -3,6 +3,7 @@ import React from "react";
 import { RollbackOutlined } from "@ant-design/icons";
 import { useAdminTitle } from "@/hooks/useAdminTitle";
 import Loader from "@/components/Loader";
+import { Space } from "antd/lib";
 
 const WrapperContent: React.FC<{
   title: string;
@@ -23,7 +24,7 @@ const WrapperContent: React.FC<{
 
   return (
     <div className={`space-y-3 ${className}`}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between ">
         <div>
           {handleNavigateBack && (
             <Button
@@ -34,14 +35,15 @@ const WrapperContent: React.FC<{
         </div>
         {toolbar}
       </div>
-
-      {!isLoading ? (
-        children
-      ) : (
-        <div className="flex h-full items-center justify-center">
-          <Loader />
-        </div>
-      )}
+      <Space size="large" direction="vertical" className="w-full">
+        {!isLoading ? (
+          children
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Loader />
+          </div>
+        )}
+      </Space>
     </div>
   );
 };
