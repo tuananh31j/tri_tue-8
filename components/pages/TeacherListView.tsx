@@ -536,16 +536,16 @@ const TeacherListView: React.FC = () => {
           setEditModalOpen(false);
           setEditingTeacher(null);
           form.resetFields();
-          Modal.success({ content: "✅ Teacher added successfully!" });
+          Modal.success({ content: "Thêm giáo viên thành công!" });
         } else {
           const errorText = await response.text();
           console.error(
-            "❌ Failed to add teacher. Status:",
+            "❌ Lưu giáo viên thất bại. Mã lỗi:",
             response.status,
             errorText
           );
           Modal.error({
-            content: `❌ Failed to add teacher. Status: ${response.status}`,
+            content: `Lưu giáo viên thất bại. Mã lỗi: ${response.status}`,
           });
         }
       } else {
@@ -568,22 +568,22 @@ const TeacherListView: React.FC = () => {
           setEditModalOpen(false);
           setEditingTeacher(null);
           form.resetFields();
-          Modal.success({ content: "✅ Teacher updated successfully!" });
+          Modal.success({ content: "Cập nhật thành công!" });
         } else {
           const errorText = await response.text();
           console.error(
-            "❌ Failed to update teacher. Status:",
+            "❌ Cập nhật giáo viên thất bại. Mã lỗi:",
             response.status,
             errorText
           );
           Modal.error({
-            content: `❌ Failed to update teacher. Status: ${response.status}`,
+            content: `Cập nhật giáo viên thất bại. Mã lỗi: ${response.status}`,
           });
         }
       }
     } catch (error) {
       console.error("Error saving teacher:", error);
-      Modal.error({ content: "Failed to save teacher: " + error });
+      Modal.error({ content: "Lưu giáo viên thất bại: " + error });
     }
   };
 

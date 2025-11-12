@@ -15,6 +15,7 @@ export default function AntdThemeContext({
       spin={{
         indicator: <Loader />,
       }}
+      prefixCls="talab"
       theme={{
         cssVar: true,
         algorithm: theme.defaultAlgorithm,
