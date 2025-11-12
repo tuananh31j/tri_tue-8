@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { UserCheck } from "lucide-react";
 
 const data = {
   navMain: [
@@ -43,7 +44,8 @@ const data = {
     {
       title: "Giáo viên",
       url: "/workspace/teachers",
-      icon: IconUsers,
+      icon: UserCheck,
+      adminOnly: true,
     },
     {
       title: "Điểm danh",
@@ -56,13 +58,12 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-
   const { userProfile } = useAuth();
   const isAdmin = React.useMemo(
     () => userProfile?.role === "admin",
     [userProfile]
   );
-   const user = {
+  const user = {
     name: userProfile.displayName,
     email: userProfile.email,
     avatar: "",

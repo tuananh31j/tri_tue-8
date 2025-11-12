@@ -86,19 +86,41 @@ const getSubjectColor = (
   taskName: string
 ): { bg: string; border: string; text: string; antdColor: string } => {
   const parts = taskName.split(" - ");
-  const subject = parts.length >= 3 ? parts[2] : "";
+  const subject = parts.at(-1);
 
   const colorMap: Record<string, string> = {
     Mathematics: "blue",
-    Chemistry: "purple",
-    Physics: "cyan",
-    Biology: "green",
-    Economics: "orange",
-    Business: "gold",
-    Psychology: "magenta",
     Literature: "red",
-    English: "geekblue",
-    Chinese: "volcano",
+    English: "purple",
+    Physics: "indigo",
+    Chemistry: "green",
+    Biology: "teal",
+    History: "orange",
+    Geography: "yellow",
+    CivicEducation: "rose",
+    Informatics: "cyan",
+    Technology: "lime",
+    PhysicalEducation: "emerald",
+    Music: "pink",
+    Art: "fuchsia",
+    DefenseEducation: "gray",
+    Science: "sky",
+    SocialScience: "amber",
+    Ethics: "violet",
+    CareerOrientation: "slate",
+    Reading: "cyan",
+    Writing: "rose",
+    MathematicalLogic: "blue",
+    ComputerScience: "cyan",
+    Programming: "emerald",
+    STEM: "teal",
+    LifeSkills: "amber",
+    EnvironmentalEducation: "green",
+    MoralEducation: "purple",
+    Astronomy: "indigo",
+    Economics: "lime",
+    Psychology: "pink",
+    Philosophy: "gray",
   };
 
   const baseColor =
@@ -137,7 +159,9 @@ const ScheduleViewAntd: React.FC<ScheduleViewProps> = ({
 
   const [form] = Form.useForm();
   const [students, setStudents] = useState<{ id: string; name: string }[]>([]);
-  const [teachers, setTeachers] = useState<{ id: string; name: string }[]>([]);
+  const [teachers, setTeachers] = useState<
+    { id: string; name: string; label: string; email: string }[]
+  >([]);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -176,7 +200,11 @@ const ScheduleViewAntd: React.FC<ScheduleViewProps> = ({
           const array = Object.keys(data)
             .map((key) => ({
               id: key,
-              name: data[key][nameField],
+              name: data[key]["Họ và tên"],
+              email: data[key]["Email"],
+              label:
+                data[key]["Họ và tên"] +
+                ` - ${data[key]["Email"] || "<Chưa có mail>"}`,
             }))
             .filter((item) => item.name);
           setData(array);
@@ -186,7 +214,7 @@ const ScheduleViewAntd: React.FC<ScheduleViewProps> = ({
       }
     };
     fetchOptions(STUDENT_LIST_URL, setStudents, "Họ và tên");
-    fetchOptions(TEACHER_LIST_URL, setTeachers, "Họ và tên");
+    fetchOptions(TEACHER_LIST_URL, setTeachers, "Email");
   }, []);
 
   const weekDates = useMemo(() => {
@@ -216,11 +244,12 @@ const ScheduleViewAntd: React.FC<ScheduleViewProps> = ({
         return type === activeFilter;
       })
       .filter((event) => {
+        console.log(event, "11111111", currentUser);
         if (userProfile?.isAdmin) {
           return true;
         } else {
           if (!userProfile.email) return false;
-          return event["Giáo viên phụ trách"] === userProfile.displayName;
+          return event["Teacher ID"] === userProfile.uid;
         }
       });
   }, [allEvents, weekDates, activeFilter, currentUser, userProfile]);
@@ -238,7 +267,7 @@ const ScheduleViewAntd: React.FC<ScheduleViewProps> = ({
 
       const taskWithEmail = {
         ...taskData,
-        "Email giáo viên": currentUser?.email || taskData["Email giáo viên"],
+        "Email giáo viên": taskData["Email giáo viên"],
       };
 
       const response = await fetch(url, {
@@ -335,290 +364,305 @@ const ScheduleViewAntd: React.FC<ScheduleViewProps> = ({
   return (
     <WrapperContent title="Lịch">
       <ConfigProvider
-      theme={{
-        token: {
-          colorPrimary: "#36797f",
-          borderRadius: 8,
-        },
-      }}
-    >
-      <div className="p-4">
-        {/* Header */}
-        <Card className="mb-4" style={{ background: "#36797f" }}>
-          <Row gutter={[16, 16]} align="middle" justify="space-between">
-            <Col xs={24} md={12}>
-              <Space align="center">
-                <Title level={2} style={{ color: "white", margin: 0 }}>
-                  📅 Lịch Học & Công Việc
-                </Title>
-              </Space>
-            </Col>
-            <Col xs={24} md={12}>
-              <Space wrap style={{ width: "100%", justifyContent: "flex-end" }}>
-                <DatePicker
-                  value={dayjs(currentDate)}
-                  onChange={(date) => date && setCurrentDate(date.toDate())}
-                  format="DD/MM/YYYY"
-                />
-                <Button
-                  type="primary"
-                  onClick={() => setCurrentDate(new Date())}
+        theme={{
+          token: {
+            colorPrimary: "#36797f",
+            borderRadius: 8,
+          },
+        }}
+      >
+        <div className="p-4">
+          {/* Header */}
+          <Card className="mb-4" style={{ background: "#36797f" }}>
+            <Row gutter={[16, 16]} align="middle" justify="space-between">
+              <Col xs={24} md={12}>
+                <Space align="center">
+                  <Title level={2} style={{ color: "white", margin: 0 }}>
+                    📅 Lịch Học & Công Việc
+                  </Title>
+                </Space>
+              </Col>
+              <Col xs={24} md={12}>
+                <Space
+                  wrap
+                  style={{ width: "100%", justifyContent: "flex-end" }}
                 >
-                  Hôm nay
-                </Button>
-                <Button icon={<LeftOutlined />} onClick={() => changeWeek(-7)}>
-                  Tuần trước
-                </Button>
-                <Button icon={<RightOutlined />} onClick={() => changeWeek(7)}>
-                  Tuần sau
-                </Button>
-              </Space>
-            </Col>
-          </Row>
-        </Card>
+                  <DatePicker
+                    value={dayjs(currentDate)}
+                    onChange={(date) => date && setCurrentDate(date.toDate())}
+                    format="DD/MM/YYYY"
+                  />
+                  <Button
+                    type="primary"
+                    onClick={() => setCurrentDate(new Date())}
+                  >
+                    Hôm nay
+                  </Button>
+                  <Button
+                    icon={<LeftOutlined />}
+                    onClick={() => changeWeek(-7)}
+                  >
+                    Tuần trước
+                  </Button>
+                  <Button
+                    icon={<RightOutlined />}
+                    onClick={() => changeWeek(7)}
+                  >
+                    Tuần sau
+                  </Button>
+                </Space>
+              </Col>
+            </Row>
+          </Card>
 
-        {/* Schedule Grid */}
-        <Card>
-          <div className="overflow-x-auto">
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th
-                    style={{
-                      padding: "12px",
-                      border: "1px solid #f0f0f0",
-                      minWidth: "100px",
-                    }}
-                  ></th>
-                  {[
-                    "Thứ 2",
-                    "Thứ 3",
-                    "Thứ 4",
-                    "Thứ 5",
-                    "Thứ 6",
-                    "Thứ 7",
-                    "Chủ nhật",
-                  ].map((day, i) => {
-                    const isToday = weekDates[i].getTime() === today.getTime();
-                    return (
-                      <th
-                        key={day}
-                        style={{
-                          padding: "12px",
-                          border: "1px solid #f0f0f0",
-                          background: isToday ? "#e6f7ff" : "#fafafa",
-                          fontWeight: "bold",
-                          minWidth: "180px",
-                        }}
-                      >
-                        <div>{day}</div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          {formatDate(weekDates[i])}
-                        </div>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {["Sáng", "Chiều", "Tối"].map((session, sessionIndex) => (
-                  <tr key={session}>
-                    <td
+          {/* Schedule Grid */}
+          <Card>
+            <div className="overflow-x-auto">
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th
                       style={{
                         padding: "12px",
                         border: "1px solid #f0f0f0",
-                        background: "#fafafa",
-                        fontWeight: "600",
-                        textAlign: "right",
+                        minWidth: "100px",
                       }}
-                    >
-                      {session}
-                    </td>
-                    {weekDates.map((date, dayIndex) => {
-                      const eventsInSlot = eventsForWeek
-                        .filter((event) => {
-                          const eventDate = new Date(event["Ngày"]);
-                          if (
-                            eventDate.getFullYear() !== date.getFullYear() ||
-                            eventDate.getMonth() !== date.getMonth() ||
-                            eventDate.getDate() !== date.getDate()
-                          ) {
-                            return false;
-                          }
-
-                          const startHour = parseInt(
-                            (event["Giờ bắt đầu"] || "0:0").split(":")[0]
-                          );
-                          if (session === "Sáng") return startHour < 12;
-                          if (session === "Chiều")
-                            return startHour >= 12 && startHour < 18;
-                          if (session === "Tối") return startHour >= 18;
-                          return false;
-                        })
-                        .sort((a, b) =>
-                          (a["Giờ bắt đầu"] || "00:00").localeCompare(
-                            b["Giờ bắt đầu"] || "00:00"
-                          )
-                        );
-
+                    ></th>
+                    {[
+                      "Thứ 2",
+                      "Thứ 3",
+                      "Thứ 4",
+                      "Thứ 5",
+                      "Thứ 6",
+                      "Thứ 7",
+                      "Chủ nhật",
+                    ].map((day, i) => {
+                      const isToday =
+                        weekDates[i].getTime() === today.getTime();
                       return (
-                        <td
-                          key={`${session}-${dayIndex}`}
-                          onClick={() => handleSlotClick(date, session)}
+                        <th
+                          key={day}
                           style={{
-                            padding: "8px",
+                            padding: "12px",
                             border: "1px solid #f0f0f0",
-                            minHeight: "120px",
-                            verticalAlign: "top",
-                            cursor: "pointer",
-                            position: "relative",
+                            background: isToday ? "#e6f7ff" : "#fafafa",
+                            fontWeight: "bold",
+                            minWidth: "180px",
                           }}
                         >
-                          {eventsInSlot.length > 0 && (
-                            <Badge
-                              count={eventsInSlot.length}
-                              style={{
-                                position: "absolute",
-                                top: "4px",
-                                right: "4px",
-                              }}
-                            />
-                          )}
-                          <Space
-                            direction="vertical"
-                            style={{ width: "100%" }}
-                            size="small"
-                          >
-                            {eventsInSlot.map((event) => {
-                              const colors = getSubjectColor(
-                                event["Tên công việc"]
-                              );
-                              return (
-                                <Card
-                                  key={event.id}
-                                  size="small"
-                                  hoverable
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCardClick(event);
-                                  }}
-                                  style={{
-                                    borderLeft: `4px solid ${colors.border}`,
-                                  }}
-                                  actions={[
-                                    <Tooltip title="Sửa">
-                                      <EditOutlined
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleOpenEditModal(event);
-                                        }}
-                                      />
-                                    </Tooltip>,
-                                    <Tooltip title="Xóa">
-                                      <Popconfirm
-                                        title="Xác nhận xóa"
-                                        description="Bạn có chắc muốn xóa lịch học này?"
-                                        onConfirm={(e) => {
-                                          e?.stopPropagation();
-                                          handleDeleteEvent(event);
-                                        }}
-                                        onCancel={(e) => e?.stopPropagation()}
-                                        okText="Xóa"
-                                        cancelText="Hủy"
-                                      >
-                                        <DeleteOutlined
-                                          onClick={(e) => e.stopPropagation()}
-                                        />
-                                      </Popconfirm>
-                                    </Tooltip>,
-                                  ]}
-                                >
-                                  <div
-                                    style={{
-                                      fontSize: "12px",
-                                      fontWeight: "bold",
-                                    }}
-                                  >
-                                    {event["Tên công việc"]}
-                                  </div>
-                                  <div
-                                    style={{ fontSize: "11px", color: "#666" }}
-                                  >
-                                    {event["Giờ bắt đầu"]} -{" "}
-                                    {event["Giờ kết thúc"]}
-                                  </div>
-                                </Card>
-                              );
-                            })}
-                          </Space>
-                        </td>
+                          <div>{day}</div>
+                          <div style={{ fontSize: "12px", color: "#666" }}>
+                            {formatDate(weekDates[i])}
+                          </div>
+                        </th>
                       );
                     })}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                </thead>
+                <tbody>
+                  {["Sáng", "Chiều", "Tối"].map((session, sessionIndex) => (
+                    <tr key={session}>
+                      <td
+                        style={{
+                          padding: "12px",
+                          border: "1px solid #f0f0f0",
+                          background: "#fafafa",
+                          fontWeight: "600",
+                          textAlign: "right",
+                        }}
+                      >
+                        {session}
+                      </td>
+                      {weekDates.map((date, dayIndex) => {
+                        const eventsInSlot = eventsForWeek
+                          .filter((event) => {
+                            const eventDate = new Date(event["Ngày"]);
+                            if (
+                              eventDate.getFullYear() !== date.getFullYear() ||
+                              eventDate.getMonth() !== date.getMonth() ||
+                              eventDate.getDate() !== date.getDate()
+                            ) {
+                              return false;
+                            }
 
-        {/* Floating Action Button */}
-        <FloatButton
-          icon={<PlusOutlined />}
-          type="primary"
-          style={{ right: 24, bottom: 24 }}
-          onClick={handleOpenAddModal}
-        />
+                            const startHour = parseInt(
+                              (event["Giờ bắt đầu"] || "0:0").split(":")[0]
+                            );
+                            if (session === "Sáng") return startHour < 12;
+                            if (session === "Chiều")
+                              return startHour >= 12 && startHour < 18;
+                            if (session === "Tối") return startHour >= 18;
+                            return false;
+                          })
+                          .sort((a, b) =>
+                            (a["Giờ bắt đầu"] || "00:00").localeCompare(
+                              b["Giờ bắt đầu"] || "00:00"
+                            )
+                          );
 
-        {/* Modals */}
-        <DayTaskListModal
-          isOpen={isDayListModalOpen}
-          onClose={() => setDayListModalOpen(false)}
-          date={selectedDate}
-          allEvents={allEvents}
-          onEventClick={(event) => {
-            setSelectedEvent(event);
-            setDayListModalOpen(false);
-            setDetailModalOpen(true);
-          }}
-          onAddTask={handleOpenAddModal}
-          onDelete={handleDeleteEvent}
-          onEdit={(event) => {
-            setEditingEvent(event);
-            setDayListModalOpen(false);
-            setAddModalOpen(true);
-          }}
-        />
+                        return (
+                          <td
+                            key={`${session}-${dayIndex}`}
+                            style={{
+                              padding: "8px",
+                              border: "1px solid #f0f0f0",
+                              minHeight: "120px",
+                              verticalAlign: "top",
+                              cursor: "pointer",
+                              position: "relative",
+                            }}
+                          >
+                            {eventsInSlot.length > 0 && (
+                              <Badge
+                                count={eventsInSlot.length}
+                                style={{
+                                  position: "absolute",
+                                  top: "4px",
+                                  right: "4px",
+                                }}
+                              />
+                            )}
+                            <Space
+                              direction="vertical"
+                              style={{ width: "100%" }}
+                              size="small"
+                            >
+                              {eventsInSlot.map((event) => {
+                                const colors = getSubjectColor(
+                                  event["Tên công việc"]
+                                );
 
-        <TaskDetailModal
-          isOpen={isDetailModalOpen}
-          onClose={() => setDetailModalOpen(false)}
-          event={selectedEvent}
-          onViewKanban={handleViewKanban}
-          onEdit={handleOpenEditModal}
-        />
+                                console.log(colors, "vbgfbfgb");
+                                return (
+                                  <Card
+                                    key={event.id}
+                                    size="small"
+                                    hoverable
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCardClick(event);
+                                    }}
+                                    style={{
+                                      borderLeft: `4px solid ${colors.antdColor}`,
+                                    }}
+                                    actions={[
+                                      <Tooltip title="Sửa">
+                                        <EditOutlined
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleOpenEditModal(event);
+                                          }}
+                                        />
+                                      </Tooltip>,
+                                      <Tooltip title="Xóa">
+                                        <Popconfirm
+                                          title="Xác nhận xóa"
+                                          description="Bạn có chắc muốn xóa lịch học này?"
+                                          onConfirm={(e) => {
+                                            e?.stopPropagation();
+                                            handleDeleteEvent(event);
+                                          }}
+                                          onCancel={(e) => e?.stopPropagation()}
+                                          okText="Xóa"
+                                          cancelText="Hủy"
+                                        >
+                                          <DeleteOutlined
+                                            onClick={(e) => e.stopPropagation()}
+                                          />
+                                        </Popconfirm>
+                                      </Tooltip>,
+                                    ]}
+                                  >
+                                    <div
+                                      className="line-clamp-3"
+                                      style={{
+                                        fontSize: "12px",
+                                        fontWeight: "bold",
+                                      }}
+                                    >
+                                      {event["Tên công việc"]}
+                                    </div>
+                                    <div
+                                      style={{
+                                        fontSize: "11px",
+                                        color: "#666",
+                                      }}
+                                    >
+                                      {event["Giờ bắt đầu"]} -{" "}
+                                      {event["Giờ kết thúc"]}
+                                    </div>
+                                  </Card>
+                                );
+                              })}
+                            </Space>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
-        <AddTaskModal
-          isOpen={isAddModalOpen}
-          onClose={() => {
-            setAddModalOpen(false);
-            setEditingEvent(null);
-            form.resetFields();
-          }}
-          onSaveTask={handleSaveTask}
-          eventToEdit={editingEvent}
-          form={form}
-          students={students}
-          teachers={teachers}
-        />
+          {/* Floating Action Button */}
+          <FloatButton
+            icon={<PlusOutlined />}
+            type="primary"
+            style={{ right: 24, bottom: 24 }}
+            onClick={handleOpenAddModal}
+          />
 
-        <KanbanModal
-          isOpen={isKanbanModalOpen}
-          onClose={() => setKanbanModalOpen(false)}
-          event={selectedEvent}
-          onUpdate={fetchEvents}
-        />
-      </div>
-    </ConfigProvider>
+          {/* Modals */}
+          <DayTaskListModal
+            isOpen={isDayListModalOpen}
+            onClose={() => setDayListModalOpen(false)}
+            date={selectedDate}
+            allEvents={allEvents}
+            onEventClick={(event) => {
+              setSelectedEvent(event);
+              setDayListModalOpen(false);
+              setDetailModalOpen(true);
+            }}
+            onAddTask={handleOpenAddModal}
+            onDelete={handleDeleteEvent}
+            onEdit={(event) => {
+              setEditingEvent(event);
+              setDayListModalOpen(false);
+              setAddModalOpen(true);
+            }}
+          />
+
+          <TaskDetailModal
+            isOpen={isDetailModalOpen}
+            onClose={() => setDetailModalOpen(false)}
+            event={selectedEvent}
+            onViewKanban={handleViewKanban}
+            onEdit={handleOpenEditModal}
+          />
+
+          <AddTaskModal
+            isOpen={isAddModalOpen}
+            onClose={() => {
+              setAddModalOpen(false);
+              setEditingEvent(null);
+              form.resetFields();
+            }}
+            onSaveTask={handleSaveTask}
+            eventToEdit={editingEvent}
+            form={form}
+            students={students}
+            teachers={teachers}
+          />
+
+          <KanbanModal
+            isOpen={isKanbanModalOpen}
+            onClose={() => setKanbanModalOpen(false)}
+            event={selectedEvent}
+            onUpdate={fetchEvents}
+          />
+        </div>
+      </ConfigProvider>
     </WrapperContent>
   );
 };
@@ -653,7 +697,7 @@ const DayTaskListModal: React.FC<{
 
   const eventsByTeacher = dayEvents.reduce(
     (acc, event) => {
-      const teacher = event["Giáo viên phụ trách"] || "Chưa phân công";
+      const teacher = event["Teacher ID"];
       if (!acc[teacher]) {
         acc[teacher] = [];
       }
@@ -909,7 +953,7 @@ const AddTaskModal: React.FC<{
   eventToEdit: ScheduleEvent | null;
   form: any;
   students: { id: string; name: string }[];
-  teachers: { id: string; name: string }[];
+  teachers: { id: string; email: string; label: string; name: string }[];
 }> = ({
   isOpen,
   onClose,
@@ -939,7 +983,7 @@ const AddTaskModal: React.FC<{
           comment: eventToEdit["Nhận xét"],
           startTime: eventToEdit["Giờ bắt đầu"],
           endTime: eventToEdit["Giờ kết thúc"],
-          teacher: eventToEdit["Giáo viên phụ trách"],
+          teacher: teachers.find((t => t.id === eventToEdit["Teacher ID"]))?.email || "",
           students: eventToEdit["Học sinh"] || [],
         });
         setStartTime(eventToEdit["Giờ bắt đầu"] || "00:00");
@@ -957,8 +1001,9 @@ const AddTaskModal: React.FC<{
       Loại: values.taskType === "study" ? "LichHoc" : "LichLamViec",
       Ngày: values.taskDate.format("YYYY-MM-DD"),
       "Địa điểm": values.taskLocation || "",
-      "Giáo viên phụ trách": values.teacher || "",
-      "Teacher ID": teachers.find((t) => t.name === values.teacher)?.id || "",
+      "Giáo viên phụ trách":
+        teachers.find((t) => t.email === values.teacher)?.name || "",
+      "Teacher ID": teachers.find((t) => t.email === values.teacher)?.id || "",
       "Giờ bắt đầu": values.startTime || "00:00",
       "Giờ kết thúc": values.endTime || "00:00",
       "Học sinh": values.taskType === "study" ? values.students || [] : [],
@@ -970,6 +1015,7 @@ const AddTaskModal: React.FC<{
           : [],
       "Phụ cấp di chuyển": values.travelAllowance || "",
       "Nhận xét": values.comment || "",
+      "Email giáo viên": values.teacher || "",
     };
     console.log(eventData, "sdfsdfsdfsd", values);
     onSaveTask(eventData, eventToEdit?.id);
@@ -1041,16 +1087,38 @@ const AddTaskModal: React.FC<{
           <Select
             placeholder="-- Chọn môn học --"
             options={[
-              { value: "Mathematics", label: "Mathematics" },
-              { value: "Chemistry", label: "Chemistry" },
-              { value: "Physics", label: "Physics" },
-              { value: "Biology", label: "Biology" },
-              { value: "Economics", label: "Economics" },
-              { value: "Business", label: "Business" },
-              { value: "Psychology", label: "Psychology" },
-              { value: "Literature", label: "Literature" },
-              { value: "English", label: "English" },
-              { value: "Chinese", label: "Chinese" },
+              { value: "Mathematics", label: "Toán" },
+              { value: "Literature", label: "Ngữ văn" },
+              { value: "English", label: "Tiếng Anh" },
+              { value: "Physics", label: "Vật lý" },
+              { value: "Chemistry", label: "Hóa học" },
+              { value: "Biology", label: "Sinh học" },
+              { value: "History", label: "Lịch sử" },
+              { value: "Geography", label: "Địa lý" },
+              { value: "CivicEducation", label: "Giáo dục công dân" },
+              { value: "Informatics", label: "Tin học" },
+              { value: "Technology", label: "Công nghệ" },
+              { value: "PhysicalEducation", label: "Thể dục" },
+              { value: "Music", label: "Âm nhạc" },
+              { value: "Art", label: "Mỹ thuật" },
+              { value: "DefenseEducation", label: "Giáo dục quốc phòng" },
+              { value: "Science", label: "Khoa học tự nhiên" },
+              { value: "SocialScience", label: "Khoa học xã hội" },
+              { value: "Ethics", label: "Đạo đức" },
+              { value: "CareerOrientation", label: "Hướng nghiệp" },
+              { value: "Reading", label: "Đọc hiểu" },
+              { value: "Writing", label: "Tập làm văn" },
+              { value: "MathematicalLogic", label: "Toán tư duy" },
+              { value: "ComputerScience", label: "Khoa học máy tính" },
+              { value: "Programming", label: "Lập trình" },
+              { value: "STEM", label: "STEM" },
+              { value: "LifeSkills", label: "Kỹ năng sống" },
+              { value: "EnvironmentalEducation", label: "Giáo dục môi trường" },
+              { value: "MoralEducation", label: "Giáo dục đạo đức" },
+              { value: "Astronomy", label: "Thiên văn học" },
+              { value: "Economics", label: "Kinh tế học" },
+              { value: "Psychology", label: "Tâm lý học" },
+              { value: "Philosophy", label: "Triết học" },
             ]}
           />
         </Form.Item>
@@ -1070,8 +1138,8 @@ const AddTaskModal: React.FC<{
             }
             options={teachers.map((t) => ({
               key: t.id,
-              value: t.name,
-              label: t.name,
+              value: t.email,
+              label: t.label,
             }))}
           />
         </Form.Item>
@@ -1107,6 +1175,7 @@ const AddTaskModal: React.FC<{
 
         <Form.Item label="Tên công việc (Tự động)">
           <Input
+            disabled
             value={taskName || "Chưa có - Vui lòng chọn đủ thông tin"}
             readOnly
           />

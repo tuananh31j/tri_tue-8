@@ -1,44 +1,67 @@
-import { Button, Card, Typography } from 'antd';
+import { Button, Card, Typography } from "antd";
+import { Image } from "antd/lib";
 
 const { Text, Paragraph } = Typography;
 
 interface TestimonialCardProps {
-    name: string;
-    image: string;
-    content: string;
+  name: string;
+  image: string;
+  content: string;
 }
 
-// Make the card a column flex layout and ensure consistent min-height so all cards are equal.
 const TestimonialCard = ({ name, image, content }: TestimonialCardProps) => {
-    return (
-        <div className='px-3' style={{ minWidth: '500px', maxWidth: '500px' }}>
-            <Card className='h-full min-h-[200px] rounded-2xl bg-white shadow-lg'>
-                <div className='flex h-full flex-col p-6'>
-                    <div className='flex-1'>
-                        <div className='mb-4 text-6xl text-gray-300' aria-hidden>
-                            &ldquo;
-                        </div>
-                        <Paragraph className='text-base leading-relaxed text-gray-700'>{content}</Paragraph>
-                    </div>
+  return (
+    <div
+      className="px-3 h-full"
+      style={{ minWidth: "500px", maxWidth: "500px" }}
+    >
+      <Card
+        className="h-full flex flex-col rounded-2xl bg-white shadow-lg"
+        bodyStyle={{ padding: 0, height: "100%" }}
+      >
+        <div className="flex flex-col h-full p-6 justify-between">
+          <div className="flex-1 flex flex-col min-h-0">
+            <div
+              className="mb-4 text-6xl text-gray-300 h-12 flex items-start"
+              aria-hidden
+            >
+              &ldquo;
+            </div>
+            <div className="flex-1 min-h-0">
+              <Paragraph className="m-0 text-base leading-relaxed text-gray-700 h-full overflow-auto">
+                {content}
+              </Paragraph>
+            </div>
+          </div>
 
-                    <div className='mt-6 flex items-center justify-between'>
-                        <div className='flex items-center gap-3'>
-                            <img src={`/teacher/${image}`} alt={name} className='h-16 w-16 rounded-full object-cover' />
-                            <div>
-                                <Text strong className='block text-gray-800'>
-                                    {name}
-                                </Text>
-                            </div>
-                        </div>
+          <div className="mt-6 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <Image
+                height={100}
+                src={`/teacher/${image}`}
+                alt={name}
+                preview={{
+                  toolbarRender: () => null,
+                }}
+              />
+              <div>
+                <Text strong className="block text-gray-800">
+                  {name}
+                </Text>
+              </div>
+            </div>
 
-                        <Button type='primary' className='rounded-full bg-teal-300 px-6 py-3 text-white'>
-                            Tìm hiểu thêm
-                        </Button>
-                    </div>
-                </div>
-            </Card>
+            <Button
+              type="primary"
+              className="rounded-full bg-teal-300 px-6 py-3 text-white"
+            >
+              Tìm hiểu thêm
+            </Button>
+          </div>
         </div>
-    );
+      </Card>
+    </div>
+  );
 };
 
 export default TestimonialCard;

@@ -88,9 +88,12 @@ const StudentListView: React.FC = () => {
     const fetchStudents = async () => {
       try {
         // Add cache-busting parameter
-        const response = await fetch(`${STUDENT_LIST_URL}?_=${Date.now()}`, {
-          cache: "no-cache",
-        });
+        const response = await fetch(
+          `${STUDENT_LIST_URL}?_=${new Date().getTime()}`,
+          {
+            cache: "no-cache",
+          }
+        );
         const data = await response.json();
         if (data) {
           const studentsArray = Object.keys(data).map((key) => ({
@@ -153,7 +156,7 @@ const StudentListView: React.FC = () => {
     const fetchExtensionHistory = async () => {
       try {
         const response = await fetch(
-          `${EXTENSION_HISTORY_URL}?_=${Date.now()}`,
+          `${EXTENSION_HISTORY_URL}?_=${new Date().getTime()}`,
           {
             cache: "no-cache",
           }
@@ -310,12 +313,12 @@ const StudentListView: React.FC = () => {
     // 🔒 PERMISSION FILTER: Admin sees all, Teacher sees only their students
     if (!userProfile?.isAdmin && userProfile?.teacherName) {
       console.log("❌ TEACHER MODE ACTIVATED - Filtering students");
-      const teacherName = userProfile.teacherName;
+      const teacherName = userProfile.uid;
 
       // Get unique student names from events taught by this teacher
       const teacherStudentNames = new Set<string>();
       scheduleEvents.forEach((event) => {
-        if (event["Giáo viên phụ trách"] === teacherName && event["Học sinh"]) {
+        if (event["Teacher ID"] === teacherName && event["Học sinh"]) {
           event["Học sinh"].forEach((name) => teacherStudentNames.add(name));
         }
       });
@@ -547,7 +550,7 @@ const StudentListView: React.FC = () => {
 
                 // Refresh extension history
                 const refreshHistoryResponse = await fetch(
-                  `${EXTENSION_HISTORY_URL}?_=${Date.now()}`,
+                  `${EXTENSION_HISTORY_URL}?_=${new Date().getTime()}`,
                   {
                     cache: "no-cache",
                   }
@@ -580,7 +583,7 @@ const StudentListView: React.FC = () => {
 
           // Refresh students from Firebase after update
           const refetchResponse = await fetch(
-            `${STUDENT_LIST_URL}?_=${Date.now()}`,
+            `${STUDENT_LIST_URL}?_=${new Date().getTime()}`,
             {
               cache: "no-cache",
             }
@@ -684,7 +687,7 @@ const StudentListView: React.FC = () => {
 
       // Recalculate total extended hours
       const historyResponse = await fetch(
-        `${EXTENSION_HISTORY_URL}?_=${Date.now()}`,
+        `${EXTENSION_HISTORY_URL}?_=${new Date().getTime()}`,
         {
           cache: "no-cache",
         }
@@ -722,7 +725,7 @@ const StudentListView: React.FC = () => {
 
       // Refresh all data
       const refetchResponse = await fetch(
-        `${STUDENT_LIST_URL}?_=${Date.now()}`,
+        `${STUDENT_LIST_URL}?_=${new Date().getTime()}`,
         {
           cache: "no-cache",
         }
@@ -738,7 +741,7 @@ const StudentListView: React.FC = () => {
 
       // Refresh extension history
       const refreshHistoryResponse = await fetch(
-        `${EXTENSION_HISTORY_URL}?_=${Date.now()}`,
+        `${EXTENSION_HISTORY_URL}?_=${new Date().getTime()}`,
         {
           cache: "no-cache",
         }
@@ -792,7 +795,7 @@ const StudentListView: React.FC = () => {
 
       // Recalculate total extended hours from remaining records
       const historyResponse = await fetch(
-        `${EXTENSION_HISTORY_URL}?_=${Date.now()}`,
+        `${EXTENSION_HISTORY_URL}?_=${new Date().getTime()}`,
         {
           cache: "no-cache",
         }
@@ -827,7 +830,7 @@ const StudentListView: React.FC = () => {
 
       // Refresh all data
       const refetchResponse = await fetch(
-        `${STUDENT_LIST_URL}?_=${Date.now()}`,
+        `${STUDENT_LIST_URL}?_=${new Date().getTime()}`,
         {
           cache: "no-cache",
         }
@@ -843,7 +846,7 @@ const StudentListView: React.FC = () => {
 
       // Refresh extension history
       const refreshHistoryResponse = await fetch(
-        `${EXTENSION_HISTORY_URL}?_=${Date.now()}`,
+        `${EXTENSION_HISTORY_URL}?_=${new Date().getTime()}`,
         {
           cache: "no-cache",
         }
@@ -929,7 +932,7 @@ const StudentListView: React.FC = () => {
       if (historyResponse.ok) {
         // Lấy lại TOÀN BỘ lịch sử gia hạn từ Firebase
         const refreshHistoryResponse = await fetch(
-          `${EXTENSION_HISTORY_URL}?_=${Date.now()}`,
+          `${EXTENSION_HISTORY_URL}?_=${new Date().getTime()}`,
           {
             cache: "no-cache",
           }
@@ -971,7 +974,7 @@ const StudentListView: React.FC = () => {
 
           // Refetch student data from Firebase to ensure accuracy
           const refetchResponse = await fetch(
-            `${STUDENT_LIST_URL}?_=${Date.now()}`,
+            `${STUDENT_LIST_URL}?_=${new Date().getTime()}`,
             {
               cache: "no-cache",
             }
@@ -988,7 +991,7 @@ const StudentListView: React.FC = () => {
 
           // Refresh extension history - fetch ALL records again
           const refreshHistoryResponse2 = await fetch(
-            `${EXTENSION_HISTORY_URL}?_=${Date.now()}`,
+            `${EXTENSION_HISTORY_URL}?_=${new Date().getTime()}`,
             {
               cache: "no-cache",
             }
@@ -1247,18 +1250,18 @@ const StudentListView: React.FC = () => {
 
           <span className="text-2xl text-white font-extrabold">Trí Tuệ 8+</span>
                     <div class="header-center">
-                        <h1>ACADEMIC REPORT</h1>
+                        <h1>BÁO CÁO HỌC THUẬT</h1>
                         <p class="company-name">Trí Tuệ 8+</p>
                     </div>
                     <div class="header-right">
                         <p class="month-year">${fromDate.toLocaleDateString(
-                          "en-US",
+                          "vi-VN",
                           { month: "long", year: "numeric" }
                         )}</p>
                         ${
                           fromDate.getTime() !== toDate.getTime()
                             ? `<p class="month-year">to ${toDate.toLocaleDateString(
-                                "en-US",
+                                "vi-VN",
                                 { month: "short", day: "numeric" }
                               )}</p>`
                             : ""
@@ -1269,11 +1272,11 @@ const StudentListView: React.FC = () => {
                 <h2>Student Information</h2>
                 <div class="info-grid">
                     <div class="info-item">
-                        <span class="info-label">Full Họ và tên:</span>
+                        <span class="info-label">Họ và tên:</span>
                         <span class="info-value">${student["Họ và tên"]}</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Student Mã:</span>
+                        <span class="info-label">Mã học sinh:</span>
                         <span class="info-value">${
                           student["Mã học sinh"] || "N/A"
                         }</span>
@@ -1293,19 +1296,19 @@ const StudentListView: React.FC = () => {
                 </div>
 
                 <div class="summary">
-                    <div class="summary-title">ACADEMIC SUMMARY</div>
+                    <div class="summary-title">TÓM TẮT HỌC THUẬT</div>
                     <div class="summary-grid">
                         <div class="summary-item">
                             <div class="summary-value">${
                               totalHours.totalSessions
                             }</div>
-                            <div class="summary-label">Total Sessions</div>
+                            <div class="summary-label">Tổng số buổi học</div>
                         </div>
                         <div class="summary-item">
                             <div class="summary-value">${totalHours.hours}h ${
                               totalHours.minutes
                             }m</div>
-                            <div class="summary-label">Total Time</div>
+                            <div class="summary-label">Tổng thời gian</div>
                         </div>
                         <div class="summary-item">
                             <div class="summary-value">${hoursExtendedFromHistory.toFixed(
@@ -1377,18 +1380,18 @@ const StudentListView: React.FC = () => {
 
                 <div class="footer">
                     <div class="signature">
-                        <p><strong>Teacher In Charge</strong></p>
+                        <p><strong>Giáo viên phụ trách</strong></p>
                         <div class="signature-line">Chữ ký</div>
                     </div>
                     <div class="signature">
-                        <p><strong>Parent/Guardian</strong></p>
+                        <p><strong>Phụ huynh/Người giám hộ</strong></p>
                         <div class="signature-line">Chữ ký</div>
                     </div>
                 </div>
 
                 <p style="text-align: center; margin-top: 30px; color: #64748b; font-size: 12px;">
-                    Printed on: ${new Date().toLocaleDateString(
-                      "en-US"
+                    Ngày in phiếu: ${new Date().toLocaleDateString(
+                      "vi-VN"
                     )} - Trí Tuệ 8+
                 </p>
             </body>
@@ -1491,9 +1494,9 @@ const StudentListView: React.FC = () => {
 
         {/* Students Table */}
         {loading ? (
-          <Card>
+          <div className="flex h-full items-center justify-center">
             <Loader />
-          </Card>
+          </div>
         ) : (
           <Card>
             <Table
@@ -1517,10 +1520,12 @@ const StudentListView: React.FC = () => {
                   key: "index",
                   width: 60,
                   align: "center",
+                  fixed: "left",
                 },
                 {
                   title: "Họ và tên",
                   dataIndex: "name",
+                  fixed: "left",
                   key: "name",
                   render: (text) => <strong>{text}</strong>,
                 },
@@ -1585,7 +1590,8 @@ const StudentListView: React.FC = () => {
                   title: "Cài đặt",
                   key: "actions",
                   align: "center",
-                  width: 280,
+                  fixed: "right",
+                  width: 100,
                   render: (_, record) => (
                     <Space align="start" direction="vertical" size="small">
                       <Button
@@ -1953,7 +1959,7 @@ const StudentListView: React.FC = () => {
                                       📅{" "}
                                       {new Date(
                                         event["Ngày"]
-                                      ).toLocaleDateString("en-US", {
+                                      ).toLocaleDateString("vi-VN", {
                                         weekday: "short",
                                         day: "2-digit",
                                         month: "short",
@@ -2459,12 +2465,12 @@ const StudentListView: React.FC = () => {
 
             {/* Ngày nhập (auto) */}
             <Form.Item label="Ngày nhập">
-              <Input value={new Date().toLocaleDateString("en-US")} disabled />
+              <Input value={new Date().toLocaleDateString("vi-VN")} disabled />
             </Form.Item>
 
             {/* Giờ nhập (auto) */}
             <Form.Item label="Giờ nhập">
-              <Input value={new Date().toLocaleTimeString("en-US")} disabled />
+              <Input value={new Date().toLocaleTimeString("vi-VN")} disabled />
             </Form.Item>
           </Space>
 

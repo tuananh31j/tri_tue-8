@@ -14,96 +14,57 @@ const testimonials: Testimonial[] = [
     name: "Lê Quang Đại",
     image: "Lê Quang Đại.png",
     content:
-      "Hệ bị hành vận củi vớ cháp dơn tiện kếck Nhai hoc Hệ two tức tủng a no-soad thợ tình ogh",
+      "Tôi luôn cảm thấy tự hào khi thấy học sinh tiến bộ từng ngày. Các em rất chăm chỉ và chủ động trong học tập.",
   },
   {
     name: "Lê Đặng Bảo Khanh",
     image: "Lê Đặng Bảo Khanh (1).png",
     content:
-      "Eing đệt kinh xờ Davể Hanh Có Nhay irzą vethet Hường a nện cực cồng độ cm danh hrểu da ca",
+      "Điều khiến tôi ấn tượng nhất là tinh thần ham học hỏi của các em. Mỗi buổi học đều là một hành trình khám phá mới.",
   },
   {
     name: "Nguyễn Duy Nam",
     image: "Nguyễn Duy Nam (4).png",
     content:
-      "Chương trình học rất bổ ích và phù hợp với trẻ em. Con tôi rất thích học tại đây",
+      "Các em tiếp thu nhanh và luôn nỗ lực hết mình. Tôi rất vui khi được đồng hành và chứng kiến sự tiến bộ rõ rệt của từng học sinh.",
   },
   {
     name: "Nguyễn Sĩ Hoàng",
     image: "Nguyễn Sĩ Hoàng.png",
     content:
-      "Giáo viên nhiệt tình, tận tâm với học sinh. Phương pháp giảng dạy hiệu quả",
+      "Giảng dạy ở đây giúp tôi cảm nhận được niềm vui thật sự trong nghề. Học sinh năng động, lớp học luôn tràn đầy năng lượng.",
   },
   {
     name: "Nguyễn Thị Hòa",
     image: "Nguyễn Thị Hòa (1).png",
     content:
-      "Môi trường học tập thân thiện và chuyên nghiệp. Rất đáng để đầu tư cho con",
+      "Tôi đánh giá cao tinh thần hợp tác và sự nỗ lực của học sinh. Mỗi buổi học đều là cơ hội để cùng nhau trưởng thành.",
   },
   {
     name: "Nguyễn Trúc Linh",
     image: "Nguyễn Trúc Linh (1).png",
-    content: "Học sinh được chăm sóc tận tình, tiến bộ rõ rệt sau mỗi khóa học",
+    content:
+      "Tôi rất hạnh phúc khi thấy học sinh của mình ngày càng tự tin hơn, đặc biệt là trong các hoạt động thảo luận và thực hành.",
   },
   {
     name: "Nguyễn Trần Hương Ly",
     image: "Nguyễn Trần Hương Ly.png",
     content:
-      "Chất lượng giảng dạy tuyệt vời, con em học rất hiệu quả và vui vẻ",
+      "Là giảng viên, tôi luôn cố gắng tạo môi trường học tập thoải mái để học sinh phát huy tối đa khả năng của mình.",
   },
   {
     name: "Trần Hải Yến",
     image: "Trần Hải Yến.png",
     content:
-      "Đội ngũ giáo viên giàu kinh nghiệm, tâm huyết với nghề. Rất hài lòng",
+      "Niềm vui lớn nhất của tôi là được chứng kiến học sinh yêu thích môn học và đạt được những kết quả xứng đáng.",
   },
-  {
-    name: "Lê Quang Đại",
-    image: "Lê Quang Đại.png",
-    content:
-      "Hệ bị hành vận củi vớ cháp dơn tiện kếck Nhai hoc Hệ two tức tủng a no-soad thợ tình ogh",
-  },
-  {
-    name: "Lê Đặng Bảo Khanh",
-    image: "Lê Đặng Bảo Khanh (1).png",
-    content:
-      "Eing đệt kinh xờ Davể Hanh Có Nhay irzą vethet Hường a nện cực cồng độ cm danh hrểu da ca",
-  },
-  {
-    name: "Nguyễn Duy Nam",
-    image: "Nguyễn Duy Nam (4).png",
-    content:
-      "Chương trình học rất bổ ích và phù hợp với trẻ em. Con tôi rất thích học tại đây",
-  },
-  {
-    name: "Nguyễn Sĩ Hoàng",
-    image: "Nguyễn Sĩ Hoàng.png",
-    content:
-      "Giáo viên nhiệt tình, tận tâm với học sinh. Phương pháp giảng dạy hiệu quả",
-  },
-  {
-    name: "Nguyễn Thị Hòa",
-    image: "Nguyễn Thị Hòa (1).png",
-    content:
-      "Môi trường học tập thân thiện và chuyên nghiệp. Rất đáng để đầu tư cho con",
-  },
-  {
-    name: "Nguyễn Trúc Linh",
-    image: "Nguyễn Trúc Linh (1).png",
-    content: "Học sinh được chăm sóc tận tình, tiến bộ rõ rệt sau mỗi khóa học",
-  },
-  {
-    name: "Nguyễn Trần Hương Ly",
-    image: "Nguyễn Trần Hương Ly.png",
-    content:
-      "Chất lượng giảng dạy tuyệt vời, con em học rất hiệu quả và vui vẻ",
-  },
-  {
-    name: "Trần Hải Yến",
-    image: "Trần Hải Yến.png",
-    content:
-      "Đội ngũ giáo viên giàu kinh nghiệm, tâm huyết với nghề. Rất hài lòng",
-  },
+];
+
+const teachers: Testimonial[] = [
+  ...testimonials,
+  ...testimonials,
+  ...testimonials,
+  ...testimonials,
 ];
 
 interface Course {
@@ -195,8 +156,10 @@ const HomePage = () => {
                         }
                         .testimonial-track {
                             display: flex;
-                            animation: scroll-horizontal 40s linear infinite;
+                            align-items: stretch; /* Đảm bảo tất cả cards có cùng height */
+                            animation: scroll-horizontal 80s linear infinite;
                             width: fit-content;
+                            height: 320px; /* Set height cố định cho track */
                         }
                         .testimonial-track:hover {
                             animation-play-state: paused;
@@ -204,19 +167,23 @@ const HomePage = () => {
                         .testimonial-wrapper {
                             overflow: hidden;
                             position: relative;
+                            height: 320px; /* Match với track height */
+                        }
+                        .testimonial-track > * {
+                            height: 100%; /* Đảm bảo mỗi card chiếm hết height của track */
                         }
                     `}</style>
           <div className="testimonial-wrapper">
             <div className="testimonial-track">
               {/* First set */}
-              {testimonials.map((testimonial, index) => (
+              {teachers.map((testimonial, index) => (
                 <TestimonialCard key={`first-${index}`} {...testimonial} />
               ))}
 
               {/* Duplicate set for seamless loop */}
-              {testimonials.map((testimonial, index) => (
+              {/* {testimonials.map((testimonial, index) => (
                 <TestimonialCard key={`second-${index}`} {...testimonial} />
-              ))}
+              ))} */}
             </div>
           </div>
         </div>

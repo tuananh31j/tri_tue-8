@@ -20,7 +20,7 @@ const Login: React.FC = () => {
     try {
       setLoading(true);
       await signInWithTeacherCredentials(email.trim(), password);
-      setSuccess("🎉 Login successful!");
+      setSuccess("Đăng nhập thành công! Chuyển hướng...");
       navigate("/workspace");
     } catch (err: any) {
       console.error("Login error:", err);
@@ -28,14 +28,16 @@ const Login: React.FC = () => {
       // Handle specific errors
       if (err.message === "Invalid email or password") {
         setError(
-          "❌ Invalid email or password. Please contact admin if you need account access."
+          "Email hoặc mật khẩu không hợp lệ. Vui lòng liên hệ quản trị viên nếu bạn cần quyền truy cập tài khoản."
         );
       } else if (err.message === "Failed to fetch teachers data") {
-        setError("❌ Unable to connect to server. Please try again later.");
+        setError("Không thể kết nối với máy chủ. Vui lòng thử lại sau.");
       } else if (err.message === "No teachers found") {
-        setError("❌ No teacher accounts found. Please contact admin.");
+        setError(
+          "Không tìm thấy tài khoản giáo viên nào. Vui lòng liên hệ quản trị viên."
+        );
       } else {
-        setError(err.message || "❌ Login failed. Please try again.");
+        setError("Đăng nhập không thành công. Vui lòng thử lại.");
       }
     } finally {
       setLoading(false);
@@ -56,7 +58,7 @@ const Login: React.FC = () => {
             Trí Tuệ 8+
           </h1>
           <p className="text-gray-600 text-base sm:text-lg">
-            Hệ thống quản lý lịch trình
+            Hệ thống quản lý giáo dục thông minh
           </p>
         </div>
 
@@ -106,8 +108,8 @@ const Login: React.FC = () => {
               }
               name="email"
               rules={[
-                { required: true, message: "Please enter your email" },
-                { type: "email", message: "Please enter a valid email" },
+                { required: true, message: "Vui lòng nhập email của bạn" },
+                { type: "email", message: "Vui lòng nhập email hợp lệ" },
               ]}
             >
               <Input
@@ -126,7 +128,7 @@ const Login: React.FC = () => {
               }
               name="password"
               rules={[
-                { required: true, message: "Please enter your password" },
+                { required: true, message: "Vui lòng điền mật khẩu" },
               ]}
             >
               <Input.Password

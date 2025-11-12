@@ -1,13 +1,9 @@
-import AdminCalendarView from "@/components/pages/AdminCalendarView";
 import AttendanceView from "@/components/pages/AttendanceView";
 import InvoicePage from "@/components/pages/InvoicePage";
-import Receipts from "@/components/pages/Receipts";
-import ScheduleView from "@/components/pages/ScheduleView";
 import StudentListView from "@/components/pages/StudentListView";
 import TeacherListView from "@/components/pages/TeacherListView";
 import ScheduleViewAntd from "@/components/pages/ScheduleViewAntd";
 import AdminLayout from "@/layouts/AdminLayout";
-import PageHeader from "@/layouts/PageHeader";
 import Authoriation from "@/routes/Authoriation";
 
 const privateRoutes = [
@@ -38,10 +34,6 @@ const privateRoutes = [
             <TeacherListView />
           </Authoriation>
         ),
-      },
-      {
-        path: "admin-calendar",
-        element: <AdminCalendarView />,
       },
       {
         path: "attendance",

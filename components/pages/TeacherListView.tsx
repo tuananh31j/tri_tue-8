@@ -4,6 +4,39 @@ import { isAdmin } from "../../config/admins";
 import type { ScheduleEvent } from "../../types";
 import PageHeader from "../../layouts/PageHeader";
 import { DATABASE_URL_BASE } from "@/firebase";
+import {
+  Button,
+  Input,
+  Select,
+  DatePicker,
+  Table,
+  Modal,
+  Form,
+  Card,
+  Statistic,
+  Space,
+  Tag,
+  Typography,
+  Row,
+  Col,
+  Divider,
+} from "antd";
+import {
+  SearchOutlined,
+  PlusOutlined,
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PrinterOutlined,
+  CloseOutlined,
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+import Loader from "@/components/Loader";
+import { Spin } from "antd/lib";
+
+const { Option } = Select;
+const { TextArea } = Input;
+const { Title, Text } = Typography;
 
 const TEACHER_LIST_URL = `${DATABASE_URL_BASE}/datasheet/Gi%C3%A1o_vi%C3%AAn.json`;
 const SCHEDULE_URL = `${DATABASE_URL_BASE}/datasheet/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
@@ -43,6 +76,28 @@ const TeacherListView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedBienChe, setSelectedBienChe] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Ant Design Form instance
+  const [form] = Form.useForm();
+
+  // Populate form when editing teacher
+  useEffect(() => {
+    if (editingTeacher && isEditModalOpen) {
+      form.setFieldsValue({
+        name: editingTeacher["Họ và tên"] || "",
+        phone: editingTeacher["SĐT"] || editingTeacher["Số điện thoại"] || "",
+        email: editingTeacher["Email"] || editingTeacher["Email công ty"] || "",
+        password: editingTeacher["Password"] || "",
+        status: editingTeacher["Biên chế"] || "",
+        position: editingTeacher["Vị trí"] || "Teacher",
+        bank: editingTeacher["Ngân hàng"] || "",
+        account: editingTeacher["STK"] || "",
+        address: editingTeacher["Địa chỉ"] || "",
+      });
+    } else if (!editingTeacher && isEditModalOpen) {
+      form.resetFields();
+    }
+  }, [editingTeacher, isEditModalOpen, form]);
 
   // 🔍 DEBUG: Component lifecycle
   useEffect(() => {
@@ -140,13 +195,13 @@ const TeacherListView: React.FC = () => {
 
   // Calculate total travel allowance for a teacher
   const calculateTravelAllowance = (
-    teacherName: string,
+    teacherId: string,
     fromDate?: Date,
     toDate?: Date
   ): number => {
     const teacherEvents = scheduleEvents.filter((event) => {
-      const eventTeacher = normalizeName(event["Giáo viên phụ trách"] || "");
-      return eventTeacher === teacherName;
+      const eventTeacher = event["Teacher ID"];
+      return eventTeacher === teacherId;
     });
 
     let filteredEvents = teacherEvents;
@@ -177,17 +232,17 @@ const TeacherListView: React.FC = () => {
 
   // Calculate total hours for a teacher
   const calculateTeacherHours = (
-    teacherName: string,
+    teacherId: string,
     fromDate?: Date,
     toDate?: Date
   ) => {
-    console.log(`\n📊 Calculating for: "${teacherName}"`);
+    console.log(`\n📊 Calculating for: "${teacherId}"`);
 
     const teacherEvents = scheduleEvents.filter((event) => {
-      const eventTeacher = normalizeName(event["Giáo viên phụ trách"] || "");
-      const matches = eventTeacher === teacherName;
+      const eventTeacher = event["Teacher ID"];
+      const matches = eventTeacher === teacherId;
       if (matches) {
-        console.log(`  ✅ Match: "${eventTeacher}" === "${teacherName}"`);
+        console.log(`  ✅ Match: "${eventTeacher}" === "${teacherId}"`);
       }
       return matches;
     });
@@ -239,14 +294,14 @@ const TeacherListView: React.FC = () => {
 
   // Get teacher events by month
   const getTeacherEventsByMonth = (
-    teacherName: string,
+    teacherId: string,
     month: number,
     year: number
   ) => {
     return scheduleEvents
       .filter((event) => {
-        const eventTeacher = normalizeName(event["Giáo viên phụ trách"] || "");
-        if (eventTeacher !== teacherName) return false;
+        const eventTeacher = event["Teacher ID"];
+        if (eventTeacher !== teacherId) return false;
         if (!event["Ngày"]) return false;
         const eventDate = new Date(event["Ngày"]);
         return (
@@ -332,9 +387,9 @@ const TeacherListView: React.FC = () => {
       const teacherName = getTeacherName(teacher);
       const fromDate = startDate ? new Date(startDate) : undefined;
       const toDate = endDate ? new Date(endDate) : undefined;
-      const stats = calculateTeacherHours(teacherName, fromDate, toDate);
+      const stats = calculateTeacherHours(teacher.id, fromDate, toDate);
       const travelAllowance = calculateTravelAllowance(
-        teacherName,
+        teacher.id,
         fromDate,
         toDate
       );
@@ -378,30 +433,91 @@ const TeacherListView: React.FC = () => {
 
   const handleDeleteTeacher = async (e: React.MouseEvent, teacher: Teacher) => {
     e.stopPropagation();
-    if (
-      window.confirm(
-        `Are you sure you want to delete teacher "${getTeacherName(teacher)}"?`
-      )
-    ) {
-      try {
-        const url = `${DATABASE_URL_BASE}/Gi%C3%A1o_vi%C3%AAn/${teacher.id}.json`;
-        const response = await fetch(url, {
-          method: "DELETE",
-        });
-        if (response.ok) {
-          setTeachers(teachers.filter((t) => t.id !== teacher.id));
-          alert("Teacher deleted successfully!");
+    Modal.confirm({
+      title: "Xác nhận xoá",
+      content: `Bạn có chắc là muốn xoá giáo viên "${getTeacherName(
+        teacher
+      )}"?`,
+      okText: "Xoá",
+      okType: "danger",
+      cancelText: "Huỷ",
+      onOk: async () => {
+        try {
+          const url = `${DATABASE_URL_BASE}/datasheet/datasheet/Gi%C3%A1o_vi%C3%AAn/${teacher.id}.json`;
+          const response = await fetch(url, {
+            method: "DELETE",
+          });
+          if (response.ok) {
+            setTeachers(teachers.filter((t) => t.id !== teacher.id));
+            Modal.success({ content: "Xoá giáo viên thành công!" });
+          }
+        } catch (error) {
+          console.error("Error deleting teacher:", error);
+          Modal.error({ content: "Xoá giáo viên thất bại" });
         }
-      } catch (error) {
-        console.error("Error deleting teacher:", error);
-        alert("Failed to delete teacher");
-      }
-    }
+      },
+    });
   };
 
-  const handleSaveTeacher = async (teacherData: Partial<Teacher>) => {
+  const handleSaveTeacher = async (values: any) => {
     try {
-      const isNew = !teacherData.id;
+      const isNew = !editingTeacher?.id;
+
+      // Validate duplicate email
+      if (values.email && values.email.trim()) {
+        const emailToCheck = values.email.trim().toLowerCase();
+        const duplicateTeacher = teachers.find((t) => {
+          const teacherEmail = (
+            t["Email"] ||
+            t["Email công ty"] ||
+            ""
+          ).toLowerCase();
+          // Skip current teacher when editing
+          if (editingTeacher?.id && t.id === editingTeacher.id) {
+            return false;
+          }
+          return teacherEmail === emailToCheck;
+        });
+
+        if (duplicateTeacher) {
+          alert("Email đã tồn tại");
+          return;
+        }
+      }
+
+      // Auto-generate Teacher Code if adding new teacher
+      let teacherCode = editingTeacher?.["Mã giáo viên"] || "";
+      if (isNew) {
+        const existingCodes = teachers
+          .map((t) => t["Mã giáo viên"])
+          .filter((code) => code && code.startsWith("GV"))
+          .map((code) => parseInt(code.replace("GV", "")) || 0);
+        const maxNumber =
+          existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+        teacherCode = `GV${String(maxNumber + 1).padStart(3, "0")}`;
+      }
+
+      const teacherData: Partial<Teacher> = {
+        "Họ và tên": values.name,
+        "Mã giáo viên": teacherCode,
+        SĐT: values.phone,
+        Email: values.email,
+        "Biên chế": values.status,
+        "Vị trí": values.position || "Teacher",
+        "Ngân hàng": values.bank,
+        STK: values.account,
+        "Địa chỉ": values.address,
+      };
+
+      // Only update password if a new one is provided
+      if (values.password && values.password.trim()) {
+        teacherData["Password"] = values.password.trim();
+      }
+
+      // Preserve the ID if editing an existing teacher
+      if (editingTeacher?.id) {
+        teacherData.id = editingTeacher.id;
+      }
 
       if (isNew) {
         // Add new teacher
@@ -419,7 +535,8 @@ const TeacherListView: React.FC = () => {
           setTeachers([...teachers, newTeacher]);
           setEditModalOpen(false);
           setEditingTeacher(null);
-          alert("✅ Teacher added successfully!");
+          form.resetFields();
+          Modal.success({ content: "✅ Teacher added successfully!" });
         } else {
           const errorText = await response.text();
           console.error(
@@ -427,11 +544,13 @@ const TeacherListView: React.FC = () => {
             response.status,
             errorText
           );
-          alert(`❌ Failed to add teacher. Status: ${response.status}`);
+          Modal.error({
+            content: `❌ Failed to add teacher. Status: ${response.status}`,
+          });
         }
       } else {
         // Update existing teacher
-        const url = `${DATABASE_URL_BASE}/Gi%C3%A1o_vi%C3%AAn/${teacherData.id}.json`;
+        const url = `${DATABASE_URL_BASE}/datasheet/Gi%C3%A1o_vi%C3%AAn/${teacherData.id}.json`;
         console.log("📤 Updating teacher:", teacherData.id, teacherData);
         const response = await fetch(url, {
           method: "PUT",
@@ -448,7 +567,8 @@ const TeacherListView: React.FC = () => {
           );
           setEditModalOpen(false);
           setEditingTeacher(null);
-          alert("✅ Teacher updated successfully!");
+          form.resetFields();
+          Modal.success({ content: "✅ Teacher updated successfully!" });
         } else {
           const errorText = await response.text();
           console.error(
@@ -456,12 +576,14 @@ const TeacherListView: React.FC = () => {
             response.status,
             errorText
           );
-          alert(`❌ Failed to update teacher. Status: ${response.status}`);
+          Modal.error({
+            content: `❌ Failed to update teacher. Status: ${response.status}`,
+          });
         }
       }
     } catch (error) {
       console.error("Error saving teacher:", error);
-      alert("Failed to save teacher: " + error);
+      Modal.error({ content: "Failed to save teacher: " + error });
     }
   };
 
@@ -658,7 +780,7 @@ const TeacherListView: React.FC = () => {
                 <div class="header">
           <span className="text-2xl text-white font-extrabold">Trí Tuệ 8+</span>
                     <div class="header-center">
-                        <h1>TEACHING HOURS REPORT</h1>
+                        <h1>BÁO CÁO GIỜ GIẢNG DẠY</h1>
                         <p class="company-name">Trí Tuệ 8+</p>
                     </div>
                     <div class="header-right">
@@ -670,11 +792,11 @@ const TeacherListView: React.FC = () => {
                 <h2>Teacher Information</h2>
                 <div class="info-grid">
                     <div class="info-item">
-                        <span class="info-label">Full Name:</span>
+                        <span class="info-label">Họ và tên đầy đủ:</span>
                         <span class="info-value">${teacherName}</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Phone:</span>
+                        <span class="info-label">Số điện thoại:</span>
                         <span class="info-value">${
                           teacher["SĐT"] || teacher["Số điện thoại"] || "N/A"
                         }</span>
@@ -686,7 +808,7 @@ const TeacherListView: React.FC = () => {
                         }</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Employment Status:</span>
+                        <span class="info-label">Tình trạng việc làm:</span>
                         <span class="info-value">${
                           teacher["Biên chế"] || "N/A"
                         }</span>
@@ -694,7 +816,7 @@ const TeacherListView: React.FC = () => {
                 </div>
 
                 <div class="summary">
-                    <div class="summary-title">TEACHING SUMMARY</div>
+                    <div class="summary-title">BÁO CÁO GIỜ GIẢNG DẠY</div>
                     <div class="summary-grid">
                         <div class="summary-item">
                             <div class="summary-value">${
@@ -712,21 +834,21 @@ const TeacherListView: React.FC = () => {
                             <div class="summary-value">${
                               events.length > 0 ? "Active" : "Inactive"
                             }</div>
-                            <div class="summary-label">Status</div>
+                            <div class="summary-label">Trạng thái</div>
                         </div>
                     </div>
                 </div>
 
-                <h2>Teaching Session Details</h2>
+                <h2>Chi tiết buổi giảng dạy</h2>
                 <table>
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Duration</th>
-                            <th>Content</th>
-                            <th>Student</th>
+                            <th>Ngày</th>
+                            <th>Thời gian</th>
+                            <th>Thời lượng</th>
+                            <th>Nội dung</th>
+                            <th>Học sinh</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -768,18 +890,18 @@ const TeacherListView: React.FC = () => {
 
                 <div class="footer">
                     <div class="signature">
-                        <p><strong>Teacher</strong></p>
-                        <div class="signature-line">Signature</div>
+                        <p><strong>Giáo viên</strong></p>
+                        <div class="signature-line">Chữ ký</div>
                     </div>
                     <div class="signature">
-                        <p><strong>Manager</strong></p>
-                        <div class="signature-line">Signature</div>
+                        <p><strong>Quản lý</strong></p>
+                        <div class="signature-line">Chữ ký</div>
                     </div>
                 </div>
 
                 <p style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
-                    Printed on: ${new Date().toLocaleDateString(
-                      "en-US"
+                    Xuất phiếu ngày: ${new Date().toLocaleDateString(
+                      "vi-VN"
                     )} - Trí Tuệ 8+
                 </p>
             </body>
@@ -795,354 +917,433 @@ const TeacherListView: React.FC = () => {
 
   return (
     <>
-      {/* Filters */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Add New Teacher button */}
         <div className="flex justify-end mb-4">
-          <button
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            size="large"
             onClick={handleAddTeacher}
-            className="px-6 py-3 bg-[#36797f] text-white rounded-lg font-semibold hover:bg-[#36797f] transition shadow-lg flex items-center gap-2 z-10 relative"
+            style={{ backgroundColor: "#36797f" }}
           >
-            <span className="text-xl text-white font-bold">
-              + Thêm giáo viên mới
-            </span>
-          </button>
+            <span className="font-bold">Thêm giáo viên mới</span>
+          </Button>
         </div>
 
         {/* Search Box */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="🔍 Tìm kiếm theo tên, mã giáo viên, số điện thoại, email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 pl-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f] text-base"
-            />
-            <svg
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            )}
-          </div>
+        <Card className="mb-6">
+          <Input
+            placeholder="🔍 Tìm kiếm theo tên, mã giáo viên, số điện thoại, email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            prefix={<SearchOutlined />}
+            suffix={
+              searchTerm && (
+                <CloseOutlined
+                  onClick={() => setSearchTerm("")}
+                  style={{ cursor: "pointer", color: "#999" }}
+                />
+              )
+            }
+            size="large"
+            allowClear
+          />
           {searchTerm && (
-            <p className="mt-2 text-sm text-gray-600">
+            <Text type="secondary" className="mt-2 block">
               Tìm thấy{" "}
-              <span className="font-bold text-[#36797f]">
+              <Text strong style={{ color: "#36797f" }}>
                 {displayTeachers.length}
-              </span>{" "}
+              </Text>{" "}
               giáo viên
-            </p>
+            </Text>
           )}
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Filters</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Tháng
-              </label>
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-transparent"
-              >
-                {months.map((month, index) => (
-                  <option key={index} value={index}>
-                    {month}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Năm
-              </label>
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-transparent"
-              >
-                {[2023, 2024, 2025, 2026].map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Tình trạng biên chế
-              </label>
-              <select
-                value={selectedBienChe}
-                onChange={(e) => setSelectedBienChe(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-transparent"
-              >
-                <option value="all">Tất cả trạng thái</option>
-                {[
-                  ...new Set(
-                    teachers.map((t) => t["Biên chế"] || "Unclassified")
-                  ),
-                ]
-                  .sort()
-                  .map((bienChe) => (
-                    <option key={bienChe} value={bienChe}>
-                      {bienChe}
-                    </option>
+        {/* Filters */}
+        <Card title={<Text strong>Bộ lọc</Text>} className="mb-6">
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} md={6}>
+              <div>
+                <Text strong className="block mb-2">
+                  Tháng
+                </Text>
+                <Select
+                  value={selectedMonth}
+                  onChange={(value) => setSelectedMonth(value)}
+                  style={{ width: "100%" }}
+                  size="large"
+                >
+                  {months.map((month, index) => (
+                    <Option key={index} value={index}>
+                      {month}
+                    </Option>
                   ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Từ ngày
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-transparent"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Đến ngày
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-transparent"
-              />
-            </div>
-          </div>
+                </Select>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <div>
+                <Text strong className="block mb-2">
+                  Năm
+                </Text>
+                <Select
+                  value={selectedYear}
+                  onChange={(value) => setSelectedYear(value)}
+                  style={{ width: "100%" }}
+                  size="large"
+                >
+                  {[2023, 2024, 2025, 2026].map((year) => (
+                    <Option key={year} value={year}>
+                      {year}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <div>
+                <Text strong className="block mb-2">
+                  Tình trạng biên chế
+                </Text>
+                <Select
+                  value={selectedBienChe}
+                  onChange={(value) => setSelectedBienChe(value)}
+                  style={{ width: "100%" }}
+                  size="large"
+                >
+                  <Option value="all">Tất cả trạng thái</Option>
+                  {[
+                    ...new Set(
+                      teachers.map((t) => t["Biên chế"] || "Unclassified")
+                    ),
+                  ]
+                    .sort()
+                    .map((bienChe) => (
+                      <Option key={bienChe} value={bienChe}>
+                        {bienChe}
+                      </Option>
+                    ))}
+                </Select>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <div>
+                <Text strong className="block mb-2">
+                  Từ ngày
+                </Text>
+                <DatePicker
+                  value={startDate ? dayjs(startDate) : null}
+                  onChange={(date) =>
+                    setStartDate(date ? date.format("YYYY-MM-DD") : "")
+                  }
+                  style={{ width: "100%" }}
+                  size="large"
+                />
+              </div>
+            </Col>
+          </Row>
+          <Row gutter={[16, 16]} className="mt-4">
+            <Col xs={24} sm={12} md={6}>
+              <div>
+                <Text strong className="block mb-2">
+                  Đến ngày
+                </Text>
+                <DatePicker
+                  value={endDate ? dayjs(endDate) : null}
+                  onChange={(date) =>
+                    setEndDate(date ? date.format("YYYY-MM-DD") : "")
+                  }
+                  style={{ width: "100%" }}
+                  size="large"
+                />
+              </div>
+            </Col>
+          </Row>
           {(startDate || endDate) && (
-            <button
+            <Button
+              danger
               onClick={() => {
                 setStartDate("");
                 setEndDate("");
               }}
-              className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+              className="mt-4"
             >
               Xóa bộ lọc ngày
-            </button>
+            </Button>
           )}
-        </div>
+        </Card>
 
         {/* Teachers Grid */}
         {loading ? (
-          <div className="text-center py-20">
-            <p className="text-gray-600 text-xl">Đang tải dữ liệu...</p>
+          <div className="flex h-full items-center justify-center">
+            <Loader />
           </div>
         ) : (
           <div className="space-y-8">
             {/* Summary Statistics */}
-            <div
+            <Card
               style={{
                 background: "linear-gradient(to right, #36797f, #36797f)",
               }}
-              className="text-white rounded-xl shadow-lg p-8"
+              className="shadow-lg"
             >
-              <h2 className="text-2xl font-bold mb-6 text-center">Tổng quan</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
-                  <div className="text-primary text-3xl font-bold">
-                    {displayTeachers.length}
-                  </div>
-                  <div className="text-primary text-sm mt-1">
-                    Tổng giáo viên
-                  </div>
-                </div>
-                <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
-                  <div className="text-primary text-3xl font-bold">
-                    {sortedGroups.length}
-                  </div>
-                  <div className="text-primary text-sm mt-1">Loại biên chế</div>
-                </div>
-                <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
-                  <div className="text-primary text-3xl font-bold">
-                    {displayTeachers.reduce(
-                      (sum, t) => sum + t.totalSessions,
-                      0
-                    )}
-                  </div>
-                  <div className="text-primary text-sm mt-1">Tổng buổi dạy</div>
-                </div>
-                <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
-                  <div className="text-primary text-3xl font-bold">
-                    {Math.floor(
-                      displayTeachers.reduce(
-                        (sum, t) => sum + t.hours * 60 + t.minutes,
+              <Title
+                level={3}
+                className="text-center mb-6"
+                style={{ color: "white" }}
+              >
+                Tổng quan
+              </Title>
+              <Row gutter={[16, 16]}>
+                <Col xs={12} md={6}>
+                  <Card
+                    className="text-center"
+                    style={{
+                      backgroundColor: "rgba(255, 255, 255, 0.2)",
+                      border: "none",
+                    }}
+                  >
+                    <Statistic
+                      value={displayTeachers.length}
+                      valueStyle={{
+                        color: "white",
+                        fontSize: 32,
+                        fontWeight: "bold",
+                      }}
+                    />
+                    <Text style={{ color: "white", fontSize: 12 }}>
+                      Tổng giáo viên
+                    </Text>
+                  </Card>
+                </Col>
+                <Col xs={12} md={6}>
+                  <Card
+                    className="text-center"
+                    style={{
+                      backgroundColor: "rgba(255, 255, 255, 0.2)",
+                      border: "none",
+                    }}
+                  >
+                    <Statistic
+                      value={sortedGroups.length}
+                      valueStyle={{
+                        color: "white",
+                        fontSize: 32,
+                        fontWeight: "bold",
+                      }}
+                    />
+                    <Text style={{ color: "white", fontSize: 12 }}>
+                      Loại biên chế
+                    </Text>
+                  </Card>
+                </Col>
+                <Col xs={12} md={6}>
+                  <Card
+                    className="text-center"
+                    style={{
+                      backgroundColor: "rgba(255, 255, 255, 0.2)",
+                      border: "none",
+                    }}
+                  >
+                    <Statistic
+                      value={displayTeachers.reduce(
+                        (sum, t) => sum + t.totalSessions,
                         0
-                      ) / 60
-                    )}
-                    h
-                  </div>
-                  <div className="text-primary text-sm mt-1">Tổng giờ dạy</div>
-                </div>
-              </div>
-            </div>
+                      )}
+                      valueStyle={{
+                        color: "white",
+                        fontSize: 32,
+                        fontWeight: "bold",
+                      }}
+                    />
+                    <Text style={{ color: "white", fontSize: 12 }}>
+                      Tổng buổi dạy
+                    </Text>
+                  </Card>
+                </Col>
+                <Col xs={12} md={6}>
+                  <Card
+                    className="text-center"
+                    style={{
+                      backgroundColor: "rgba(255, 255, 255, 0.2)",
+                      border: "none",
+                    }}
+                  >
+                    <Statistic
+                      value={`${Math.floor(
+                        displayTeachers.reduce(
+                          (sum, t) => sum + t.hours * 60 + t.minutes,
+                          0
+                        ) / 60
+                      )}h`}
+                      valueStyle={{
+                        color: "white",
+                        fontSize: 32,
+                        fontWeight: "bold",
+                      }}
+                    />
+                    <Text style={{ color: "white", fontSize: 12 }}>
+                      Tổng giờ dạy
+                    </Text>
+                  </Card>
+                </Col>
+              </Row>
+            </Card>
 
             {sortedGroups.map((bienChe) => {
               const teachersInGroup = groupedTeachers[bienChe];
+
+              const columns = [
+                {
+                  title: "#",
+                  key: "index",
+                  width: 60,
+                  render: (_: any, __: any, index: number) => index + 1,
+                },
+                {
+                  title: "Họ tên",
+                  key: "name",
+                  render: (_: any, teacher: any) => (
+                    <Text strong>{getTeacherName(teacher)}</Text>
+                  ),
+                },
+                {
+                  title: "Số điện thoại",
+                  dataIndex: "SĐT",
+                  key: "phone",
+                  render: (_: any, teacher: any) =>
+                    teacher["SĐT"] || teacher["Số điện thoại"] || "-",
+                },
+                {
+                  title: "Email",
+                  key: "email",
+                  render: (_: any, teacher: any) =>
+                    teacher["Email"] || teacher["Email công ty"] || "-",
+                },
+                {
+                  title: "Tổng giờ dạy",
+                  key: "hours",
+                  align: "center" as const,
+                  render: (_: any, teacher: any) => (
+                    <Text strong style={{ color: "#36797f" }}>
+                      {teacher.hours}h {teacher.minutes}p
+                    </Text>
+                  ),
+                },
+                {
+                  title: "Buổi dạy",
+                  key: "sessions",
+                  align: "center" as const,
+                  render: (_: any, teacher: any) => (
+                    <Tag color="red" style={{ fontWeight: "bold" }}>
+                      {teacher.totalSessions} Buổi
+                    </Tag>
+                  ),
+                },
+                {
+                  title: "Trợ cấp đi lại",
+                  key: "allowance",
+                  align: "center" as const,
+                  render: (_: any, teacher: any) => (
+                    <Text strong style={{ color: "#52c41a" }}>
+                      {teacher.totalTravelAllowance
+                        ? teacher.totalTravelAllowance.toLocaleString("vi-VN")
+                        : "0"}{" "}
+                      VNĐ
+                    </Text>
+                  ),
+                },
+                {
+                  title: "Hành động",
+                  key: "actions",
+                  align: "center" as const,
+                  render: (_: any, teacher: any) => (
+                    <Space direction="vertical">
+                      <Button
+                        type="default"
+                        icon={<EyeOutlined />}
+                        size="small"
+                        onClick={() => {
+                          setSelectedTeacher(teacher);
+                          setModalOpen(true);
+                        }}
+                        style={{ borderColor: "#36797f", color: "#36797f" }}
+                      >
+                        Xem
+                      </Button>
+                      <Button
+                        type="default"
+                        icon={<EditOutlined />}
+                        size="small"
+                        onClick={(e) => handleEditTeacher(e, teacher)}
+                        style={{ borderColor: "#1890ff", color: "#1890ff" }}
+                      >
+                        Sửa
+                      </Button>
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        size="small"
+                        onClick={(e) => handleDeleteTeacher(e, teacher)}
+                      >
+                        Xóa
+                      </Button>
+                    </Space>
+                  ),
+                },
+              ];
+
               return (
-                <div key={bienChe} className="mb-6">
-                  {/* Group Header */}
-                  <div
-                    style={{
-                      background: "linear-gradient(to right, #36797f, #36797f)",
-                    }}
-                    className="text-white px-6 py-4 rounded-t-xl shadow-lg sticky top-0 z-10"
-                  >
+                <Card
+                  key={bienChe}
+                  className="mb-6"
+                  title={
                     <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold flex items-center gap-3">
-                        <span className="bg-white text-[#36797f] rounded-full px-4 py-1 text-lg font-bold">
+                      <Space>
+                        <Tag
+                          color="#36797f"
+                          style={{
+                            fontSize: 16,
+                            padding: "4px 16px",
+                            fontWeight: "bold",
+                          }}
+                        >
                           {teachersInGroup.length}
-                        </span>
-                        {bienChe}
-                      </h2>
-                      <div className="text-sm bg-[#36797f] px-3 py-1 rounded-full">
+                        </Tag>
+                        <Text strong style={{ fontSize: 18 }}>
+                          {bienChe}
+                        </Text>
+                      </Space>
+                      <Tag
+                        style={{
+                          backgroundColor: "#36797f",
+                          color: "white",
+                          fontSize: 12,
+                        }}
+                      >
                         {teachersInGroup.length} giáo viên
-                      </div>
+                      </Tag>
                     </div>
-                  </div>
-                  {/* Teachers in this group */}
-                  <div className="bg-white rounded-b-xl overflow-hidden">
-                    <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-red-100 sticky top-0 z-10">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              #
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Họ tên
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Số điện thoại
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Email
-                            </th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Tổng giờ dạy
-                            </th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Buổi dạy
-                            </th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Trợ cấp đi lại
-                            </th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-[#2A0A0B] uppercase tracking-wider">
-                              Hành động
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {teachersInGroup.map((teacher, index) => {
-                            const teacherName = getTeacherName(teacher);
-                            return (
-                              <tr
-                                key={index}
-                                className="hover:bg-red-50 transition"
-                              >
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                                  {index + 1}
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap">
-                                  <div className="text-sm font-semibold text-gray-900">
-                                    {teacherName}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                                  {teacher["SĐT"] ||
-                                    teacher["Số điện thoại"] ||
-                                    "-"}
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                                  {teacher["Email"] ||
-                                    teacher["Email công ty"] ||
-                                    "-"}
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-center">
-                                  <span className="text-sm font-bold text-[#36797f]">
-                                    {teacher.hours}h {teacher.minutes}p
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-center">
-                                  <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-[#36797f]">
-                                    {teacher.totalSessions} Buổi
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-center">
-                                  <span className="text-sm font-bold text-green-600">
-                                    {teacher.totalTravelAllowance
-                                      ? teacher.totalTravelAllowance.toLocaleString(
-                                          "vi-VN"
-                                        )
-                                      : "0"}{" "}
-                                    VNĐ
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
-                                  <div className="flex gap-2 justify-center">
-                                    <button
-                                      onClick={() => {
-                                        setSelectedTeacher(teacher);
-                                        setModalOpen(true);
-                                      }}
-                                      className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-[#36797f]/20 text-[#36797f] bg-white hover:bg-[#36797f] hover:text-white hover:border-[#36797f] font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
-                                      title="View Details"
-                                    >
-                                      👁️ Xem
-                                    </button>
-                                    <button
-                                      onClick={(e) =>
-                                        handleEditTeacher(e, teacher)
-                                      }
-                                      className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-blue-200 text-blue-600 bg-white hover:bg-blue-600 hover:text-white hover:border-blue-600 font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
-                                      title="Edit"
-                                    >
-                                      ✏️ Sửa
-                                    </button>
-                                    <button
-                                      onClick={(e) =>
-                                        handleDeleteTeacher(e, teacher)
-                                      }
-                                      className="px-3 py-1.5 inline-flex items-center justify-center gap-1 rounded-xl shadow-sm border border-red-200 text-red-600 bg-white hover:bg-red-600 hover:text-white hover:border-red-600 font-semibold text-xs transition-all duration-150 ease-out hover:scale-105 hover:shadow-md"
-                                      title="Delete"
-                                    >
-                                      🗑️ Xóa
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
+                  }
+                  headStyle={{
+                    background: "linear-gradient(to right, #36797f, #36797f)",
+                    color: "white",
+                  }}
+                >
+                  <Table
+                    columns={columns}
+                    dataSource={teachersInGroup}
+                    pagination={false}
+                    scroll={{ y: 600 }}
+                    rowKey={(record) =>
+                      record["Mã giáo viên"] ||
+                      record["Họ và tên"] ||
+                      Math.random().toString()
+                    }
+                    rowClassName="hover:bg-red-50"
+                  />
+                </Card>
               );
             })}
           </div>
@@ -1150,333 +1351,310 @@ const TeacherListView: React.FC = () => {
       </div>
 
       {/* Teacher Detail Modal */}
-      {isModalOpen && selectedTeacher && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={() => setModalOpen(false)}
-        >
+      <Modal
+        open={isModalOpen && !!selectedTeacher}
+        onCancel={() => setModalOpen(false)}
+        footer={null}
+        width={900}
+        title={
+          <div>
+            <Title level={4} style={{ margin: 0, color: "#36797f" }}>
+              {selectedTeacher && getTeacherName(selectedTeacher)}
+            </Title>
+            <Text style={{ color: "rgba(255, 255, 255, 0.85)" }}>
+              SĐT:{" "}
+              {selectedTeacher &&
+                (selectedTeacher["SĐT"] ||
+                  selectedTeacher["Số điện thoại"] ||
+                  "N/A")}
+            </Text>
+          </div>
+        }
+        modalRender={(modal) => (
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modal-content-70 flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "linear-gradient(to right, #36797f, #36797f)",
+              borderRadius: 8,
+            }}
           >
-            <div className="bg-linear-to-r from-green-600 to-[#36797f] text-white p-6 rounded-t-2xl shrink-0">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-2xl font-bold mb-2">
-                    {getTeacherName(selectedTeacher)}
-                  </h2>
-                  <p className="text-red-100">
-                    SĐT:{" "}
-                    {selectedTeacher["SĐT"] ||
-                      selectedTeacher["Số điện thoại"] ||
-                      "N/A"}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition"
+            {modal}
+          </div>
+        )}
+        styles={{
+          header: {
+            background: "transparent",
+            color: "white",
+            borderBottom: "none",
+          },
+          body: {
+            background: "white",
+            borderRadius: "0 0 8px 8px",
+          },
+        }}
+      >
+        {selectedTeacher && (
+          <>
+            {/* Teacher Info */}
+            <Row gutter={16} className="mb-6">
+              <Col span={12}>
+                <Card className="text-center">
+                  <Statistic
+                    value={`${selectedTeacher.hours}h ${selectedTeacher.minutes}p`}
+                    valueStyle={{
+                      color: "#36797f",
+                      fontSize: 28,
+                      fontWeight: "bold",
+                    }}
+                  />
+                  <Text type="secondary">Tổng giờ dạy</Text>
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card
+                  className="text-center"
+                  style={{ backgroundColor: "#fff1f0" }}
                 >
-                  ✖
-                </button>
-              </div>
-            </div>
+                  <Statistic
+                    value={selectedTeacher.totalSessions}
+                    valueStyle={{
+                      color: "#36797f",
+                      fontSize: 28,
+                      fontWeight: "bold",
+                    }}
+                  />
+                  <Text type="secondary">Tổng số buổi dạy</Text>
+                </Card>
+              </Col>
+            </Row>
 
-            <div className="p-6">
-              {/* Teacher Info */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="p-4 rounded-lg text-center">
-                  <div className="text-primary text-3xl font-bold text-[#36797f]">
-                    {selectedTeacher.hours}h {selectedTeacher.minutes}p
-                  </div>
-                  <div className="text-gray-600 mt-2">Tổng giờ dạy</div>
-                </div>
-                <div className="bg-linear-to-br from-red-100 to-red-100 p-4 rounded-lg text-center">
-                  <div className="text-primary text-3xl font-bold text-[#36797f]">
-                    {selectedTeacher.totalSessions}
-                  </div>
-                  <div className="text-gray-600 mt-2">Tổng số buổi dạy</div>
-                </div>
-              </div>
-
-              {/* Sessions List */}
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-gray-800">
-                    📅 Lịch giảng dạy - {months[selectedMonth]} {selectedYear}
-                  </h3>
-                  <button
-                    onClick={() =>
-                      printReport(
-                        selectedTeacher,
-                        getTeacherEventsByMonth(
-                          getTeacherName(selectedTeacher),
-                          selectedMonth,
-                          selectedYear
-                        )
+            {/* Sessions List */}
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <Title level={5}>
+                  📅 Lịch giảng dạy - {months[selectedMonth]} {selectedYear}
+                </Title>
+                <Button
+                  type="primary"
+                  icon={<PrinterOutlined />}
+                  onClick={() =>
+                    printReport(
+                      selectedTeacher,
+                      getTeacherEventsByMonth(
+                        selectedTeacher.id,
+                        selectedMonth,
+                        selectedYear
                       )
-                    }
-                    className="px-4 py-2 bg-[#36797f] text-white rounded-lg hover:bg-[#36797f] transition font-semibold"
-                  >
-                    🖨️ In phiếu báo
-                  </button>
-                </div>
-                {(() => {
-                  const events = getTeacherEventsByMonth(
-                    getTeacherName(selectedTeacher),
-                    selectedMonth,
-                    selectedYear
-                  );
-                  if (events.length === 0) {
-                    return (
-                      <div className="text-center py-10 text-gray-500">
-                        <p>Không có buổi dạy nào trong tháng này</p>
-                      </div>
-                    );
+                    )
                   }
+                  style={{ backgroundColor: "#36797f" }}
+                >
+                  In phiếu báo
+                </Button>
+              </div>
+              {(() => {
+                const events = getTeacherEventsByMonth(
+                  selectedTeacher.id,
+                  selectedMonth,
+                  selectedYear
+                );
+                if (events.length === 0) {
                   return (
-                    <div className="space-y-3">
-                      {events.map((event, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-gray-50 p-4 rounded-lg border-l-4 border-[#36797f]"
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-semibold text-gray-800">
-                              {event["Tên công việc"]}
-                            </h4>
-                            <span className="text-sm text-gray-600">
-                              {new Date(event["Ngày"]).toLocaleDateString(
-                                "vi-VN"
-                              )}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                            <p>
-                              {event["Giờ bắt đầu"]} - {event["Giờ kết thúc"]}
-                            </p>
-                            <p>{event["Học sinh"] || "N/A"}</p>
-                          </div>
-                          {event["Nhận xét"] && (
-                            <p className="text-sm text-gray-600 mt-2 italic">
-                              {event["Nhận xét"]}
-                            </p>
-                          )}
-                        </div>
-                      ))}
+                    <div className="text-center py-10">
+                      <Text type="secondary">
+                        Không có buổi dạy nào trong tháng này
+                      </Text>
                     </div>
                   );
-                })()}
-              </div>
+                }
+                return (
+                  <Space
+                    direction="vertical"
+                    style={{ width: "100%" }}
+                    size="middle"
+                  >
+                    {events.map((event, idx) => (
+                      <Card
+                        key={idx}
+                        size="small"
+                        style={{ borderLeft: "4px solid #36797f" }}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <Text strong>{event["Tên công việc"]}</Text>
+                          <Text type="secondary">
+                            {new Date(event["Ngày"]).toLocaleDateString(
+                              "vi-VN"
+                            )}
+                          </Text>
+                        </div>
+                        <Row gutter={16}>
+                          <Col span={12}>
+                            <Text type="secondary">
+                              {event["Giờ bắt đầu"]} - {event["Giờ kết thúc"]}
+                            </Text>
+                          </Col>
+                          <Col span={12}>
+                            <Text type="secondary">
+                              {event["Học sinh"] || "N/A"}
+                            </Text>
+                          </Col>
+                        </Row>
+                        {event["Nhận xét"] && (
+                          <Text type="secondary" italic className="mt-2 block">
+                            {event["Nhận xét"]}
+                          </Text>
+                        )}
+                      </Card>
+                    ))}
+                  </Space>
+                );
+              })()}
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
       {/* Edit Teacher Modal */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modal-content-70 flex flex-col">
-            <div className="bg-[#36797f] text-white p-6 rounded-t-2xl shrink-0">
-              <h2 className="text-2xl font-bold">
-                {editingTeacher && editingTeacher.id
-                  ? "Chỉnh sửa giáo viên"
-                  : "Thêm giáo viên mới"}
-              </h2>
-            </div>
+      <Modal
+        open={isEditModalOpen}
+        onCancel={() => {
+          setEditModalOpen(false);
+          setEditingTeacher(null);
+          form.resetFields();
+        }}
+        footer={null}
+        width={700}
+        title={
+          <Title level={4} style={{ margin: 0, color: "#36797f" }}>
+            {editingTeacher && editingTeacher.id
+              ? "Chỉnh sửa giáo viên"
+              : "Thêm giáo viên mới"}
+          </Title>
+        }
+        modalRender={(modal) => (
+          <div style={{ background: "#36797f", borderRadius: 8 }}>{modal}</div>
+        )}
+        styles={{
+          header: {
+            background: "transparent",
+            color: "white",
+            borderBottom: "none",
+          },
+          body: {
+            background: "white",
+            borderRadius: "0 0 8px 8px",
+          },
+        }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSaveTeacher}
+          initialValues={{
+            position: "Teacher",
+          }}
+        >
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                label="Họ tên"
+                name="name"
+                rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}
+              >
+                <Input size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Số điện thoại" name="phone">
+                <Input size="large" type="tel" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Email" name="email">
+                <Input size="large" type="email" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Mật khẩu"
+                name="password"
+                rules={[
+                  {
+                    required: !editingTeacher?.id,
+                    message: "Vui lòng nhập mật khẩu",
+                  },
+                ]}
+              >
+                <Input.Password
+                  size="large"
+                  placeholder={
+                    editingTeacher?.id
+                      ? "Để trống nếu không đổi mật khẩu"
+                      : "Nhập mật khẩu"
+                  }
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Tình trạng biên chế" name="status">
+                <Select size="large" placeholder="Chọn tình trạng">
+                  <Option value="Full-time">Toàn thời gian</Option>
+                  <Option value="Part-time">Bán thời gian</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Vị trí"
+                name="position"
+                rules={[{ required: true, message: "Vui lòng chọn vị trí" }]}
+              >
+                <Select size="large">
+                  <Option value="Teacher">Giáo viên</Option>
+                  <Option value="Admin">Quản trị viên</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Ngân hàng" name="bank">
+                <Input size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Số tài khoản" name="account">
+                <Input size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item label="Địa chỉ" name="address">
+                <TextArea rows={3} />
+              </Form.Item>
+            </Col>
+          </Row>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-
-                // Auto-generate Teacher Code if adding new teacher
-                let teacherCode = editingTeacher?.["Mã giáo viên"] || "";
-                if (!editingTeacher?.id) {
-                  // Generate new code: GV001, GV002, etc.
-                  const existingCodes = teachers
-                    .map((t) => t["Mã giáo viên"])
-                    .filter((code) => code && code.startsWith("GV"))
-                    .map((code) => parseInt(code.replace("GV", "")) || 0);
-                  const maxNumber =
-                    existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
-                  teacherCode = `GV${String(maxNumber + 1).padStart(3, "0")}`;
-                }
-
-                const teacherData: Partial<Teacher> = {
-                  "Họ và tên": formData.get("name") as string,
-                  "Mã giáo viên": teacherCode,
-                  SĐT: formData.get("phone") as string,
-                  Email: formData.get("email") as string,
-                  "Biên chế": formData.get("status") as string,
-                  "Vị trí": (formData.get("position") as string) || "Teacher",
-                  "Ngân hàng": formData.get("bank") as string,
-                  STK: formData.get("account") as string,
-                  "Địa chỉ": formData.get("address") as string,
-                };
-
-                // Only update password if a new one is provided
-                const newPassword = formData.get("password") as string;
-                if (newPassword && newPassword.trim()) {
-                  teacherData["Password"] = newPassword.trim();
-                } else if (!editingTeacher?.id) {
-                  // For new teachers, password is required
-                  alert("Mật khẩu bắt buộc nhập");
-                  return;
-                }
-                // Preserve the ID if editing an existing teacher
-                if (editingTeacher?.id) {
-                  teacherData.id = editingTeacher.id;
-                }
-                handleSaveTeacher(teacherData);
-              }}
-              className="p-6"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Họ tên *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    defaultValue={editingTeacher?.["Họ và tên"] || ""}
-                    required
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Số điện thoại
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    defaultValue={
-                      editingTeacher?.["SĐT"] ||
-                      editingTeacher?.["Số điện thoại"] ||
-                      ""
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    defaultValue={
-                      editingTeacher?.["Email"] ||
-                      editingTeacher?.["Email công ty"] ||
-                      ""
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Mật khẩu *
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    defaultValue={editingTeacher?.["Password"] || ""}
-                    required={!editingTeacher?.id}
-                    placeholder={
-                      editingTeacher?.id
-                        ? "Leave blank to keep current password"
-                        : "Enter password"
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Tình trạng biên chế
-                  </label>
-                  <select
-                    name="status"
-                    defaultValue={editingTeacher?.["Biên chế"] || ""}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
-                  >
-                    <option value="">Chọn tình trạng</option>
-                    <option value="Full-time">Toàn thời gian</option>
-                    <option value="Part-time">Bán thời gian</option>
-                  </select>
-                </div>
-                {/* Position field */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Vị trí
-                  </label>
-                  <select
-                    name="position"
-                    defaultValue={editingTeacher?.["Vị trí"] || "Teacher"}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
-                    required
-                  >
-                    <option value="Teacher">Giáo viên</option>
-                    <option value="Admin">Quản trị viên</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Ngân hàng
-                  </label>
-                  <input
-                    type="text"
-                    name="bank"
-                    defaultValue={editingTeacher?.["Ngân hàng"] || ""}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Số tài khoản
-                  </label>
-                  <input
-                    type="text"
-                    name="account"
-                    defaultValue={editingTeacher?.["STK"] || ""}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Địa chỉ
-                  </label>
-                  <textarea
-                    name="address"
-                    defaultValue={editingTeacher?.["Địa chỉ"] || ""}
-                    rows={3}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#36797f] focus:border-[#36797f]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6 justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditModalOpen(false);
-                    setEditingTeacher(null);
-                  }}
-                  className="px-6 py-3 bg-gray-300 text-gray-800 rounded-lg font-semibold hover:bg-gray-400 transition"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-[#36797f] text-white rounded-lg font-semibold hover:bg-[#36797f] transition"
-                >
-                  Lưu
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <Form.Item>
+            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+              <Button
+                size="large"
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setEditingTeacher(null);
+                  form.resetFields();
+                }}
+              >
+                Hủy
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="large"
+                style={{ backgroundColor: "#36797f" }}
+              >
+                Lưu
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </>
   );
 };

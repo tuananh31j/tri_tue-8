@@ -196,7 +196,7 @@ Script sẽ:
 
 ## 🐛 Bug Fixes
 
-- ✅ Fixed TypeScript errors với Date.now()
+- ✅ Fixed TypeScript errors với new Date().getTime()
 - ✅ Added proper auth tokens to all write operations
 - ✅ Proper error handling
 

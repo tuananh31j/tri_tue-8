@@ -107,7 +107,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await fetch(USERS_URL);
       const data = await response.json();
-
+      console.log(data, "000000000000");
       // Find existing user profile
       let profile: UserProfile | null = null;
       if (data) {
@@ -163,6 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           );
 
           if (teacherEntry) {
+            console.log(teacherEntry, "sfsfdsdfdsfsbb");
             const [teacherId, teacherData]: [string, any] = teacherEntry;
             const position = teacherData["Vị trí"] || "";
 
@@ -348,7 +349,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Create a mock user object for teacher login
       const mockUser = {
-        uid: `teacher_${teacherId}`,
+        uid: teacherId,
         email: teacherData["Email"] || teacherData["Email công ty"],
         emailVerified: true,
         displayName: teacherData["Họ và tên"],

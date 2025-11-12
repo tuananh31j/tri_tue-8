@@ -20,6 +20,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import WrapperContent from "@/components/WrapperContent";
+import Loader from "@/components/Loader";
 
 let DATABASE_URL_BASE = BASE_URL + "/datasheet";
 
@@ -102,7 +103,7 @@ const AttendanceView: React.FC = () => {
               const teacherStudentNames = new Set<string>();
               Object.values(scheduleData).forEach((event: any) => {
                 if (
-                  event["Giáo viên phụ trách"] === userProfile.teacherName &&
+                  event["Teacher ID"] === userProfile.uid &&
                   event["Học sinh"]
                 ) {
                   event["Học sinh"].forEach((name: string) =>
@@ -375,12 +376,9 @@ const AttendanceView: React.FC = () => {
 
           {/* Attendance Table */}
           {loading ? (
-            <Card>
-              <div className="text-center py-20">
-                <Spin size="large" />
-                <p className="mt-4 text-gray-600">Đang tải học sinh...</p>
-              </div>
-            </Card>
+            <div className="flex h-full items-center justify-center">
+              <Loader />
+            </div>
           ) : (
             <Card>
               <Table

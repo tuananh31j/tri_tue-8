@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vite';
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
     resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
@@ -17,4 +17,7 @@ export default defineConfig({
             },
         }),
     ],
-});
+    esbuild: {
+      drop: mode === 'production' ? ['console', 'debugger'] : [],
+    },
+}));

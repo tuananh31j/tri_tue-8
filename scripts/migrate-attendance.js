@@ -115,7 +115,9 @@ async function migrateAttendanceData() {
     console.log(`👥 Migrating ${recordCount} student records`);
 
     // 3. Backup old data (optional but recommended)
-    const backupRef = db.ref("datasheet/Điểm_danh_backup_" + Date.now());
+    const backupRef = db.ref(
+      "datasheet/Điểm_danh_backup_" + new Date().getTime()
+    );
     await backupRef.set(oldData);
     console.log("💾 Created backup of old data");
 
@@ -128,7 +130,7 @@ async function migrateAttendanceData() {
     console.log(`  - Dates processed: ${Object.keys(groupedByDate).length}`);
     console.log(`  - Student records migrated: ${recordCount}`);
     console.log(
-      `  - Backup location: datasheet/Điểm_danh_backup_${Date.now()}`
+      `  - Backup location: datasheet/Điểm_danh_backup_${new Date().getTime()}`
     );
 
     // 6. Print sample of new structure

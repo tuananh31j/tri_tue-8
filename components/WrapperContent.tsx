@@ -2,6 +2,7 @@ import { Button, Spin } from "antd";
 import React from "react";
 import { RollbackOutlined } from "@ant-design/icons";
 import { useAdminTitle } from "@/hooks/useAdminTitle";
+import Loader from "@/components/Loader";
 
 const WrapperContent: React.FC<{
   title: string;
@@ -38,7 +39,7 @@ const WrapperContent: React.FC<{
         children
       ) : (
         <div className="flex h-full items-center justify-center">
-          <Spin />
+          <Loader />
         </div>
       )}
     </div>
