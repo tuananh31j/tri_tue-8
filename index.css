@@ -138,3 +138,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ======================== */
+/* Print styles             */
+/* ======================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-content,
+  .print-content * {
+    visibility: visible;
+  }
+  .print-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  button,
+  .ant-btn {
+    display: none !important;
+  }
+  .ant-table-pagination {
+    display: none !important;
+  }
+}

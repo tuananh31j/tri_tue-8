@@ -57,6 +57,7 @@ const useDebounce = (value: string, delay: number) => {
 
 const TEACHER_LIST_URL = `${DATABASE_URL_BASE}/datasheet/Gi%C3%A1o_vi%C3%AAn.json`;
 const SCHEDULE_URL = `${DATABASE_URL_BASE}/datasheet/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
+const ATTENDANCE_SESSIONS_URL = `${DATABASE_URL_BASE}/datasheet/%C4%90i%E1%BB%83m_danh_sessions.json`;
 
 interface Teacher {
   id: string;
@@ -82,6 +83,7 @@ const TeacherListView: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>([]);
+  const [attendanceSessions, setAttendanceSessions] = useState<any[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [startDate, setStartDate] = useState("");
@@ -165,7 +167,30 @@ const TeacherListView: React.FC = () => {
     fetchTeachers();
   }, []);
 
-  // Fetch schedule events
+  // Fetch attendance sessions (for calculating hours and sessions)
+  useEffect(() => {
+    const fetchAttendanceSessions = async () => {
+      try {
+        const response = await fetch(ATTENDANCE_SESSIONS_URL);
+        const data = await response.json();
+        if (data) {
+          const sessionsArray = Object.keys(data).map((key) => ({
+            id: key,
+            ...data[key],
+          }));
+          console.log('📊 Attendance sessions loaded:', sessionsArray.length);
+          setAttendanceSessions(sessionsArray);
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching attendance sessions:", error);
+        setLoading(false);
+      }
+    };
+    fetchAttendanceSessions();
+  }, []);
+
+  // Fetch schedule events (for display purposes)
   useEffect(() => {
     const fetchSchedule = async () => {
       try {
@@ -204,38 +229,36 @@ const TeacherListView: React.FC = () => {
           setScheduleEvents(eventsArray);
           console.log("✅ Schedule events loaded:", eventsArray.length);
         }
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching schedule:", error);
-        setLoading(false);
       }
     };
     fetchSchedule();
   }, [userProfile, currentUser]);
 
-  // Calculate total travel allowance for a teacher
+  // Calculate total travel allowance for a teacher from attendance sessions
   const calculateTravelAllowance = (
     teacherId: string,
     fromDate?: Date,
     toDate?: Date
   ): number => {
-    const teacherEvents = scheduleEvents.filter((event) => {
-      const eventTeacher = event["Teacher ID"];
-      return eventTeacher === teacherId;
+    const teacherSessions = attendanceSessions.filter((session) => {
+      const sessionTeacher = session["Teacher ID"];
+      return sessionTeacher === teacherId;
     });
 
-    let filteredEvents = teacherEvents;
+    let filteredSessions = teacherSessions;
     if (fromDate && toDate) {
-      filteredEvents = teacherEvents.filter((event) => {
-        if (!event["Ngày"]) return false;
-        const eventDate = new Date(event["Ngày"]);
-        return eventDate >= fromDate && eventDate <= toDate;
+      filteredSessions = teacherSessions.filter((session) => {
+        if (!session["Ngày"]) return false;
+        const sessionDate = new Date(session["Ngày"]);
+        return sessionDate >= fromDate && sessionDate <= toDate;
       });
     }
 
     let totalAllowance = 0;
-    filteredEvents.forEach((event) => {
-      const allowance = event["Phụ cấp di chuyển"];
+    filteredSessions.forEach((session) => {
+      const allowance = session["Phụ cấp di chuyển"];
       if (allowance) {
         // Remove non-numeric characters and parse
         const numericValue = parseFloat(
@@ -250,43 +273,39 @@ const TeacherListView: React.FC = () => {
     return totalAllowance;
   };
 
-  // Calculate total hours for a teacher
+  // Calculate total hours for a teacher from Điểm_danh_sessions
   const calculateTeacherHours = (
     teacherId: string,
     fromDate?: Date,
     toDate?: Date
   ) => {
-    console.log(`\n📊 Calculating for: "${teacherId}"`);
+    console.log(`\n📊 Calculating for teacher: "${teacherId}"`);
 
-    const teacherEvents = scheduleEvents.filter((event) => {
-      const eventTeacher = event["Teacher ID"];
-      const matches = eventTeacher === teacherId;
-      if (matches) {
-        console.log(`  ✅ Match: "${eventTeacher}" === "${teacherId}"`);
-      }
-      return matches;
+    // Filter attendance sessions where this teacher taught
+    const teacherSessions = attendanceSessions.filter((session) => {
+      const sessionTeacher = session["Teacher ID"];
+      return sessionTeacher === teacherId;
     });
 
-    console.log(`  Found ${teacherEvents.length} events total`);
+    console.log(`  Found ${teacherSessions.length} sessions total`);
 
-    let filteredEvents = teacherEvents;
+    // Apply date filter if provided
+    let filteredSessions = teacherSessions;
     if (fromDate && toDate) {
-      filteredEvents = teacherEvents.filter((event) => {
-        if (!event["Ngày"]) return false;
-        const eventDate = new Date(event["Ngày"]);
-        return eventDate >= fromDate && eventDate <= toDate;
+      filteredSessions = teacherSessions.filter((session) => {
+        if (!session["Ngày"]) return false;
+        const sessionDate = new Date(session["Ngày"]);
+        return sessionDate >= fromDate && sessionDate <= toDate;
       });
       console.log(
-        `  Filtered to ${
-          filteredEvents.length
-        } events (${fromDate.toLocaleDateString()} - ${toDate.toLocaleDateString()})`
+        `  Filtered to ${filteredSessions.length} sessions (${fromDate.toLocaleDateString()} - ${toDate.toLocaleDateString()})`
       );
     }
 
     let totalMinutes = 0;
-    filteredEvents.forEach((event, idx) => {
-      const start = event["Giờ bắt đầu"] || "0:0";
-      const end = event["Giờ kết thúc"] || "0:0";
+    filteredSessions.forEach((session, idx) => {
+      const start = session["Giờ bắt đầu"] || "0:0";
+      const end = session["Giờ kết thúc"] || "0:0";
       const [startH, startM] = start.split(":").map(Number);
       const [endH, endM] = end.split(":").map(Number);
       const minutes = endH * 60 + endM - (startH * 60 + startM);
@@ -294,7 +313,7 @@ const TeacherListView: React.FC = () => {
         totalMinutes += minutes;
         if (idx < 3) {
           console.log(
-            `  Event ${idx + 1}: ${start} - ${end} = ${minutes} phút`
+            `  Session ${idx + 1}: ${start} - ${end} = ${minutes} phút`
           );
         }
       }
@@ -303,7 +322,7 @@ const TeacherListView: React.FC = () => {
     const result = {
       hours: Math.floor(totalMinutes / 60),
       minutes: totalMinutes % 60,
-      totalSessions: filteredEvents.length,
+      totalSessions: filteredSessions.length,
     };
 
     console.log(
@@ -312,20 +331,20 @@ const TeacherListView: React.FC = () => {
     return result;
   };
 
-  // Get teacher events by month
+  // Get teacher sessions by month from attendance sessions
   const getTeacherEventsByMonth = (
     teacherId: string,
     month: number,
     year: number
   ) => {
-    return scheduleEvents
-      .filter((event) => {
-        const eventTeacher = event["Teacher ID"];
-        if (eventTeacher !== teacherId) return false;
-        if (!event["Ngày"]) return false;
-        const eventDate = new Date(event["Ngày"]);
+    return attendanceSessions
+      .filter((session) => {
+        const sessionTeacher = session["Teacher ID"];
+        if (sessionTeacher !== teacherId) return false;
+        if (!session["Ngày"]) return false;
+        const sessionDate = new Date(session["Ngày"]);
         return (
-          eventDate.getMonth() === month && eventDate.getFullYear() === year
+          sessionDate.getMonth() === month && sessionDate.getFullYear() === year
         );
       })
       .sort((a, b) => {
@@ -421,7 +440,7 @@ const TeacherListView: React.FC = () => {
     });
   }, [
     teachers,
-    scheduleEvents,
+    attendanceSessions,
     startDate,
     endDate,
     selectedBienChe,

@@ -9,6 +9,7 @@ import {
   IconUsers,
   IconCalendar,
   IconReceipt,
+  IconSchool,
 } from "@tabler/icons-react";
 import * as React from "react";
 import { NavDocuments } from "@/components/NavDocument";
@@ -26,10 +27,16 @@ import { UserCheck } from "lucide-react";
 const data = {
   navMain: [
     {
-      title: "Lịch",
-      url: "/workspace",
+      title: "Lịch tổng hợp",
+      url: "/workspace/admin-schedule",
       icon: IconCalendar,
+      adminOnly: true,
     },
+    // {
+    //   title: "Lịch",
+    //   url: "/workspace",
+    //   icon: IconCalendar,
+    // },
     {
       title: "Hóa đơn",
       url: "/workspace/invoice",
@@ -47,10 +54,28 @@ const data = {
       icon: UserCheck,
       adminOnly: true,
     },
+    // {
+    //   title: "Điểm danh",
+    //   url: "/workspace/attendance",
+    //   icon: IconListDetails,
+    // },
     {
-      title: "Điểm danh",
-      url: "/workspace/attendance",
-      icon: IconListDetails,
+      title: "Quản lý lớp học",
+      url: "/workspace/classes",
+      icon: IconSchool,
+      adminOnly: true,
+    },
+    {
+      title: "Lớp học của tôi",
+      url: "/workspace/my-classes",
+      icon: IconSchool,
+      teacherOnly: true,
+    },
+    {
+      title: "Lịch dạy",
+      url: "/workspace/my-schedule",
+      icon: IconCalendar,
+      teacherOnly: true,
     },
   ],
 
@@ -59,17 +84,31 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { userProfile } = useAuth();
-  const isAdmin = React.useMemo(
-    () => userProfile?.role === "admin",
-    [userProfile]
-  );
+  const isAdmin = React.useMemo(() => {
+    const adminStatus = userProfile?.isAdmin === true || userProfile?.role === "admin";
+    console.log("Sidebar - User Profile:", {
+      email: userProfile?.email,
+      role: userProfile?.role,
+      isAdmin: userProfile?.isAdmin,
+      position: userProfile?.position,
+      calculatedIsAdmin: adminStatus
+    });
+    return adminStatus;
+  }, [userProfile]);
+  
   const user = {
-    name: userProfile.displayName,
-    email: userProfile.email,
+    name: userProfile?.displayName || userProfile?.email || "",
+    email: userProfile?.email || "",
     avatar: "",
   };
+  
   const menu = data.navMain.filter((item) => {
+    // Admin-only items: show only to admins
     if (item.adminOnly && !isAdmin) {
+      return false;
+    }
+    // Teacher-only items: show only to non-admins (teachers)
+    if (item.teacherOnly && isAdmin) {
       return false;
     }
     return true;

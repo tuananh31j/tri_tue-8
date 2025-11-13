@@ -21,7 +21,9 @@ import {
   Tag,
   message,
   Popconfirm,
+  Dropdown,
 } from "antd";
+import type { MenuProps } from "antd";
 import {
   SearchOutlined,
   EyeOutlined,
@@ -31,14 +33,18 @@ import {
   PlusOutlined,
   ClearOutlined,
   UserOutlined,
+  MoreOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import WrapperContent from "@/components/WrapperContent";
 import Loader from "@/components/Loader";
 import { Empty } from "antd/lib";
+import StudentReportButton from "@/components/StudentReportButton";
 
 const STUDENT_LIST_URL = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh.json`;
 const SCHEDULE_URL = `${DATABASE_URL_BASE}/datasheet/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
+const ATTENDANCE_SESSIONS_URL = `${DATABASE_URL_BASE}/datasheet/%C4%90i%E1%BB%83m_danh_sessions.json`;
 const EXTENSION_HISTORY_URL = `${DATABASE_URL_BASE}/datasheet/Gia_h%E1%BA%A1n.json`;
 
 interface Student {
@@ -60,6 +66,7 @@ const StudentListView: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>([]);
+  const [attendanceSessions, setAttendanceSessions] = useState<any[]>([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -116,7 +123,30 @@ const StudentListView: React.FC = () => {
     fetchStudents();
   }, []);
 
-  // Fetch schedule events
+  // Fetch attendance sessions (for calculating hours and sessions)
+  useEffect(() => {
+    const fetchAttendanceSessions = async () => {
+      try {
+        const response = await fetch(ATTENDANCE_SESSIONS_URL);
+        const data = await response.json();
+        if (data) {
+          const sessionsArray = Object.keys(data).map((key) => ({
+            id: key,
+            ...data[key],
+          }));
+          console.log('📊 Attendance sessions loaded:', sessionsArray.length);
+          setAttendanceSessions(sessionsArray);
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching attendance sessions:", error);
+        setLoading(false);
+      }
+    };
+    fetchAttendanceSessions();
+  }, []);
+
+  // Fetch schedule events (for display purposes)
   useEffect(() => {
     const fetchSchedule = async () => {
       try {
@@ -141,10 +171,8 @@ const StudentListView: React.FC = () => {
 
           setScheduleEvents(eventsArray);
         }
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching schedule:", error);
-        setLoading(false);
       }
     };
     fetchSchedule();
@@ -234,45 +262,76 @@ const StudentListView: React.FC = () => {
     return total;
   };
 
-  // Calculate total hours for a student
+  // Calculate total hours for a student from Điểm_danh_sessions (matching StudentReport logic)
   const calculateStudentHours = (
-    studentName: string,
+    studentId: string,
     fromDate?: Date,
     toDate?: Date
   ) => {
-    const studentEvents = scheduleEvents.filter((event) =>
-      event["Học sinh"]?.includes(studentName)
-    );
+    // Filter attendance sessions where this student has a record
+    let studentSessions = attendanceSessions.filter((session) => {
+      // Check if student has attendance record in this session
+      const hasAttendance = session['Điểm danh']?.some(
+        (record: any) => record['Student ID'] === studentId
+      );
+      return hasAttendance;
+    });
 
-    let filteredEvents = studentEvents;
+    // Apply date filter if provided
     if (fromDate && toDate) {
-      filteredEvents = studentEvents.filter((event) => {
-        if (!event["Ngày"]) return false;
-        const eventDate = new Date(event["Ngày"]);
-        return eventDate >= fromDate && eventDate <= toDate;
+      studentSessions = studentSessions.filter((session) => {
+        if (!session["Ngày"]) return false;
+        const sessionDate = new Date(session["Ngày"]);
+        return sessionDate >= fromDate && sessionDate <= toDate;
       });
     }
 
     let totalMinutes = 0;
-    filteredEvents.forEach((event) => {
-      const start = event["Giờ bắt đầu"] || "0:0";
-      const end = event["Giờ kết thúc"] || "0:0";
-      const [startH, startM] = start.split(":").map(Number);
-      const [endH, endM] = end.split(":").map(Number);
-      const minutes = endH * 60 + endM - (startH * 60 + startM);
-      if (minutes > 0) totalMinutes += minutes;
+    let presentSessions = 0;
+    let absentSessions = 0;
+
+    studentSessions.forEach((session) => {
+      const record = session['Điểm danh']?.find(
+        (r: any) => r['Student ID'] === studentId
+      );
+      
+      if (record) {
+        // Only count hours if student was present
+        if (record['Có mặt']) {
+          const start = session["Giờ bắt đầu"] || "0:0";
+          const end = session["Giờ kết thúc"] || "0:0";
+          const [startH, startM] = start.split(":").map(Number);
+          const [endH, endM] = end.split(":").map(Number);
+          const minutes = endH * 60 + endM - (startH * 60 + startM);
+          if (minutes > 0) totalMinutes += minutes;
+          presentSessions++;
+        } else {
+          absentSessions++;
+        }
+      }
+    });
+
+    console.log(`📊 Student ${studentId} stats:`, {
+      totalSessions: studentSessions.length,
+      presentSessions,
+      absentSessions,
+      totalMinutes,
+      hours: Math.floor(totalMinutes / 60),
+      minutes: totalMinutes % 60
     });
 
     return {
       hours: Math.floor(totalMinutes / 60),
       minutes: totalMinutes % 60,
-      totalSessions: filteredEvents.length,
+      totalSessions: studentSessions.length,
+      presentSessions,
+      absentSessions,
     };
   };
 
-  // Get student events by date range
+  // Get student events by date range (using student ID from attendance records)
   const getStudentEventsByDateRange = (
-    studentName: string,
+    studentId: string,
     fromDate?: Date,
     toDate?: Date
   ) => {
@@ -283,12 +342,16 @@ const StudentListView: React.FC = () => {
       toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     }
 
-    return scheduleEvents
-      .filter((event) => {
-        if (!event["Học sinh"]?.includes(studentName)) return false;
-        if (!event["Ngày"]) return false;
-        const eventDate = new Date(event["Ngày"]);
-        return eventDate >= fromDate! && eventDate <= toDate!;
+    return attendanceSessions
+      .filter((session) => {
+        // Check if student has attendance record in this session
+        const hasAttendance = session['Điểm danh']?.some(
+          (record: any) => record['Student ID'] === studentId
+        );
+        if (!hasAttendance) return false;
+        if (!session["Ngày"]) return false;
+        const sessionDate = new Date(session["Ngày"]);
+        return sessionDate >= fromDate! && sessionDate <= toDate!;
       })
       .sort((a, b) => {
         const dateA = new Date(a["Ngày"]);
@@ -348,7 +411,7 @@ const StudentListView: React.FC = () => {
         const fromDate = startDate ? new Date(startDate) : undefined;
         const toDate = endDate ? new Date(endDate) : undefined;
         const stats = calculateStudentHours(
-          student["Họ và tên"],
+          student.id, // Use student ID instead of name
           fromDate,
           toDate
         );
@@ -382,7 +445,7 @@ const StudentListView: React.FC = () => {
       });
   }, [
     students,
-    scheduleEvents,
+    attendanceSessions,
     startDate,
     endDate,
     searchTerm,
@@ -1074,7 +1137,7 @@ const StudentListView: React.FC = () => {
     }
 
     const totalHours = calculateStudentHours(
-      student["Họ và tên"],
+      student.id, // Use student ID instead of name
       fromDate,
       toDate
     );
@@ -1590,55 +1653,71 @@ const StudentListView: React.FC = () => {
                 key: "actions",
                 align: "center",
                 fixed: "right",
-                width: 100,
+                width: 80,
                 render: (_, record) => (
-                  <Space align="start" direction="vertical" size="small">
-                    <Button
-                      type="default"
-                      size="small"
-                      icon={<EyeOutlined />}
-                      onClick={() => handleStudentClick(record.student)}
-                      title="View Details"
+                  <Space size={4}>
+                    <Dropdown
+                      menu={{
+                        items: [
+                          {
+                            key: 'view',
+                            label: 'Xem chi tiết',
+                            icon: <EyeOutlined />,
+                            onClick: () => handleStudentClick(record.student),
+                          },
+                          {
+                            key: 'extend',
+                            label: 'Gia hạn giờ học',
+                            icon: <ClockCircleOutlined />,
+                            onClick: () => handleExtendHours(record.student),
+                          },
+                          {
+                            type: 'divider',
+                          },
+                          {
+                            key: 'edit',
+                            label: 'Chỉnh sửa',
+                            icon: <EditOutlined />,
+                            onClick: () => {
+                              // Create a synthetic event to satisfy the function signature
+                              const syntheticEvent = { stopPropagation: () => {} } as React.MouseEvent;
+                              handleEditStudent(syntheticEvent, record.student);
+                            },
+                          },
+                          {
+                            key: 'delete',
+                            label: 'Xóa học sinh',
+                            icon: <DeleteOutlined />,
+                            danger: true,
+                            onClick: () => {
+                              Modal.confirm({
+                                title: 'Xóa học sinh',
+                                content: `Bạn có chắc chắn muốn xóa học sinh "${record.student['Họ và tên']}" không?`,
+                                okText: 'Xóa',
+                                okType: 'danger',
+                                cancelText: 'Hủy',
+                                onOk: () => {
+                                  const syntheticEvent = { stopPropagation: () => {} } as React.MouseEvent;
+                                  handleDeleteStudent(syntheticEvent, record.student);
+                                },
+                              });
+                            },
+                          },
+                        ],
+                      }}
+                      trigger={['click']}
                     >
-                      Chi tiết
-                    </Button>
-                    <Button
-                      type="default"
-                      size="small"
-                      icon={<ClockCircleOutlined />}
-                      onClick={() => handleExtendHours(record.student)}
-                      title="Extend Hours"
-                      style={{ borderColor: "#52c41a", color: "#52c41a" }}
-                    >
-                      Gia hạn
-                    </Button>
-                    <Button
-                      type="default"
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={(e) => handleEditStudent(e, record.student)}
-                      title="Edit"
-                      style={{ borderColor: "#1890ff", color: "#1890ff" }}
-                    >
-                      Chỉnh sửa
-                    </Button>
-                    <Popconfirm
-                      title="Xóa học sinh"
-                      description="Bạn có chắc chắn muốn xóa học sinh này không?"
-                      onConfirm={(e) => handleDeleteStudent(e, record.student)}
-                      okText="Yes"
-                      cancelText="No"
-                    >
-                      <Button
-                        type="default"
+                      <Button 
+                        type="text" 
+                        icon={<MoreOutlined />}
                         size="small"
-                        icon={<DeleteOutlined />}
-                        danger
-                        title="Delete"
-                      >
-                        Xoá
-                      </Button>
-                    </Popconfirm>
+                      />
+                    </Dropdown>
+                    <StudentReportButton 
+                      student={record.student} 
+                      type="link" 
+                      size="small"
+                    />
                   </Space>
                 ),
               },

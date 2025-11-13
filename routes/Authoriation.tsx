@@ -4,8 +4,12 @@ import { Link } from "react-router-dom";
 
 const Authoriation = ({ children }: { children: React.ReactNode }) => {
   const { currentUser, userProfile, loading } = useAuth();
-  console.log(userProfile)
-  if (userProfile && !(userProfile.role.toLocaleLowerCase() === "admin")) {
+  console.log("Authoriation - User Profile:", userProfile);
+  
+  // Check if user is admin by either isAdmin flag or role
+  const isAdmin = userProfile?.isAdmin === true || userProfile?.role?.toLowerCase() === "admin";
+  
+  if (userProfile && !isAdmin) {
     return (
       <div className="container p-6">
         <h2 className="text-2xl font-semibold mb-2">Không có quyền truy cập</h2>
