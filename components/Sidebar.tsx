@@ -32,11 +32,12 @@ const data = {
       icon: IconCalendar,
       adminOnly: true,
     },
-    // {
-    //   title: "Lịch",
-    //   url: "/workspace",
-    //   icon: IconCalendar,
-    // },
+    {
+      title: "Lịch dạy",
+      url: "/workspace/my-schedule",
+      icon: IconCalendar,
+      teacherOnly: true,
+    },
     {
       title: "Hóa đơn",
       url: "/workspace/invoice",
@@ -54,11 +55,12 @@ const data = {
       icon: UserCheck,
       adminOnly: true,
     },
-    // {
-    //   title: "Điểm danh",
-    //   url: "/workspace/attendance",
-    //   icon: IconListDetails,
-    // },
+    {
+       title: "Điểm danh",
+       url: "/workspace/attendance",
+       icon: IconListDetails,
+       teacherOnly: true,
+    },
     {
       title: "Quản lý lớp học",
       url: "/workspace/classes",
@@ -69,12 +71,6 @@ const data = {
       title: "Lớp học của tôi",
       url: "/workspace/my-classes",
       icon: IconSchool,
-      teacherOnly: true,
-    },
-    {
-      title: "Lịch dạy",
-      url: "/workspace/my-schedule",
-      icon: IconCalendar,
       teacherOnly: true,
     },
   ],
