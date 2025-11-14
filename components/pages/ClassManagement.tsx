@@ -23,6 +23,7 @@ import { Class } from "../../types";
 import ClassFormModal from "../../components/ClassFormModal";
 import AddStudentModal from "../../components/AddStudentModal";
 import WrapperContent from "@/components/WrapperContent";
+import { subjectMap } from "@/utils/selectOptions";
 
 const ClassManagement = () => {
   const { classes, loading, deleteClass } = useClasses();
@@ -77,6 +78,7 @@ const ClassManagement = () => {
       dataIndex: "Môn học",
       key: "subject",
       width: 150,
+      render: (subject: string) => subjectMap[subject] || subject,
     },
     {
       title: "Khối",
