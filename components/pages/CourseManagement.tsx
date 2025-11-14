@@ -111,8 +111,12 @@ const CourseManagement = () => {
       );
 
       if (existingCourse) {
-        const gradeLabel = gradeOptions.find(opt => opt.value === values["Khối"])?.label || `Lớp ${values["Khối"]}`;
-        const subjectLabel = subjectOptions.find(opt => opt.value === values["Môn học"])?.label || values["Môn học"];
+        const gradeLabel =
+          gradeOptions.find((opt) => opt.value === values["Khối"])?.label ||
+          `Lớp ${values["Khối"]}`;
+        const subjectLabel =
+          subjectOptions.find((opt) => opt.value === values["Môn học"])
+            ?.label || values["Môn học"];
         message.error(`Đã tồn tại khóa học ${subjectLabel} cho ${gradeLabel}!`);
         return;
       }

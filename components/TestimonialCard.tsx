@@ -48,12 +48,9 @@ const TestimonialCard = ({ name, image, content }: TestimonialCardProps) => {
               </div>
             </div>
 
-            <Button
-              type="primary"
-              className="rounded-full bg-teal-300 px-6 py-3 text-white"
-            >
+            <button className="rounded-md lg:block hidden bg-primary px-6 py-2 text-white">
               Tìm hiểu thêm
-            </Button>
+            </button>
           </div>
         </div>
       </Card>
