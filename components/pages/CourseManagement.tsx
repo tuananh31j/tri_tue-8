@@ -102,6 +102,21 @@ const CourseManagement = () => {
       const values = await form.validateFields();
       const timestamp = new Date().toISOString();
 
+      // Validate trùng lặp: kiểm tra xem đã có khóa học với cùng khối và môn học chưa
+      const existingCourse = courses.find(
+        (course) =>
+          course["Khối"] === values["Khối"] &&
+          course["Môn học"] === values["Môn học"] &&
+          course.id !== (editingCourse?.id || "")
+      );
+
+      if (existingCourse) {
+        const gradeLabel = gradeOptions.find(opt => opt.value === values["Khối"])?.label || `Lớp ${values["Khối"]}`;
+        const subjectLabel = subjectOptions.find(opt => opt.value === values["Môn học"])?.label || values["Môn học"];
+        message.error(`Đã tồn tại khóa học ${subjectLabel} cho ${gradeLabel}!`);
+        return;
+      }
+
       if (editingCourse) {
         // Update existing course
         const courseRef = ref(

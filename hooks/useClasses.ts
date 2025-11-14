@@ -3,6 +3,7 @@ import { ref, onValue, push, set, update, remove } from 'firebase/database';
 import { database } from '../firebase';
 import { Class } from '../types';
 import { toast } from 'react-toastify';
+import { message } from 'antd';
 
 export const useClasses = () => {
     const [classes, setClasses] = useState<Class[]>([]);
@@ -10,7 +11,7 @@ export const useClasses = () => {
 
     useEffect(() => {
         const classesRef = ref(database, 'datasheet/Lớp_học');
-        
+
         const unsubscribe = onValue(classesRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -25,7 +26,7 @@ export const useClasses = () => {
             setLoading(false);
         }, (error) => {
             console.error('Error fetching classes:', error);
-            toast.error('Không thể tải danh sách lớp học');
+            message.error('Không thể tải danh sách lớp học');
             setLoading(false);
         });
 
@@ -37,11 +38,11 @@ export const useClasses = () => {
             const classesRef = ref(database, 'datasheet/Lớp_học');
             const newClassRef = push(classesRef);
             await set(newClassRef, classData);
-            toast.success('Thêm lớp học thành công');
+            message.success('Thêm lớp học thành công');
             return newClassRef.key;
         } catch (error) {
             console.error('Error adding class:', error);
-            toast.error('Không thể thêm lớp học');
+            message.error('Không thể thêm lớp học');
             throw error;
         }
     };
@@ -50,10 +51,10 @@ export const useClasses = () => {
         try {
             const classRef = ref(database, `datasheet/Lớp_học/${classId}`);
             await update(classRef, updates);
-            toast.success('Cập nhật lớp học thành công');
+            message.success('Cập nhật lớp học thành công');
         } catch (error) {
             console.error('Error updating class:', error);
-            toast.error('Không thể cập nhật lớp học');
+            message.error('Không thể cập nhật lớp học');
             throw error;
         }
     };
@@ -62,10 +63,10 @@ export const useClasses = () => {
         try {
             const classRef = ref(database, `datasheet/Lớp_học/${classId}`);
             await remove(classRef);
-            toast.success('Xóa lớp học thành công');
+            message.success('Xóa lớp học thành công');
         } catch (error) {
             console.error('Error deleting class:', error);
-            toast.error('Không thể xóa lớp học');
+            message.error('Không thể xóa lớp học');
             throw error;
         }
     };
@@ -84,13 +85,13 @@ export const useClasses = () => {
             });
         } catch (error) {
             console.error('Error adding student to class:', error);
-            toast.error('Không thể thêm học sinh vào lớp');
+            message.error('Không thể thêm học sinh vào lớp');
             throw error;
         }
     };
 
     const addMultipleStudentsToClass = async (
-        classId: string, 
+        classId: string,
         students: Array<{ id: string; name: string }>
     ) => {
         try {
@@ -103,9 +104,9 @@ export const useClasses = () => {
 
             // Filter out students that are already in the class
             const newStudents = students.filter(s => !currentStudentIds.includes(s.id));
-            
+
             if (newStudents.length === 0) {
-                toast.info('Tất cả học sinh đã có trong lớp');
+                message.info('Tất cả học sinh đã có trong lớp');
                 return;
             }
 
@@ -118,10 +119,10 @@ export const useClasses = () => {
                 'Học sinh': updatedStudentNames
             });
 
-            toast.success(`Đã thêm ${newStudents.length} học sinh vào lớp`);
+            message.success(`Đã thêm ${newStudents.length} học sinh vào lớp`);
         } catch (error) {
             console.error('Error adding students to class:', error);
-            toast.error('Không thể thêm học sinh vào lớp');
+            message.error('Không thể thêm học sinh vào lớp');
             throw error;
         }
     };
@@ -141,7 +142,7 @@ export const useClasses = () => {
             });
         } catch (error) {
             console.error('Error removing student from class:', error);
-            toast.error('Không thể xóa học sinh khỏi lớp');
+            message.error('Không thể xóa học sinh khỏi lớp');
             throw error;
         }
     };

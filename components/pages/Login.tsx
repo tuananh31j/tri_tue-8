@@ -47,11 +47,7 @@ const Login: React.FC = () => {
 
   useLayoutEffect(() => {
     if (currentUser) {
-      if (userProfile.role === "admin") {
-        navigate("/workspace/admin-schedule");
-      } else {
-        navigate("/workspace/my-schedule");
-      }
+      navigate("/workspace/students");
     }
   }, [currentUser]);
 
