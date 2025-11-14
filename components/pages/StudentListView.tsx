@@ -1728,7 +1728,7 @@ const StudentListView: React.FC = () => {
                 ),
               },
             ]}
-            pagination={{ pageSize: 10 }}
+            pagination={{ pageSize: 10, showSizeChanger: false }}
             scroll={{ x: 1200 }}
           />
         </Card>

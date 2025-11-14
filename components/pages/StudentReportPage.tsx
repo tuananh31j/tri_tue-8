@@ -367,7 +367,7 @@ const StudentReportPage = () => {
             columns={columns}
             dataSource={studentSessions}
             rowKey="id"
-            pagination={{ pageSize: 20 }}
+            pagination={{ pageSize: 20, showSizeChanger: false }}
             size="small"
           />
         </Card>

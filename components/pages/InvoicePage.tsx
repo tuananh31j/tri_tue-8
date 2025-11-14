@@ -1963,7 +1963,7 @@ const InvoicePage = () => {
         dataSource={filteredStudentInvoices}
         loading={loading}
         rowKey="id"
-        pagination={{ pageSize: 10 }}
+        pagination={{ pageSize: 10, showSizeChanger: false }}
         expandable={{
           expandedRowRender,
           rowExpandable: (record) => record.sessions.length > 0,
@@ -2076,7 +2076,7 @@ const InvoicePage = () => {
         dataSource={filteredTeacherSalaries}
         loading={loading}
         rowKey="id"
-        pagination={{ pageSize: 10 }}
+        pagination={{ pageSize: 10, showSizeChanger: false }}
         expandable={{
           expandedRowRender: expandedTeacherRowRender,
           rowExpandable: (record) => record.sessions.length > 0,
