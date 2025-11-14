@@ -998,7 +998,6 @@ const TeacherListView: React.FC = () => {
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          size="large"
           onClick={handleAddTeacher}
           style={{ backgroundColor: "#36797f" }}
         >
@@ -1021,7 +1020,6 @@ const TeacherListView: React.FC = () => {
               />
             )
           }
-          size="large"
           allowClear
         />
         {debouncedSearchTerm && (
@@ -1047,7 +1045,6 @@ const TeacherListView: React.FC = () => {
                 value={selectedMonth}
                 onChange={(value) => setSelectedMonth(value)}
                 style={{ width: "100%" }}
-                size="large"
               >
                 {months.map((month, index) => (
                   <Option key={index} value={index}>
@@ -1066,7 +1063,6 @@ const TeacherListView: React.FC = () => {
                 value={selectedYear}
                 onChange={(value) => setSelectedYear(value)}
                 style={{ width: "100%" }}
-                size="large"
               >
                 {[2023, 2024, 2025, 2026].map((year) => (
                   <Option key={year} value={year}>
@@ -1085,7 +1081,6 @@ const TeacherListView: React.FC = () => {
                 value={selectedBienChe}
                 onChange={(value) => setSelectedBienChe(value)}
                 style={{ width: "100%" }}
-                size="large"
               >
                 <Option value="all">Tất cả trạng thái</Option>
                 {[
@@ -1113,7 +1108,6 @@ const TeacherListView: React.FC = () => {
                   setStartDate(date ? date.format("YYYY-MM-DD") : "")
                 }
                 style={{ width: "100%" }}
-                size="large"
               />
             </div>
           </Col>
@@ -1130,7 +1124,6 @@ const TeacherListView: React.FC = () => {
                   setEndDate(date ? date.format("YYYY-MM-DD") : "")
                 }
                 style={{ width: "100%" }}
-                size="large"
               />
             </div>
           </Col>
@@ -1621,17 +1614,17 @@ const TeacherListView: React.FC = () => {
                 name="name"
                 rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}
               >
-                <Input size="large" />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item label="Số điện thoại" name="phone">
-                <Input size="large" type="tel" />
+                <Input type="tel" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item label="Email" name="email">
-                <Input size="large" type="email" />
+                <Input type="email" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -1646,7 +1639,6 @@ const TeacherListView: React.FC = () => {
                 ]}
               >
                 <Input.Password
-                  size="large"
                   placeholder={
                     editingTeacher?.id
                       ? "Để trống nếu không đổi mật khẩu"
@@ -1657,7 +1649,7 @@ const TeacherListView: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item label="Tình trạng biên chế" name="status">
-                <Select size="large" placeholder="Chọn tình trạng">
+                <Select placeholder="Chọn tình trạng">
                   <Option value="Full-time">Toàn thời gian</Option>
                   <Option value="Part-time">Bán thời gian</Option>
                 </Select>
@@ -1669,7 +1661,7 @@ const TeacherListView: React.FC = () => {
                 name="position"
                 rules={[{ required: true, message: "Vui lòng chọn vị trí" }]}
               >
-                <Select size="large">
+                <Select>
                   <Option value="Teacher">Giáo viên</Option>
                   <Option value="Admin">Quản trị viên</Option>
                 </Select>
@@ -1677,17 +1669,17 @@ const TeacherListView: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item label="Ngân hàng" name="bank">
-                <Input size="large" />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item label="Số tài khoản" name="account">
-                <Input size="large" />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item label="Trợ cấp đi lại VNĐ/Buổi" name="travelAllowance">
-                <Input size="large" type="number" min={0} />
+                <Input type="number" min={0} />
               </Form.Item>
             </Col>
             <Col span={24}>
@@ -1700,7 +1692,6 @@ const TeacherListView: React.FC = () => {
           <Form.Item>
             <Space style={{ width: "100%", justifyContent: "flex-end" }}>
               <Button
-                size="large"
                 onClick={() => {
                   setEditModalOpen(false);
                   setEditingTeacher(null);
@@ -1712,7 +1703,6 @@ const TeacherListView: React.FC = () => {
               <Button
                 type="primary"
                 htmlType="submit"
-                size="large"
                 style={{ backgroundColor: "#36797f" }}
               >
                 Lưu

@@ -308,13 +308,12 @@ const AttendanceView: React.FC = () => {
               current && current > dayjs().endOf("day")
             }
             className="w-full"
-            size="large"
           />
         </Card>
 
         {/* Stats */}
         <Card title="Thống kê điểm danh" size="small">
-          <Space direction="horizontal" size="large">
+          <Space direction="horizontal">
             <Statistic
               title="Có mặt"
               value={presentCount}
@@ -337,7 +336,6 @@ const AttendanceView: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             prefix={<SearchOutlined />}
-            size="large"
           />
         </Card>
       </div>
@@ -351,7 +349,6 @@ const AttendanceView: React.FC = () => {
               value={totalExercises}
               onChange={(e) => setTotalExercises(Number(e.target.value))}
               placeholder="Nhập số bài tập"
-              size="large"
             />
           </div>
           <div>
@@ -360,7 +357,6 @@ const AttendanceView: React.FC = () => {
               value={homeworkDescription}
               onChange={(e) => setHomeworkDescription(e.target.value)}
               placeholder="Ví dụ: Trang 42-45, bài tập 1-5"
-              size="large"
             />
           </div>
         </div>
@@ -481,7 +477,6 @@ const AttendanceView: React.FC = () => {
               </div>
               <Button
                 type="primary"
-                size="large"
                 onClick={handleSubmit}
                 disabled={submitting || filteredStudents.length === 0}
                 loading={submitting}

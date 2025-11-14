@@ -189,7 +189,7 @@ const ClassFormModal = ({
           <Input placeholder="VD: TOAN10A1" />
         </Form.Item>
 
-        <Space style={{ width: "100%" }} size="large">
+        <Space style={{ width: "100%" }}>
           <Form.Item
             name="subject"
             label="Môn học"
@@ -236,7 +236,7 @@ const ClassFormModal = ({
           />
         </Form.Item>
 
-        <Space style={{ width: "100%" }} size="large">
+        <Space style={{ width: "100%" }}>
           <Form.Item
             name="startDate"
             label="Ngày bắt đầu"

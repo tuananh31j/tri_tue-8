@@ -1,6 +1,7 @@
 import WrapperContent from "@/components/WrapperContent";
 import { DATABASE_URL_BASE, database } from "@/firebase";
 import { ref, onValue, update } from "firebase/database";
+import { subjectOptions } from "@/utils/selectOptions";
 import {
   Tabs,
   Table,
@@ -326,12 +327,27 @@ const InvoicePage = () => {
           const classInfo = classes.find((c) => c.id === classId);
 
           // Find course using Khối and Môn học from class info
+          // Handle both value (Mathematics) and label (Toán) formats
           const course = classInfo
-            ? courses.find(
-                (c) =>
-                  c.Khối === classInfo.Khối &&
-                  c["Môn học"] === classInfo["Môn học"]
-              )
+            ? courses.find((c) => {
+                if (c.Khối !== classInfo.Khối) return false;
+                const classSubject = classInfo["Môn học"];
+                const courseSubject = c["Môn học"];
+                // Direct match
+                if (classSubject === courseSubject) return true;
+                // Try matching with subject options (label <-> value)
+                const subjectOption = subjectOptions.find(
+                  (opt) =>
+                    opt.label === classSubject || opt.value === classSubject
+                );
+                if (subjectOption) {
+                  return (
+                    courseSubject === subjectOption.label ||
+                    courseSubject === subjectOption.value
+                  );
+                }
+                return false;
+              })
             : undefined;
 
           console.log("🔍 Matching course for student invoice:", {
@@ -407,6 +423,7 @@ const InvoicePage = () => {
     sessions,
     students,
     courses,
+    classes,
     studentMonth,
     studentYear,
     studentInvoiceStatus,
@@ -446,12 +463,27 @@ const InvoicePage = () => {
         const classInfo = classes.find((c) => c.id === classId);
 
         // Find course using Khối and Môn học from class info
+        // Handle both value (Mathematics) and label (Toán) formats
         const course = classInfo
-          ? courses.find(
-              (c) =>
-                c.Khối === classInfo.Khối &&
-                c["Môn học"] === classInfo["Môn học"]
-            )
+          ? courses.find((c) => {
+              if (c.Khối !== classInfo.Khối) return false;
+              const classSubject = classInfo["Môn học"];
+              const courseSubject = c["Môn học"];
+              // Direct match
+              if (classSubject === courseSubject) return true;
+              // Try matching with subject options (label <-> value)
+              const subjectOption = subjectOptions.find(
+                (opt) =>
+                  opt.label === classSubject || opt.value === classSubject
+              );
+              if (subjectOption) {
+                return (
+                  courseSubject === subjectOption.label ||
+                  courseSubject === subjectOption.value
+                );
+              }
+              return false;
+            })
           : undefined;
 
         const salaryRate =
@@ -518,6 +550,7 @@ const InvoicePage = () => {
     sessions,
     teachers,
     courses,
+    classes,
     teacherMonth,
     teacherYear,
     teacherSalaryStatus,
@@ -575,25 +608,37 @@ const InvoicePage = () => {
     invoiceId: string,
     status: "paid" | "unpaid"
   ) => {
-    try {
-      const invoiceRef = ref(
-        database,
-        `datasheet/Phiếu_thu_học_phí/${invoiceId}`
-      );
-      const currentData = studentInvoiceStatus[invoiceId] || {};
-      await update(invoiceRef, {
-        ...currentData,
-        status,
-      });
-      message.success(
+    Modal.confirm({
+      title:
+        status === "paid" ? "Xác nhận thanh toán" : "Hủy xác nhận thanh toán",
+      content:
         status === "paid"
-          ? "Đã đánh dấu đã thanh toán"
-          : "Đã đánh dấu chưa thanh toán"
-      );
-    } catch (error) {
-      console.error("Error updating student invoice status:", error);
-      message.error("Lỗi khi cập nhật trạng thái");
-    }
+          ? "Bạn có chắc chắn muốn đánh dấu phiếu thu này đã thanh toán?"
+          : "Bạn có chắc chắn muốn hủy trạng thái thanh toán?",
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const invoiceRef = ref(
+            database,
+            `datasheet/Phiếu_thu_học_phí/${invoiceId}`
+          );
+          const currentData = studentInvoiceStatus[invoiceId] || {};
+          await update(invoiceRef, {
+            ...currentData,
+            status,
+          });
+          message.success(
+            status === "paid"
+              ? "Đã đánh dấu đã thanh toán"
+              : "Đã đánh dấu chưa thanh toán"
+          );
+        } catch (error) {
+          console.error("Error updating student invoice status:", error);
+          message.error("Lỗi khi cập nhật trạng thái");
+        }
+      },
+    });
   };
 
   // Update discount
@@ -634,38 +679,53 @@ const InvoicePage = () => {
     salaryId: string,
     status: "paid" | "unpaid"
   ) => {
-    try {
-      console.log("🔄 Updating teacher salary status:", { salaryId, status });
-
-      const salaryRef = ref(
-        database,
-        `datasheet/Phiếu_lương_giáo_viên/${salaryId}`
-      );
-
-      console.log(
-        "📍 Firebase path:",
-        `datasheet/Phiếu_lương_giáo_viên/${salaryId}`
-      );
-
-      await update(salaryRef, { status });
-
-      console.log("✅ Firebase updated successfully");
-
-      // Update local state to trigger re-render
-      setTeacherSalaryStatus((prev) => ({
-        ...prev,
-        [salaryId]: status,
-      }));
-
-      message.success(
+    Modal.confirm({
+      title:
+        status === "paid" ? "Xác nhận thanh toán" : "Hủy xác nhận thanh toán",
+      content:
         status === "paid"
-          ? "Đã đánh dấu đã thanh toán"
-          : "Đã đánh dấu chưa thanh toán"
-      );
-    } catch (error) {
-      console.error("❌ Error updating teacher salary status:", error);
-      message.error("Lỗi khi cập nhật trạng thái");
-    }
+          ? "Bạn có chắc chắn muốn đánh dấu phiếu lương này đã thanh toán?"
+          : "Bạn có chắc chắn muốn hủy trạng thái thanh toán?",
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          console.log("🔄 Updating teacher salary status:", {
+            salaryId,
+            status,
+          });
+
+          const salaryRef = ref(
+            database,
+            `datasheet/Phiếu_lương_giáo_viên/${salaryId}`
+          );
+
+          console.log(
+            "📍 Firebase path:",
+            `datasheet/Phiếu_lương_giáo_viên/${salaryId}`
+          );
+
+          await update(salaryRef, { status });
+
+          console.log("✅ Firebase updated successfully");
+
+          // Update local state to trigger re-render
+          setTeacherSalaryStatus((prev) => ({
+            ...prev,
+            [salaryId]: status,
+          }));
+
+          message.success(
+            status === "paid"
+              ? "Đã đánh dấu đã thanh toán"
+              : "Đã đánh dấu chưa thanh toán"
+          );
+        } catch (error) {
+          console.error("❌ Error updating teacher salary status:", error);
+          message.error("Lỗi khi cập nhật trạng thái");
+        }
+      },
+    });
   };
 
   // View and export invoice
@@ -1100,11 +1160,26 @@ const InvoicePage = () => {
       const classInfo = classes.find((c) => c.id === classId);
 
       // Find course using Khối and Môn học from class info
+      // Handle both value (Mathematics) and label (Toán) formats
       const course = classInfo
-        ? courses.find(
-            (c) =>
-              c.Khối === classInfo.Khối && c["Môn học"] === classInfo["Môn học"]
-          )
+        ? courses.find((c) => {
+            if (c.Khối !== classInfo.Khối) return false;
+            const classSubject = classInfo["Môn học"];
+            const courseSubject = c["Môn học"];
+            // Direct match
+            if (classSubject === courseSubject) return true;
+            // Try matching with subject options (label <-> value)
+            const subjectOption = subjectOptions.find(
+              (opt) => opt.label === classSubject || opt.value === classSubject
+            );
+            if (subjectOption) {
+              return (
+                courseSubject === subjectOption.label ||
+                courseSubject === subjectOption.value
+              );
+            }
+            return false;
+          })
         : undefined;
 
       console.log("🔍 Finding course for session:", {
@@ -1270,24 +1345,21 @@ const InvoicePage = () => {
             >
               Xem
             </Button>
-            <Button
-              size="small"
-              type={record.status === "paid" ? "default" : "primary"}
-              icon={<CheckCircleOutlined />}
-              onClick={() =>
-                updateStudentInvoiceStatus(
-                  record.id,
-                  record.status === "paid" ? "unpaid" : "paid"
-                )
-              }
-            >
-              {record.status === "paid" ? "Chưa TT" : "Đã TT"}
-            </Button>
+            {record.status !== "paid" && (
+              <Button
+                size="small"
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                onClick={() => updateStudentInvoiceStatus(record.id, "paid")}
+              >
+                Xác nhận TT
+              </Button>
+            )}
           </Space>
         ),
       },
     ],
-    []
+    [updateStudentDiscount, viewStudentInvoice, updateStudentInvoiceStatus]
   );
 
   // Expandable row render for teacher salary details
@@ -1493,19 +1565,16 @@ const InvoicePage = () => {
           >
             Xem
           </Button>
-          <Button
-            size="small"
-            type={record.status === "paid" ? "default" : "primary"}
-            icon={<CheckCircleOutlined />}
-            onClick={() =>
-              updateTeacherSalaryStatus(
-                record.id,
-                record.status === "paid" ? "unpaid" : "paid"
-              )
-            }
-          >
-            {record.status === "paid" ? "Chưa TT" : "Đã TT"}
-          </Button>
+          {record.status !== "paid" && (
+            <Button
+              size="small"
+              type="primary"
+              icon={<CheckCircleOutlined />}
+              onClick={() => updateTeacherSalaryStatus(record.id, "paid")}
+            >
+              Đã TT
+            </Button>
+          )}
         </Space>
       ),
     },

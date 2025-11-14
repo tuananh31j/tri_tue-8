@@ -116,7 +116,6 @@ const AdminSchedule = () => {
 
   const isToday = (date: Dayjs) => date.isSame(dayjs(), "day");
 
-  if (loading) return <div style={{ padding: "24px" }}>Đang tải...</div>;
   if (activeClasses.length === 0)
     return (
       <div style={{ padding: "24px" }}>
@@ -125,7 +124,7 @@ const AdminSchedule = () => {
     );
 
   return (
-    <WrapperContent title="Lịch dạy tổng hợp">
+    <WrapperContent title="Lịch dạy tổng hợp" isLoading={loading}>
       <Card style={{ marginBottom: 16 }}>
         <div
           style={{
@@ -210,7 +209,9 @@ const AdminSchedule = () => {
                     minWidth: "150px",
                   }}
                 >
-                  <div style={{ fontWeight: "bold" }}>{day.format("dddd")}</div>
+                  <div className="capitalize" style={{ fontWeight: "bold" }}>
+                    {day.format("dddd")}
+                  </div>
                   <div style={{ fontSize: "12px", color: "#666" }}>
                     {day.format("DD/MM/YYYY")}
                   </div>

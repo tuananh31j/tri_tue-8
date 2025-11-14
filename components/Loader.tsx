@@ -29,7 +29,7 @@ const Loader = ({ className, style, full, space }: LoaderProps) => {
       >
         <GlobeIcon
           className="text-primary animate-spin"
-          style={{ animationDuration: "0.4s" }}
+          style={{ animationDuration: "0.5s" }}
         />
       </div>
     </div>

@@ -35,7 +35,7 @@ const WrapperContent: React.FC<{
         </div>
         {toolbar}
       </div>
-      <Space size="large" direction="vertical" className="w-full">
+      <Space direction="vertical" className="w-full">
         {!isLoading ? (
           children
         ) : (

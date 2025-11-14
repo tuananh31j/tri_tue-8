@@ -134,7 +134,7 @@ const StudentListView: React.FC = () => {
             id: key,
             ...data[key],
           }));
-          console.log('📊 Attendance sessions loaded:', sessionsArray.length);
+          console.log("📊 Attendance sessions loaded:", sessionsArray.length);
           setAttendanceSessions(sessionsArray);
         }
         setLoading(false);
@@ -271,8 +271,8 @@ const StudentListView: React.FC = () => {
     // Filter attendance sessions where this student has a record
     let studentSessions = attendanceSessions.filter((session) => {
       // Check if student has attendance record in this session
-      const hasAttendance = session['Điểm danh']?.some(
-        (record: any) => record['Student ID'] === studentId
+      const hasAttendance = session["Điểm danh"]?.some(
+        (record: any) => record["Student ID"] === studentId
       );
       return hasAttendance;
     });
@@ -291,13 +291,13 @@ const StudentListView: React.FC = () => {
     let absentSessions = 0;
 
     studentSessions.forEach((session) => {
-      const record = session['Điểm danh']?.find(
-        (r: any) => r['Student ID'] === studentId
+      const record = session["Điểm danh"]?.find(
+        (r: any) => r["Student ID"] === studentId
       );
-      
+
       if (record) {
         // Only count hours if student was present
-        if (record['Có mặt']) {
+        if (record["Có mặt"]) {
           const start = session["Giờ bắt đầu"] || "0:0";
           const end = session["Giờ kết thúc"] || "0:0";
           const [startH, startM] = start.split(":").map(Number);
@@ -317,7 +317,7 @@ const StudentListView: React.FC = () => {
       absentSessions,
       totalMinutes,
       hours: Math.floor(totalMinutes / 60),
-      minutes: totalMinutes % 60
+      minutes: totalMinutes % 60,
     });
 
     return {
@@ -345,8 +345,8 @@ const StudentListView: React.FC = () => {
     return attendanceSessions
       .filter((session) => {
         // Check if student has attendance record in this session
-        const hasAttendance = session['Điểm danh']?.some(
-          (record: any) => record['Student ID'] === studentId
+        const hasAttendance = session["Điểm danh"]?.some(
+          (record: any) => record["Student ID"] === studentId
         );
         if (!hasAttendance) return false;
         if (!session["Ngày"]) return false;
@@ -680,7 +680,9 @@ const StudentListView: React.FC = () => {
             response.status,
             errorText
           );
-          message.error(`Không cập nhật được học sinh. Status: ${response.status}`);
+          message.error(
+            `Không cập nhật được học sinh. Status: ${response.status}`
+          );
         }
       }
     } catch (error) {
@@ -1469,11 +1471,11 @@ const StudentListView: React.FC = () => {
 
   return (
     <WrapperContent
+      isLoading={loading}
       title="Quản lý học sinh"
       toolbar={
         <Button
           type="primary"
-          size="large"
           onClick={handleAddStudent}
           icon={<PlusOutlined />}
         >
@@ -1499,7 +1501,6 @@ const StudentListView: React.FC = () => {
               />
             ) : null
           }
-          size="large"
         />
         {searchTerm && (
           <p className="mt-2 text-sm text-gray-600">
@@ -1524,7 +1525,6 @@ const StudentListView: React.FC = () => {
                 setStartDate(date ? date.format("YYYY-MM-DD") : "")
               }
               className="w-full"
-              size="large"
             />
           </div>
           <div>
@@ -1537,7 +1537,6 @@ const StudentListView: React.FC = () => {
                 setEndDate(date ? date.format("YYYY-MM-DD") : "")
               }
               className="w-full"
-              size="large"
             />
           </div>
         </div>
@@ -1660,62 +1659,69 @@ const StudentListView: React.FC = () => {
                       menu={{
                         items: [
                           {
-                            key: 'view',
-                            label: 'Xem chi tiết',
+                            key: "view",
+                            label: "Xem chi tiết",
                             icon: <EyeOutlined />,
                             onClick: () => handleStudentClick(record.student),
                           },
                           {
-                            key: 'extend',
-                            label: 'Gia hạn giờ học',
+                            key: "extend",
+                            label: "Gia hạn giờ học",
                             icon: <ClockCircleOutlined />,
                             onClick: () => handleExtendHours(record.student),
                           },
                           {
-                            type: 'divider',
+                            type: "divider",
                           },
                           {
-                            key: 'edit',
-                            label: 'Chỉnh sửa',
+                            key: "edit",
+                            label: "Chỉnh sửa",
                             icon: <EditOutlined />,
                             onClick: () => {
                               // Create a synthetic event to satisfy the function signature
-                              const syntheticEvent = { stopPropagation: () => {} } as React.MouseEvent;
+                              const syntheticEvent = {
+                                stopPropagation: () => {},
+                              } as React.MouseEvent;
                               handleEditStudent(syntheticEvent, record.student);
                             },
                           },
                           {
-                            key: 'delete',
-                            label: 'Xóa học sinh',
+                            key: "delete",
+                            label: "Xóa học sinh",
                             icon: <DeleteOutlined />,
                             danger: true,
                             onClick: () => {
                               Modal.confirm({
-                                title: 'Xóa học sinh',
-                                content: `Bạn có chắc chắn muốn xóa học sinh "${record.student['Họ và tên']}" không?`,
-                                okText: 'Xóa',
-                                okType: 'danger',
-                                cancelText: 'Hủy',
+                                title: "Xóa học sinh",
+                                content: `Bạn có chắc chắn muốn xóa học sinh "${record.student["Họ và tên"]}" không?`,
+                                okText: "Xóa",
+                                okType: "danger",
+                                cancelText: "Hủy",
                                 onOk: () => {
-                                  const syntheticEvent = { stopPropagation: () => {} } as React.MouseEvent;
-                                  handleDeleteStudent(syntheticEvent, record.student);
+                                  const syntheticEvent = {
+                                    stopPropagation: () => {},
+                                  } as React.MouseEvent;
+                                  handleDeleteStudent(
+                                    syntheticEvent,
+                                    record.student
+                                  );
                                 },
                               });
                             },
                           },
                         ],
                       }}
-                      trigger={['click']}
+                      trigger={["click"]}
                     >
-                      <Button 
-                        type="text" 
+                      <Button
+                        type="text"
                         icon={<MoreOutlined />}
                         size="small"
                       />
                     </Dropdown>
-                    <StudentReportButton 
-                      student={record.student} 
-                      type="link" 
+                    <StudentReportButton
+                      student={record.student}
+                      type="link"
                       size="small"
                     />
                   </Space>
@@ -1725,12 +1731,6 @@ const StudentListView: React.FC = () => {
             pagination={false}
             scroll={{ x: 1200 }}
           />
-        </Card>
-      )}
-
-      {!loading && displayStudents.length === 0 && (
-        <Card>
-          <Empty description="Chưa có học sinh nào" />
         </Card>
       )}
 
@@ -2507,7 +2507,7 @@ const StudentListView: React.FC = () => {
           layout="vertical"
           style={{ padding: "24px" }}
         >
-          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+          <Space direction="vertical" style={{ width: "100%" }}>
             {/* Họ và tên (auto) */}
             <Form.Item label="Họ và tên" name="studentName">
               <Input disabled />
@@ -2651,7 +2651,7 @@ const StudentListView: React.FC = () => {
           layout="vertical"
           style={{ padding: "24px" }}
         >
-          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+          <Space direction="vertical" style={{ width: "100%" }}>
             {/* Original Hours (read-only) */}
             <Card
               style={{

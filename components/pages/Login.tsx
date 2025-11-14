@@ -122,7 +122,6 @@ const Login: React.FC = () => {
               <Input
                 prefix={<UserOutlined />}
                 placeholder="email@example.com"
-                size="large"
                 disabled={loading}
               />
             </Form.Item>
@@ -139,7 +138,6 @@ const Login: React.FC = () => {
               <Input.Password
                 prefix={<LockOutlined />}
                 placeholder="••••••••"
-                size="large"
                 disabled={loading}
               />
             </Form.Item>
@@ -148,7 +146,6 @@ const Login: React.FC = () => {
               <Button
                 type="primary"
                 htmlType="submit"
-                size="large"
                 block
                 loading={loading}
                 style={{

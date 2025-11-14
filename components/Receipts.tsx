@@ -164,7 +164,6 @@ export const TuitionReceipt: React.FC<{
           icon={<DownloadOutlined />}
           onClick={handleExport}
           loading={isExporting}
-          size="large"
           style={{ backgroundColor: "#36797f" }}
         >
           {isExporting ? "Đang xuất..." : "📸 Xuất ảnh"}
@@ -323,7 +322,6 @@ export const SalarySlip: React.FC<{
           icon={<DownloadOutlined />}
           onClick={handleExport}
           loading={isExporting}
-          size="large"
           style={{ backgroundColor: "#36797f" }}
         >
           {isExporting ? "Đang xuất..." : "📸 Xuất ảnh"}
@@ -486,7 +484,6 @@ const Receipts: React.FC = () => {
         activeKey={activeTab}
         onChange={(key) => setActiveTab(key as "tuition" | "salary")}
         type="card"
-        size="large"
       >
         <TabPane
           tab={
@@ -515,7 +512,6 @@ const Receipts: React.FC = () => {
                         Tên học sinh
                       </Text>
                       <Input
-                        size="large"
                         value={tuitionData.studentName}
                         onChange={(e) =>
                           setTuitionData({
@@ -537,7 +533,6 @@ const Receipts: React.FC = () => {
                         Tháng
                       </Text>
                       <Input
-                        size="large"
                         value={tuitionData.month}
                         onChange={(e) =>
                           setTuitionData({
@@ -561,7 +556,6 @@ const Receipts: React.FC = () => {
                         Tổng số buổi học
                       </Text>
                       <Input
-                        size="large"
                         type="number"
                         value={tuitionData.totalSessions}
                         onChange={(e) =>
@@ -585,7 +579,6 @@ const Receipts: React.FC = () => {
                         Học phí/buổi (VNĐ)
                       </Text>
                       <Input
-                        size="large"
                         value={tuitionData.pricePerSession}
                         onChange={(e) =>
                           setTuitionData({
@@ -608,7 +601,6 @@ const Receipts: React.FC = () => {
                         Tổng học phí (VNĐ)
                       </Text>
                       <Input
-                        size="large"
                         value={tuitionData.totalAmount}
                         readOnly
                         style={{ fontWeight: "bold", color: "#36797f" }}
@@ -678,7 +670,6 @@ const Receipts: React.FC = () => {
                         Tên giáo viên
                       </Text>
                       <Input
-                        size="large"
                         value={salaryData.teacherName}
                         onChange={(e) =>
                           setSalaryData({
@@ -700,7 +691,6 @@ const Receipts: React.FC = () => {
                         Tháng
                       </Text>
                       <Input
-                        size="large"
                         value={salaryData.month}
                         onChange={(e) =>
                           setSalaryData({
@@ -724,7 +714,6 @@ const Receipts: React.FC = () => {
                         Ca TH
                       </Text>
                       <Input
-                        size="large"
                         value={salaryData.caTH}
                         onChange={(e) =>
                           setSalaryData({ ...salaryData, caTH: e.target.value })
@@ -742,7 +731,6 @@ const Receipts: React.FC = () => {
                         Lương TH (VNĐ)
                       </Text>
                       <Input
-                        size="large"
                         value={salaryData.luongTH}
                         onChange={(e) =>
                           setSalaryData({
@@ -766,7 +754,6 @@ const Receipts: React.FC = () => {
                         Ca THCS
                       </Text>
                       <Input
-                        size="large"
                         value={salaryData.caTHCS}
                         onChange={(e) =>
                           setSalaryData({
@@ -787,7 +774,6 @@ const Receipts: React.FC = () => {
                         Lương THCS (VNĐ)
                       </Text>
                       <Input
-                        size="large"
                         value={salaryData.luongTHCS}
                         onChange={(e) =>
                           setSalaryData({
@@ -811,7 +797,6 @@ const Receipts: React.FC = () => {
                         Ca THPT
                       </Text>
                       <Input
-                        size="large"
                         value={salaryData.caTHPT}
                         onChange={(e) =>
                           setSalaryData({
@@ -832,7 +817,6 @@ const Receipts: React.FC = () => {
                         Lương THPT (VNĐ)
                       </Text>
                       <Input
-                        size="large"
                         value={salaryData.luongTHPT}
                         onChange={(e) =>
                           setSalaryData({
@@ -851,7 +835,6 @@ const Receipts: React.FC = () => {
                     Tổng lương (VNĐ)
                   </Text>
                   <Input
-                    size="large"
                     value={salaryData.tongLuong}
                     readOnly
                     style={{ fontWeight: "bold", color: "#36797f" }}
