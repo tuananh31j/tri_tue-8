@@ -1874,7 +1874,8 @@ const InvoicePage = () => {
   ];
 
   const studentTab = (
-    <div>
+       <Space direction="vertical" className="w-full">
+
       {/* Filters */}
       <Card className="mb-4">
         <Row gutter={[16, 16]}>
@@ -1969,11 +1970,11 @@ const InvoicePage = () => {
           rowExpandable: (record) => record.sessions.length > 0,
         }}
       />
-    </div>
+    </Space>
   );
 
   const teacherTab = (
-    <div>
+    <Space direction="vertical" className="w-full">
       {/* Filters */}
       <Card className="mb-4">
         <Row gutter={[16, 16]}>
@@ -2082,7 +2083,7 @@ const InvoicePage = () => {
           rowExpandable: (record) => record.sessions.length > 0,
         }}
       />
-    </div>
+    </Space>
   );
 
   return (

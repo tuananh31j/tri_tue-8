@@ -20,6 +20,7 @@ import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isoWeek from "dayjs/plugin/isoWeek";
 import "dayjs/locale/vi";
 import WrapperContent from "@/components/WrapperContent";
+import { subjectMap } from "@/utils/selectOptions";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -131,17 +132,15 @@ const TeacherSchedule = () => {
 
   const isToday = (date: Dayjs) => date.isSame(dayjs(), "day");
 
-  if (loading) return <div style={{ padding: "24px" }}>Đang tải...</div>;
   if (myClasses.length === 0)
     return (
-      <WrapperContent title="Lịch dạy của tôi">
+      <WrapperContent title="Lịch dạy của tôi" isLoading={loading}>
         <Empty description="Bạn chưa được phân công lớp học nào" />
       </WrapperContent>
     );
 
   return (
-    <div style={{ padding: "24px" }}>
-      {/* Header */}
+    <WrapperContent title="Lịch dạy của tôi" isLoading={loading}>
       <Card style={{ marginBottom: 16 }}>
         <div
           style={{
@@ -204,7 +203,9 @@ const TeacherSchedule = () => {
                     minWidth: "150px",
                   }}
                 >
-                  <div style={{ fontWeight: "bold" }}>{day.format("dddd")}</div>
+                  <div className="capitalize" style={{ fontWeight: "bold" }}>
+                    {day.format("dddd")}
+                  </div>
                   <div style={{ fontSize: "12px", color: "#666" }}>
                     {day.format("DD/MM/YYYY")}
                   </div>
@@ -337,7 +338,8 @@ const TeacherSchedule = () => {
                                   color="blue"
                                   style={{ fontSize: "10px", margin: 0 }}
                                 >
-                                  {event.class["Môn học"]}
+                                  {subjectMap[event.class["Môn học"]] ||
+                                    event.class["Môn học"]}
                                 </Tag>
                               </div>
                             </div>
@@ -352,7 +354,7 @@ const TeacherSchedule = () => {
           </tbody>
         </table>
       </div>
-    </div>
+    </WrapperContent>
   );
 };
 
