@@ -21,6 +21,8 @@ interface Course {
   Khối: number;
   "Môn học": string;
   Giá: number;
+  "Lương GV Part-time": number;
+  "Lương GV Full-time": number;
   "Ngày tạo": string;
   "Ngày cập nhật"?: string;
 }
@@ -78,6 +80,8 @@ const CourseManagement = () => {
       Khối: record["Khối"],
       "Môn học": record["Môn học"],
       Giá: record["Giá"],
+      "Lương GV Part-time": record["Lương GV Part-time"],
+      "Lương GV Full-time": record["Lương GV Full-time"],
     });
     setIsModalOpen(true);
   };
@@ -108,6 +112,8 @@ const CourseManagement = () => {
           Khối: values["Khối"],
           "Môn học": values["Môn học"],
           Giá: values["Giá"],
+          "Lương GV Part-time": values["Lương GV Part-time"],
+          "Lương GV Full-time": values["Lương GV Full-time"],
           "Ngày cập nhật": timestamp,
         });
         message.success("Cập nhật khóa học thành công");
@@ -119,6 +125,8 @@ const CourseManagement = () => {
           Khối: values["Khối"],
           "Môn học": values["Môn học"],
           Giá: values["Giá"],
+          "Lương GV Part-time": values["Lương GV Part-time"],
+          "Lương GV Full-time": values["Lương GV Full-time"],
           "Ngày tạo": timestamp,
         };
         console.log("➕ Adding new course:", courseData);
@@ -179,6 +187,28 @@ const CourseManagement = () => {
       sorter: (a: Course, b: Course) => a["Giá"] - b["Giá"],
       render: (price: number) => (
         <Tag color="blue">{price?.toLocaleString("vi-VN")} đ</Tag>
+      ),
+    },
+    {
+      title: "Lương GV PT/buổi",
+      dataIndex: "Lương GV Part-time",
+      key: "salaryPartTime",
+      width: 150,
+      sorter: (a: Course, b: Course) =>
+        a["Lương GV Part-time"] - b["Lương GV Part-time"],
+      render: (salary: number) => (
+        <Tag color="green">{salary?.toLocaleString("vi-VN")} đ</Tag>
+      ),
+    },
+    {
+      title: "Lương GV FT/buổi",
+      dataIndex: "Lương GV Full-time",
+      key: "salaryFullTime",
+      width: 150,
+      sorter: (a: Course, b: Course) =>
+        a["Lương GV Full-time"] - b["Lương GV Full-time"],
+      render: (salary: number) => (
+        <Tag color="orange">{salary?.toLocaleString("vi-VN")} đ</Tag>
       ),
     },
     {
@@ -318,7 +348,61 @@ const CourseManagement = () => {
               formatter={(value) =>
                 `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
               }
-              parser={(value) => Number((value ?? "").replace(/\$\s?|(,*)/g, ""))}
+              parser={(value) =>
+                Number((value ?? "").replace(/\$\s?|(,*)/g, ""))
+              }
+              min={0}
+              step={10000}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Lương GV Part-time/buổi (VNĐ)"
+            name="Lương GV Part-time"
+            rules={[
+              { required: true, message: "Vui lòng nhập lương GV Part-time!" },
+              {
+                type: "number",
+                min: 0,
+                message: "Lương phải lớn hơn hoặc bằng 0!",
+              },
+            ]}
+          >
+            <InputNumber<number>
+              placeholder="Nhập lương giáo viên Part-time"
+              style={{ width: "100%" }}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) =>
+                Number((value ?? "").replace(/\$\s?|(,*)/g, ""))
+              }
+              min={0}
+              step={10000}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Lương GV Full-time/buổi (VNĐ)"
+            name="Lương GV Full-time"
+            rules={[
+              { required: true, message: "Vui lòng nhập lương GV Full-time!" },
+              {
+                type: "number",
+                min: 0,
+                message: "Lương phải lớn hơn hoặc bằng 0!",
+              },
+            ]}
+          >
+            <InputNumber<number>
+              placeholder="Nhập lương giáo viên Full-time"
+              style={{ width: "100%" }}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) =>
+                Number((value ?? "").replace(/\$\s?|(,*)/g, ""))
+              }
               min={0}
               step={10000}
             />

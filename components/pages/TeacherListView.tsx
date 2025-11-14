@@ -75,6 +75,7 @@ interface Teacher {
   "Ngân hàng"?: string;
   STK?: string;
   "Địa chỉ"?: string;
+  "Trợ cấp đi lại"?: number;
   Ảnh?: string;
   [key: string]: any;
 }
@@ -115,6 +116,7 @@ const TeacherListView: React.FC = () => {
         bank: editingTeacher["Ngân hàng"] || "",
         account: editingTeacher["STK"] || "",
         address: editingTeacher["Địa chỉ"] || "",
+        travelAllowance: editingTeacher["Trợ cấp đi lại"] || 0,
       });
     } else if (!editingTeacher && isEditModalOpen) {
       form.resetFields();
@@ -178,7 +180,7 @@ const TeacherListView: React.FC = () => {
             id: key,
             ...data[key],
           }));
-          console.log('📊 Attendance sessions loaded:', sessionsArray.length);
+          console.log("📊 Attendance sessions loaded:", sessionsArray.length);
           setAttendanceSessions(sessionsArray);
         }
         setLoading(false);
@@ -435,7 +437,7 @@ const TeacherListView: React.FC = () => {
       return {
         ...teacher,
         ...stats,
-        totalTravelAllowance: travelAllowance,
+        totalTravelAllowance: teacher["Trợ cấp đi lại"] || 0,
       };
     });
   }, [
@@ -568,6 +570,7 @@ const TeacherListView: React.FC = () => {
         "Ngân hàng": values.bank,
         STK: values.account,
         "Địa chỉ": values.address,
+        "Trợ cấp đi lại": values.travelAllowance || 0,
       };
 
       // Only update password if a new one is provided
@@ -1680,6 +1683,11 @@ const TeacherListView: React.FC = () => {
             <Col span={12}>
               <Form.Item label="Số tài khoản" name="account">
                 <Input size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Trợ cấp đi lại VNĐ/Buổi" name="travelAllowance">
+                <Input size="large" type="number" min={0} />
               </Form.Item>
             </Col>
             <Col span={24}>

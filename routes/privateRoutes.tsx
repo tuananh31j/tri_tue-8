@@ -2,7 +2,6 @@ import AttendanceView from "@/components/pages/AttendanceView";
 import InvoicePage from "@/components/pages/InvoicePage";
 import StudentListView from "@/components/pages/StudentListView";
 import TeacherListView from "@/components/pages/TeacherListView";
-import ScheduleViewAntd from "@/components/pages/ScheduleViewAntd";
 import ClassManagement from "@/components/pages/ClassManagement";
 import CourseManagement from "@/components/pages/CourseManagement";
 import TeacherClassView from "@/components/pages/TeacherClassView";
@@ -14,6 +13,7 @@ import AdminSchedule from "@/components/pages/AdminSchedule";
 import StudentReportPage from "@/components/pages/StudentReportPage";
 import AdminLayout from "@/layouts/AdminLayout";
 import Authoriation from "@/routes/Authoriation";
+import { Empty } from "antd/lib";
 
 const privateRoutes = [
   {
@@ -22,7 +22,7 @@ const privateRoutes = [
     children: [
       {
         index: true,
-        element: <ScheduleViewAntd />,
+        element: <Empty />,
       },
       {
         path: "invoice",

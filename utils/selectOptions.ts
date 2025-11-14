@@ -48,3 +48,16 @@ export const gradeOptions = [
   {value: 11, label: "Lớp 11"},
   {value: 12, label: "Lớp 12"},
 ]
+
+
+export const levelShool = [
+  {
+    key: '1,2,3,4,5',
+    value: "TH", label: "Tiểu học"},
+  {
+    key: '6,7,8,9',
+    value: "THCS", label: "Trung học cơ sở"},
+  {
+    key: '10,11,12',
+    value: "THPT", label: "Trung học phổ thông"},
+]

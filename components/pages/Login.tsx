@@ -10,7 +10,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
 
   const handleEmailPasswordSubmit = async (values: any) => {
     setError("");
@@ -47,7 +47,11 @@ const Login: React.FC = () => {
 
   useLayoutEffect(() => {
     if (currentUser) {
-      navigate("/workspace");
+      if (userProfile.role === "admin") {
+        navigate("/workspace/admin-schedule");
+      } else {
+        navigate("/workspace/my-schedule");
+      }
     }
   }, [currentUser]);
 
