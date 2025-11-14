@@ -153,7 +153,8 @@ const TeacherAttendance = () => {
                     <span>
                       {classData["Tên lớp"]}
                       <Tag color="default" style={{ marginLeft: 8 }}>
-                        {classData["Môn học"]}
+                        {subjectMap[classData["Môn học"]] ||
+                          classData["Môn học"]}
                       </Tag>
                     </span>
                   }
