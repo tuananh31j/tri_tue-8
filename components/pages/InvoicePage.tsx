@@ -145,11 +145,53 @@ const InvoicePage = () => {
   const [studentInvoiceStatus, setStudentInvoiceStatus] = useState<
     Record<
       string,
-      { status: "paid" | "unpaid"; discount?: number } | "paid" | "unpaid"
+      | {
+          status: "paid" | "unpaid";
+          discount?: number;
+          // Full invoice data for paid records
+          studentId?: string;
+          studentName?: string;
+          studentCode?: string;
+          month?: number;
+          year?: number;
+          totalSessions?: number;
+          totalAmount?: number;
+          finalAmount?: number;
+          paidAt?: string;
+          sessions?: any[];
+        }
+      | "paid"
+      | "unpaid"
     >
   >({});
   const [teacherSalaryStatus, setTeacherSalaryStatus] = useState<
-    Record<string, "paid" | "unpaid" | { status: "paid" | "unpaid" }>
+    Record<
+      string,
+      | "paid"
+      | "unpaid"
+      | {
+          status: "paid" | "unpaid";
+          // Full salary data for paid records
+          teacherId?: string;
+          teacherName?: string;
+          teacherCode?: string;
+          bienChe?: string;
+          month?: number;
+          year?: number;
+          totalSessions?: number;
+          totalHours?: number;
+          totalMinutes?: number;
+          totalSalary?: number;
+          totalAllowance?: number;
+          paidAt?: string;
+          bankInfo?: {
+            bank: string | null;
+            accountNo: string | null;
+            accountName: string | null;
+          };
+          sessions?: any[];
+        }
+    >
   >({});
 
   // Load payment status from Firebase
@@ -305,6 +347,32 @@ const InvoicePage = () => {
   const studentInvoices = useMemo(() => {
     const invoicesMap: Record<string, StudentInvoice> = {};
 
+    // First, load all paid invoices from Firebase (these are immutable)
+    Object.entries(studentInvoiceStatus).forEach(([key, data]) => {
+      if (!data) return;
+
+      const status = typeof data === "string" ? data : data.status;
+
+      // If paid and has complete data in Firebase, use it directly
+      if (status === "paid" && typeof data === "object" && data.studentId) {
+        invoicesMap[key] = {
+          id: key,
+          studentId: data.studentId,
+          studentName: data.studentName || "",
+          studentCode: data.studentCode || "",
+          month: data.month ?? 0,
+          year: data.year ?? 0,
+          totalSessions: data.totalSessions ?? 0,
+          totalAmount: data.totalAmount ?? 0,
+          discount: data.discount ?? 0,
+          finalAmount: data.finalAmount ?? 0,
+          status: "paid",
+          sessions: data.sessions || [],
+        };
+      }
+    });
+
+    // Then calculate unpaid invoices from sessions
     sessions.forEach((session) => {
       const sessionDate = new Date(session["Ngày"]);
       const sessionMonth = sessionDate.getMonth();
@@ -312,12 +380,17 @@ const InvoicePage = () => {
 
       if (
         sessionMonth === studentMonth &&
-        sessionYear === studentYear &&
+        // sessionYear === studentYear &&
         session["Điểm danh"]
       ) {
         session["Điểm danh"].forEach((record: any) => {
           const studentId = record["Student ID"];
           if (!studentId || !record["Có mặt"]) return;
+
+          const key = `${studentId}-${sessionMonth}-${sessionYear}`;
+
+          // Skip if already loaded from Firebase as paid
+          if (invoicesMap[key]?.status === "paid") return;
 
           const student = students.find((s) => s.id === studentId);
           if (!student) return;
@@ -350,26 +423,8 @@ const InvoicePage = () => {
               })
             : undefined;
 
-          console.log("🔍 Matching course for student invoice:", {
-            classId,
-            classKhoi: classInfo?.Khối,
-            classSubject: classInfo?.["Môn học"],
-            foundCourse: course?.["Môn học"],
-            coursePrice: course?.Giá,
-          });
-
           const pricePerSession = course?.Giá || 0;
 
-          if (pricePerSession === 0) {
-            console.warn("⚠️ Price is 0 for session:", {
-              sessionClass: session["Tên lớp"],
-              sessionCode: session["Mã lớp"],
-              foundCourse: course,
-              availableCourses: courses,
-            });
-          }
-
-          const key = `${studentId}-${sessionMonth}-${sessionYear}`;
           if (!invoicesMap[key]) {
             const invoiceData = studentInvoiceStatus[key];
             const discount =
@@ -406,16 +461,12 @@ const InvoicePage = () => {
       }
     });
 
-    // Calculate final amount after discount
+    // Calculate final amount for unpaid invoices only
     Object.values(invoicesMap).forEach((invoice) => {
-      const finalAmount = Math.max(0, invoice.totalAmount - invoice.discount);
-      console.log("💰 Calculating final amount:", {
-        invoiceId: invoice.id,
-        totalAmount: invoice.totalAmount,
-        discount: invoice.discount,
-        finalAmount: finalAmount,
-      });
-      invoice.finalAmount = finalAmount;
+      if (invoice.status !== "paid") {
+        const finalAmount = Math.max(0, invoice.totalAmount - invoice.discount);
+        invoice.finalAmount = finalAmount;
+      }
     });
 
     return Object.values(invoicesMap);
@@ -434,6 +485,34 @@ const InvoicePage = () => {
   const teacherSalaries = useMemo(() => {
     const salariesMap: Record<string, TeacherSalary> = {};
 
+    // First, load all paid salaries from Firebase (these are immutable)
+    Object.entries(teacherSalaryStatus).forEach(([key, data]) => {
+      if (!data) return;
+
+      const status = typeof data === "string" ? data : data.status;
+
+      // If paid and has complete data in Firebase, use it directly
+      if (status === "paid" && typeof data === "object" && data.teacherId) {
+        salariesMap[key] = {
+          id: key,
+          teacherId: data.teacherId,
+          teacherName: data.teacherName || "",
+          teacherCode: data.teacherCode || "",
+          bienChe: data.bienChe || "Chưa phân loại",
+          month: data.month ?? 0,
+          year: data.year ?? 0,
+          totalSessions: data.totalSessions ?? 0,
+          totalHours: data.totalHours ?? 0,
+          totalMinutes: data.totalMinutes ?? 0,
+          totalSalary: data.totalSalary ?? 0,
+          totalAllowance: data.totalAllowance ?? 0,
+          status: "paid",
+          sessions: data.sessions || [],
+        };
+      }
+    });
+
+    // Then calculate unpaid salaries from sessions
     sessions.forEach((session) => {
       const sessionDate = new Date(session["Ngày"]);
       const sessionMonth = sessionDate.getMonth();
@@ -443,11 +522,15 @@ const InvoicePage = () => {
         const teacherId = session["Teacher ID"];
         if (!teacherId) return;
 
+        const key = `${teacherId}-${sessionMonth}-${sessionYear}`;
+
+        // Skip if already loaded from Firebase as paid
+        if (salariesMap[key]?.status === "paid") return;
+
         const teacher = teachers.find((t) => t.id === teacherId);
         if (!teacher) return;
 
         const bienChe = teacher["Biên chế"] || "Chưa phân loại";
-        const key = `${teacherId}-${sessionMonth}-${sessionYear}`;
 
         // Calculate session duration
         const [startH, startM] = (session["Giờ bắt đầu"] || "0:0")
@@ -524,25 +607,20 @@ const InvoicePage = () => {
       }
     });
 
-    // Convert total minutes to hours and calculate total allowance
+    // Convert total minutes to hours and calculate total allowance for unpaid only
     Object.values(salariesMap).forEach((salary) => {
-      salary.totalHours = Math.floor(salary.totalMinutes / 60);
-      salary.totalMinutes = salary.totalMinutes % 60;
+      if (salary.status !== "paid") {
+        salary.totalHours = Math.floor(salary.totalMinutes / 60);
+        salary.totalMinutes = salary.totalMinutes % 60;
 
-      // Find teacher info to get travel allowance per session
-      const teacher = teachers.find((t) => t.id === salary.teacherId);
-      const travelAllowancePerSession = teacher?.["Trợ cấp đi lại"] || 0;
+        // Find teacher info to get travel allowance per session
+        const teacher = teachers.find((t) => t.id === salary.teacherId);
+        const travelAllowancePerSession = teacher?.["Trợ cấp đi lại"] || 0;
 
-      // Calculate total travel allowance = allowance per session * number of sessions
-      salary.totalAllowance = travelAllowancePerSession * salary.totalSessions;
-
-      console.log("💰 Calculating teacher allowance:", {
-        teacherId: salary.teacherId,
-        teacherName: salary.teacherName,
-        allowancePerSession: travelAllowancePerSession,
-        totalSessions: salary.totalSessions,
-        totalAllowance: salary.totalAllowance,
-      });
+        // Calculate total travel allowance = allowance per session * number of sessions
+        salary.totalAllowance =
+          travelAllowancePerSession * salary.totalSessions;
+      }
     });
 
     return Object.values(salariesMap);
@@ -619,15 +697,51 @@ const InvoicePage = () => {
       cancelText: "Hủy",
       onOk: async () => {
         try {
+          // Find the invoice data
+          const invoice = studentInvoices.find((inv) => inv.id === invoiceId);
+          if (!invoice) {
+            message.error("Không tìm thấy thông tin phiếu thu");
+            return;
+          }
+
           const invoiceRef = ref(
             database,
             `datasheet/Phiếu_thu_học_phí/${invoiceId}`
           );
           const currentData = studentInvoiceStatus[invoiceId] || {};
-          await update(invoiceRef, {
-            ...currentData,
-            status,
-          });
+
+          // When marking as paid, save complete invoice data
+          if (status === "paid") {
+            await update(invoiceRef, {
+              ...currentData,
+              status,
+              studentId: invoice.studentId,
+              studentName: invoice.studentName,
+              studentCode: invoice.studentCode,
+              month: invoice.month,
+              year: invoice.year,
+              totalSessions: invoice.totalSessions,
+              totalAmount: invoice.totalAmount,
+              discount: invoice.discount,
+              finalAmount: invoice.finalAmount,
+              paidAt: new Date().toISOString(),
+              sessions: invoice.sessions.map((s) => ({
+                id: s.id,
+                Ngày: s["Ngày"],
+                "Giờ bắt đầu": s["Giờ bắt đầu"],
+                "Giờ kết thúc": s["Giờ kết thúc"],
+                "Tên lớp": s["Tên lớp"],
+                "Mã lớp": s["Mã lớp"],
+              })),
+            });
+          } else {
+            // Only allow unpaid if not yet marked as paid
+            await update(invoiceRef, {
+              ...currentData,
+              status,
+            });
+          }
+
           message.success(
             status === "paid"
               ? "Đã đánh dấu đã thanh toán"
@@ -649,9 +763,11 @@ const InvoicePage = () => {
       const currentStatus =
         typeof currentData === "object" ? currentData.status : currentData;
 
-      // Chỉ cho phép cập nhật nếu chưa thanh toán
+      // Không cho phép cập nhật nếu đã thanh toán
       if (currentStatus === "paid") {
-        message.error("Không thể cập nhật phiếu đã thanh toán");
+        message.error(
+          "Không thể cập nhật phiếu đã thanh toán. Dữ liệu đã được lưu cố định."
+        );
         return;
       }
 
@@ -695,6 +811,13 @@ const InvoicePage = () => {
             status,
           });
 
+          // Find the salary data
+          const salary = teacherSalaries.find((sal) => sal.id === salaryId);
+          if (!salary) {
+            message.error("Không tìm thấy thông tin phiếu lương");
+            return;
+          }
+
           const salaryRef = ref(
             database,
             `datasheet/Phiếu_lương_giáo_viên/${salaryId}`
@@ -705,7 +828,41 @@ const InvoicePage = () => {
             `datasheet/Phiếu_lương_giáo_viên/${salaryId}`
           );
 
-          await update(salaryRef, { status });
+          // When marking as paid, save complete salary data
+          if (status === "paid") {
+            const teacher = teachers.find((t) => t.id === salary.teacherId);
+            await update(salaryRef, {
+              status,
+              teacherId: salary.teacherId,
+              teacherName: salary.teacherName,
+              teacherCode: salary.teacherCode,
+              bienChe: salary.bienChe,
+              month: salary.month,
+              year: salary.year,
+              totalSessions: salary.totalSessions,
+              totalHours: salary.totalHours,
+              totalMinutes: salary.totalMinutes,
+              totalSalary: salary.totalSalary,
+              totalAllowance: salary.totalAllowance,
+              paidAt: new Date().toISOString(),
+              bankInfo: {
+                bank: teacher?.["Ngân hàng"] || null,
+                accountNo: teacher?.STK || null,
+                accountName: teacher?.["Họ và tên"] || null,
+              },
+              sessions: salary.sessions.map((s) => ({
+                id: s.id,
+                Ngày: s["Ngày"],
+                "Giờ bắt đầu": s["Giờ bắt đầu"],
+                "Giờ kết thúc": s["Giờ kết thúc"],
+                "Tên lớp": s["Tên lớp"],
+                "Mã lớp": s["Mã lớp"],
+              })),
+            });
+          } else {
+            // Only allow unpaid if not yet marked as paid
+            await update(salaryRef, { status });
+          }
 
           console.log("✅ Firebase updated successfully");
 
@@ -734,6 +891,8 @@ const InvoicePage = () => {
     const modal = Modal.info({
       title: `Phiếu thu học phí - ${invoice.studentName}`,
       width: 800,
+      maskClosable: true,
+      closable: true,
       content: (
         <div
           id={`student-invoice-${invoice.id}`}
@@ -759,6 +918,8 @@ const InvoicePage = () => {
     const modal = Modal.info({
       title: `Phiếu lương giáo viên - ${salary.teacherName}`,
       width: 800,
+      maskClosable: true,
+      closable: true,
       content: (
         <div
           id={`teacher-salary-${salary.id}`}
@@ -779,7 +940,7 @@ const InvoicePage = () => {
     });
   };
 
-  // Generate VietQR URL with hardcoded bank info
+  // Generate VietQR URL with hardcoded bank info for students
   const generateVietQR = (
     amount: string,
     studentName: string,
@@ -790,6 +951,38 @@ const InvoicePage = () => {
     const accountName = "NGUYEN THI HOA";
     const numericAmount = amount.replace(/[^0-9]/g, "");
     const description = `HP T${month} ${studentName}`;
+    return `https://img.vietqr.io/image/${bankId}-${accountNo}-compact.png?amount=${numericAmount}&addInfo=${encodeURIComponent(
+      description
+    )}&accountName=${encodeURIComponent(accountName)}`;
+  };
+
+  // Generate VietQR URL for teacher salary payment
+  const generateTeacherVietQR = (
+    amount: number,
+    teacherName: string,
+    month: number,
+    bankName: string,
+    accountNo: string,
+    accountName: string
+  ): string => {
+    // Extract bank code from bank name (simple mapping)
+    const bankCodeMap: Record<string, string> = {
+      VPBank: "VPB",
+      Vietcombank: "VCB",
+      Techcombank: "TCB",
+      BIDV: "BIDV",
+      Agribank: "ABB",
+      VietinBank: "CTG",
+      MBBank: "MB",
+      ACB: "ACB",
+      Sacombank: "STB",
+      VIB: "VIB",
+    };
+
+    const bankId = bankCodeMap[bankName] || "VCB"; // Default to VCB if not found
+    const numericAmount = amount.toString().replace(/[^0-9]/g, "");
+    const description = `Luong T${month + 1} ${teacherName}`;
+
     return `https://img.vietqr.io/image/${bankId}-${accountNo}-compact.png?amount=${numericAmount}&addInfo=${encodeURIComponent(
       description
     )}&accountName=${encodeURIComponent(accountName)}`;
@@ -1073,11 +1266,37 @@ const InvoicePage = () => {
           <p style="margin: 5px 0;"><strong>Ghi chú:</strong> ${teacher?.["Ghi chú"] || "Thầy Cô kiểm tra ký thông tin và tiền lương. Nếu có sai sót báo lại với Trung Tâm"}</p>
         </div>
 
-        <div style="margin-bottom: 20px;">
+
+
+        ${
+          teacher?.["Ngân hàng"] && teacher?.STK
+            ? `
+        <div style="margin-top: 30px; text-align: center; display: flex; flex-direction: column; align-items: center;">
+          <p style="margin-bottom: 15px; font-size: 16px; font-weight: bold;">Quét mã QR để nhận lương</p>
+          <img
+            src="${generateTeacherVietQR(
+              grandTotal,
+              salary.teacherName,
+              salary.month,
+              teacher["Ngân hàng"],
+              teacher.STK,
+              teacher["Họ và tên"]
+            )}"
+            alt="VietQR"
+            style="width: 200px; height: 200px; border: 1px solid #ddd; padding: 10px; border-radius: 8px;"
+          />
+          <p style="margin-top: 10px; font-size: 14px; color: #666;">
+            Ngân hàng: ${teacher["Ngân hàng"]} - STK: ${teacher.STK}<br/>
+            Người nhận: ${teacher["Họ và tên"]}
+          </p>
+        </div>
+        `
+            : ` <div style="margin-bottom: 20px;">
           <p style="margin: 5px 0;"><strong>Thông tin ngân hàng:</strong></p>
           <p style="margin: 5px 0;">Ngân hàng: ${teacher?.["Ngân hàng"] || "N/A"}</p>
           <p style="margin: 5px 0;">Số tài khoản: ${teacher?.STK || "N/A"}</p>
-        </div>
+        </div>`
+        }
 
         <p style="margin-top: 30px; text-align: center; color: #666; font-size: 12px;">
           Ngày xuất: ${new Date().toLocaleDateString("vi-VN")}
@@ -1150,61 +1369,92 @@ const InvoicePage = () => {
       }
     > = {};
 
-    record.sessions.forEach((session) => {
-      const className = session["Tên lớp"] || "";
-      const classCode = session["Mã lớp"] || "";
-      const key = `${classCode}-${className}`;
+    // If invoice is paid, use sessions data from Firebase (already saved)
+    if (record.status === "paid") {
+      const firebaseData = studentInvoiceStatus[record.id];
+      if (
+        firebaseData &&
+        typeof firebaseData === "object" &&
+        firebaseData.sessions
+      ) {
+        // Use saved sessions from Firebase
+        firebaseData.sessions.forEach((session: any) => {
+          const className = session["Tên lớp"] || "";
+          const classCode = session["Mã lớp"] || "";
+          const key = `${classCode}-${className}`;
 
-      // Find class info using Class ID from session
-      const classId = session["Class ID"];
-      const classInfo = classes.find((c) => c.id === classId);
+          if (!classSummary[key]) {
+            classSummary[key] = {
+              className,
+              classCode,
+              sessionCount: 0,
+              pricePerSession: 0,
+              totalPrice: 0,
+            };
+          }
 
-      // Find course using Khối and Môn học from class info
-      // Handle both value (Mathematics) and label (Toán) formats
-      const course = classInfo
-        ? courses.find((c) => {
-            if (c.Khối !== classInfo.Khối) return false;
-            const classSubject = classInfo["Môn học"];
-            const courseSubject = c["Môn học"];
-            // Direct match
-            if (classSubject === courseSubject) return true;
-            // Try matching with subject options (label <-> value)
-            const subjectOption = subjectOptions.find(
-              (opt) => opt.label === classSubject || opt.value === classSubject
-            );
-            if (subjectOption) {
-              return (
-                courseSubject === subjectOption.label ||
-                courseSubject === subjectOption.value
-              );
-            }
-            return false;
-          })
-        : undefined;
+          classSummary[key].sessionCount++;
+        });
 
-      console.log("🔍 Finding course for session:", {
-        classId,
-        classKhoi: classInfo?.Khối,
-        classSubject: classInfo?.["Môn học"],
-        foundCourse: course?.["Môn học"],
-        coursePrice: course?.Giá,
-      });
+        // Calculate prices from saved totalAmount
+        const totalSessions = firebaseData.totalSessions || 1;
+        const avgPrice = (firebaseData.totalAmount || 0) / totalSessions;
 
-      const pricePerSession = course?.Giá || 0;
-
-      if (!classSummary[key]) {
-        classSummary[key] = {
-          className,
-          classCode,
-          sessionCount: 0,
-          pricePerSession,
-          totalPrice: 0,
-        };
+        Object.values(classSummary).forEach((summary) => {
+          summary.pricePerSession = avgPrice;
+          summary.totalPrice = avgPrice * summary.sessionCount;
+        });
       }
+    } else {
+      // For unpaid invoices, calculate from current data
+      record.sessions.forEach((session) => {
+        const className = session["Tên lớp"] || "";
+        const classCode = session["Mã lớp"] || "";
+        const key = `${classCode}-${className}`;
 
-      classSummary[key].sessionCount++;
-      classSummary[key].totalPrice += pricePerSession;
-    });
+        // Find class info using Class ID from session
+        const classId = session["Class ID"];
+        const classInfo = classes.find((c) => c.id === classId);
+
+        // Find course using Khối and Môn học from class info
+        const course = classInfo
+          ? courses.find((c) => {
+              if (c.Khối !== classInfo.Khối) return false;
+              const classSubject = classInfo["Môn học"];
+              const courseSubject = c["Môn học"];
+              // Direct match
+              if (classSubject === courseSubject) return true;
+              // Try matching with subject options (label <-> value)
+              const subjectOption = subjectOptions.find(
+                (opt) =>
+                  opt.label === classSubject || opt.value === classSubject
+              );
+              if (subjectOption) {
+                return (
+                  courseSubject === subjectOption.label ||
+                  courseSubject === subjectOption.value
+                );
+              }
+              return false;
+            })
+          : undefined;
+
+        const pricePerSession = course?.Giá || 0;
+
+        if (!classSummary[key]) {
+          classSummary[key] = {
+            className,
+            classCode,
+            sessionCount: 0,
+            pricePerSession,
+            totalPrice: 0,
+          };
+        }
+
+        classSummary[key].sessionCount++;
+        classSummary[key].totalPrice += pricePerSession;
+      });
+    }
 
     const classData = Object.values(classSummary);
 
@@ -1381,45 +1631,88 @@ const InvoicePage = () => {
       }
     > = {};
 
-    record.sessions.forEach((session) => {
-      const className = session["Tên lớp"] || "";
-      const classCode = session["Mã lớp"] || "";
-      const key = `${classCode}-${className}`;
+    // If salary is paid, use sessions data from Firebase (already saved)
+    if (record.status === "paid") {
+      const firebaseData = teacherSalaryStatus[record.id];
+      if (
+        firebaseData &&
+        typeof firebaseData === "object" &&
+        firebaseData.sessions
+      ) {
+        // Use saved sessions from Firebase
+        firebaseData.sessions.forEach((session: any) => {
+          const className = session["Tên lớp"] || "";
+          const classCode = session["Mã lớp"] || "";
+          const key = `${classCode}-${className}`;
 
-      // Find class info using Class ID from session
-      const classId = session["Class ID"];
-      const classInfo = classes.find((c) => c.id === classId);
+          if (!classSummary[key]) {
+            classSummary[key] = {
+              className,
+              classCode,
+              sessionCount: 0,
+              salaryPerSession: 0,
+              totalSalary: 0,
+              totalAllowance: 0,
+            };
+          }
 
-      // Find course using Khối and Môn học from class info
-      const course = classInfo
-        ? courses.find(
-            (c) =>
-              c.Khối === classInfo.Khối && c["Môn học"] === classInfo["Môn học"]
-          )
-        : undefined;
+          classSummary[key].sessionCount++;
+        });
 
-      const salaryPerSession =
-        record.bienChe === "Full-time"
-          ? course?.["Lương GV Full-time"] || 0
-          : course?.["Lương GV Part-time"] || 0;
+        // Calculate from saved data
+        const totalSessions = firebaseData.totalSessions || 1;
+        const avgSalary = (firebaseData.totalSalary || 0) / totalSessions;
+        const avgAllowance = (firebaseData.totalAllowance || 0) / totalSessions;
 
-      if (!classSummary[key]) {
-        classSummary[key] = {
-          className,
-          classCode,
-          sessionCount: 0,
-          salaryPerSession,
-          totalSalary: 0,
-          totalAllowance: 0,
-        };
+        Object.values(classSummary).forEach((summary) => {
+          summary.salaryPerSession = avgSalary;
+          summary.totalSalary = avgSalary * summary.sessionCount;
+          summary.totalAllowance = avgAllowance * summary.sessionCount;
+        });
       }
+    } else {
+      // For unpaid salaries, calculate from current data
+      record.sessions.forEach((session) => {
+        const className = session["Tên lớp"] || "";
+        const classCode = session["Mã lớp"] || "";
+        const key = `${classCode}-${className}`;
 
-      classSummary[key].sessionCount++;
-      classSummary[key].totalSalary += salaryPerSession;
-      // Calculate allowance = allowancePerSession * sessionCount for this class
-      classSummary[key].totalAllowance =
-        travelAllowancePerSession * classSummary[key].sessionCount;
-    });
+        // Find class info using Class ID from session
+        const classId = session["Class ID"];
+        const classInfo = classes.find((c) => c.id === classId);
+
+        // Find course using Khối and Môn học from class info
+        const course = classInfo
+          ? courses.find(
+              (c) =>
+                c.Khối === classInfo.Khối &&
+                c["Môn học"] === classInfo["Môn học"]
+            )
+          : undefined;
+
+        const salaryPerSession =
+          record.bienChe === "Full-time"
+            ? course?.["Lương GV Full-time"] || 0
+            : course?.["Lương GV Part-time"] || 0;
+
+        if (!classSummary[key]) {
+          classSummary[key] = {
+            className,
+            classCode,
+            sessionCount: 0,
+            salaryPerSession,
+            totalSalary: 0,
+            totalAllowance: 0,
+          };
+        }
+
+        classSummary[key].sessionCount++;
+        classSummary[key].totalSalary += salaryPerSession;
+        // Calculate allowance = allowancePerSession * sessionCount for this class
+        classSummary[key].totalAllowance =
+          travelAllowancePerSession * classSummary[key].sessionCount;
+      });
+    }
 
     const classData = Object.values(classSummary);
 

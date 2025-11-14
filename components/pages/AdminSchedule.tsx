@@ -18,6 +18,7 @@ import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isoWeek from "dayjs/plugin/isoWeek";
 import "dayjs/locale/vi";
 import WrapperContent from "@/components/WrapperContent";
+import { subjectMap } from "@/utils/selectOptions";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -348,7 +349,8 @@ const AdminSchedule = () => {
                                   color="orange"
                                   style={{ fontSize: "10px", margin: 0 }}
                                 >
-                                  {event.class["Môn học"]}
+                                  {subjectMap[event.class["Môn học"]] ||
+                                    event.class["Môn học"]}
                                 </Tag>
                               </div>
                             </div>

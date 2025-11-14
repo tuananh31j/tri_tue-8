@@ -204,7 +204,6 @@ const ClassManagement = () => {
         scroll={{ x: 1400 }}
         pagination={{
           pageSize: 10,
-          showSizeChanger: true,
           showTotal: (total) => `Tổng ${total} lớp học`,
         }}
       />
@@ -251,7 +250,7 @@ const ClassManagement = () => {
                 {viewingClass["Tên lớp"]}
               </Descriptions.Item>
               <Descriptions.Item label="Môn học">
-                {viewingClass["Môn học"]}
+                {subjectMap[viewingClass["Môn học"]] || viewingClass["Môn học"]}
               </Descriptions.Item>
               <Descriptions.Item label="Khối">
                 {viewingClass["Khối"]}

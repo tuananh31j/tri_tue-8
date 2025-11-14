@@ -9,6 +9,7 @@ import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import WrapperContent from "@/components/WrapperContent";
+import { subjectMap } from "@/utils/selectOptions";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -71,79 +72,34 @@ const TeacherAttendance = () => {
 
   return (
     <WrapperContent title="Điểm danh" isLoading={loading}>
-      <div style={{ padding: "24px" }}>
-        <h2>Điểm danh lớp học</h2>
-        <p style={{ color: "#666", marginBottom: 24 }}>
-          Hôm nay: {today.format("dddd, DD/MM/YYYY")}
-        </p>
+      <p style={{ color: "#666", marginBottom: 24 }}>
+        Hôm nay: {today.format("dddd, DD/MM/YYYY")}
+      </p>
 
-        {todayClasses.length > 0 && (
-          <Card
-            title={
-              <span>
-                <Badge status="processing" />
-                Lớp học hôm nay ({todayClasses.length})
-              </span>
-            }
-            style={{ marginBottom: 24 }}
-          >
-            <List
-              dataSource={todayClasses}
-              renderItem={(classData) => {
-                const todaySchedule = classData["Lịch học"]?.find(
-                  (s) => s["Thứ"] === todayDayOfWeek
-                );
-                return (
-                  <List.Item
-                    actions={[
-                      <Button
-                        type="primary"
-                        icon={<CheckCircleOutlined />}
-                        onClick={() => handleStartAttendance(classData)}
-                      >
-                        Điểm danh
-                      </Button>,
-                    ]}
-                  >
-                    <List.Item.Meta
-                      title={
-                        <span>
-                          {classData["Tên lớp"]}
-                          <Tag color="blue" style={{ marginLeft: 8 }}>
-                            {classData["Môn học"]}
-                          </Tag>
-                        </span>
-                      }
-                      description={
-                        <div>
-                          <div>
-                            <ClockCircleOutlined />{" "}
-                            {todaySchedule?.["Giờ bắt đầu"]} -{" "}
-                            {todaySchedule?.["Giờ kết thúc"]}
-                            {todaySchedule?.["Địa điểm"] &&
-                              ` • ${todaySchedule["Địa điểm"]}`}
-                          </div>
-                          <div style={{ marginTop: 4 }}>
-                            Số học sinh: {classData["Student IDs"]?.length || 0}
-                          </div>
-                        </div>
-                      }
-                    />
-                  </List.Item>
-                );
-              }}
-            />
-          </Card>
-        )}
-
-        {otherClasses.length > 0 && (
-          <Card title={`Lớp học khác (${otherClasses.length})`}>
-            <List
-              dataSource={otherClasses}
-              renderItem={(classData) => (
+      {todayClasses.length > 0 && (
+        <Card
+          title={
+            <span>
+              <Badge status="processing" />
+              Lớp học hôm nay ({todayClasses.length})
+            </span>
+          }
+          style={{ marginBottom: 24 }}
+        >
+          <List
+            dataSource={todayClasses}
+            renderItem={(classData) => {
+              const todaySchedule = classData["Lịch học"]?.find(
+                (s) => s["Thứ"] === todayDayOfWeek
+              );
+              return (
                 <List.Item
                   actions={[
-                    <Button onClick={() => handleStartAttendance(classData)}>
+                    <Button
+                      type="primary"
+                      icon={<CheckCircleOutlined />}
+                      onClick={() => handleStartAttendance(classData)}
+                    >
                       Điểm danh
                     </Button>,
                   ]}
@@ -152,23 +108,66 @@ const TeacherAttendance = () => {
                     title={
                       <span>
                         {classData["Tên lớp"]}
-                        <Tag color="default" style={{ marginLeft: 8 }}>
-                          {classData["Môn học"]}
+                        <Tag color="blue" style={{ marginLeft: 8 }}>
+                          {subjectMap[classData["Môn học"]] ||
+                            classData["Môn học"]}
                         </Tag>
                       </span>
                     }
-                    description={`Số học sinh: ${classData["Student IDs"]?.length || 0}`}
+                    description={
+                      <div>
+                        <div>
+                          <ClockCircleOutlined />{" "}
+                          {todaySchedule?.["Giờ bắt đầu"]} -{" "}
+                          {todaySchedule?.["Giờ kết thúc"]}
+                          {todaySchedule?.["Địa điểm"] &&
+                            ` • ${todaySchedule["Địa điểm"]}`}
+                        </div>
+                        <div style={{ marginTop: 4 }}>
+                          Số học sinh: {classData["Student IDs"]?.length || 0}
+                        </div>
+                      </div>
+                    }
                   />
                 </List.Item>
-              )}
-            />
-          </Card>
-        )}
+              );
+            }}
+          />
+        </Card>
+      )}
 
-        {myClasses.length === 0 && (
-          <Empty description="Bạn chưa được phân công lớp học nào" />
-        )}
-      </div>
+      {otherClasses.length > 0 && (
+        <Card title={`Lớp học khác (${otherClasses.length})`}>
+          <List
+            dataSource={otherClasses}
+            renderItem={(classData) => (
+              <List.Item
+                actions={[
+                  <Button onClick={() => handleStartAttendance(classData)}>
+                    Điểm danh
+                  </Button>,
+                ]}
+              >
+                <List.Item.Meta
+                  title={
+                    <span>
+                      {classData["Tên lớp"]}
+                      <Tag color="default" style={{ marginLeft: 8 }}>
+                        {classData["Môn học"]}
+                      </Tag>
+                    </span>
+                  }
+                  description={`Số học sinh: ${classData["Student IDs"]?.length || 0}`}
+                />
+              </List.Item>
+            )}
+          />
+        </Card>
+      )}
+
+      {myClasses.length === 0 && (
+        <Empty description="Bạn chưa được phân công lớp học nào" />
+      )}
     </WrapperContent>
   );
 };

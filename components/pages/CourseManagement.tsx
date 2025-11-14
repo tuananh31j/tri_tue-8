@@ -301,7 +301,6 @@ const CourseManagement = () => {
         pagination={{
           pageSize: 10,
           showTotal: (total) => `Tổng số: ${total} khóa học`,
-          showSizeChanger: true,
         }}
       />
 
