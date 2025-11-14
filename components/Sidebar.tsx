@@ -56,15 +56,21 @@ const data = {
       adminOnly: true,
     },
     {
-       title: "Điểm danh",
-       url: "/workspace/attendance",
-       icon: IconListDetails,
-       teacherOnly: true,
+      title: "Điểm danh",
+      url: "/workspace/attendance",
+      icon: IconListDetails,
+      teacherOnly: true,
     },
     {
       title: "Quản lý lớp học",
       url: "/workspace/classes",
       icon: IconSchool,
+      adminOnly: true,
+    },
+    {
+      title: "Quản lý khóa học",
+      url: "/workspace/courses",
+      icon: IconTags,
       adminOnly: true,
     },
     {
@@ -81,23 +87,24 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { userProfile } = useAuth();
   const isAdmin = React.useMemo(() => {
-    const adminStatus = userProfile?.isAdmin === true || userProfile?.role === "admin";
+    const adminStatus =
+      userProfile?.isAdmin === true || userProfile?.role === "admin";
     console.log("Sidebar - User Profile:", {
       email: userProfile?.email,
       role: userProfile?.role,
       isAdmin: userProfile?.isAdmin,
       position: userProfile?.position,
-      calculatedIsAdmin: adminStatus
+      calculatedIsAdmin: adminStatus,
     });
     return adminStatus;
   }, [userProfile]);
-  
+
   const user = {
     name: userProfile?.displayName || userProfile?.email || "",
     email: userProfile?.email || "",
     avatar: "",
   };
-  
+
   const menu = data.navMain.filter((item) => {
     // Admin-only items: show only to admins
     if (item.adminOnly && !isAdmin) {

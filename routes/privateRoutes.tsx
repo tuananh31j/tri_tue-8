@@ -4,6 +4,7 @@ import StudentListView from "@/components/pages/StudentListView";
 import TeacherListView from "@/components/pages/TeacherListView";
 import ScheduleViewAntd from "@/components/pages/ScheduleViewAntd";
 import ClassManagement from "@/components/pages/ClassManagement";
+import CourseManagement from "@/components/pages/CourseManagement";
 import TeacherClassView from "@/components/pages/TeacherClassView";
 import TeacherAttendance from "@/components/pages/TeacherAttendance";
 import AttendanceSession from "@/components/pages/AttendanceSession";
@@ -60,6 +61,14 @@ const privateRoutes = [
         element: (
           <Authoriation>
             <ClassManagement />
+          </Authoriation>
+        ),
+      },
+      {
+        path: "courses",
+        element: (
+          <Authoriation>
+            <CourseManagement />
           </Authoriation>
         ),
       },

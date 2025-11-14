@@ -98,3 +98,13 @@ export interface HomeworkAssignment {
     "Người giao": string; // Assigned by
     "Thời gian giao": string; // Assignment time
 }
+
+// Course Management Types
+export interface Course {
+    id: string;
+    "Khối": number; // Grade level
+    "Môn học": string; // Subject
+    "Giá": number; // Price
+    "Ngày tạo": string; // Created date
+    "Ngày cập nhật"?: string; // Updated date
+}

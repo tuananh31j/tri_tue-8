@@ -51,6 +51,7 @@ import Card from "antd/es/card/Card";
 import WrapperContent from "@/components/WrapperContent";
 import { LibraryBig } from "lucide-react";
 import { Empty } from "antd/lib";
+import { subjectOptions } from "@/utils/selectOptions";
 dayjs.locale("vi");
 
 const { Title, Text, Paragraph } = Typography;
@@ -1121,43 +1122,7 @@ const AddTaskModal: React.FC<{
           name="subjectName"
           rules={[{ required: true }]}
         >
-          <Select
-            placeholder="-- Chọn môn học --"
-            options={[
-              { value: "Mathematics", label: "Toán" },
-              { value: "Literature", label: "Ngữ văn" },
-              { value: "English", label: "Tiếng Anh" },
-              { value: "Physics", label: "Vật lý" },
-              { value: "Chemistry", label: "Hóa học" },
-              { value: "Biology", label: "Sinh học" },
-              { value: "History", label: "Lịch sử" },
-              { value: "Geography", label: "Địa lý" },
-              { value: "CivicEducation", label: "Giáo dục công dân" },
-              { value: "Informatics", label: "Tin học" },
-              { value: "Technology", label: "Công nghệ" },
-              { value: "PhysicalEducation", label: "Thể dục" },
-              { value: "Music", label: "Âm nhạc" },
-              { value: "Art", label: "Mỹ thuật" },
-              { value: "DefenseEducation", label: "Giáo dục quốc phòng" },
-              { value: "Science", label: "Khoa học tự nhiên" },
-              { value: "SocialScience", label: "Khoa học xã hội" },
-              { value: "Ethics", label: "Đạo đức" },
-              { value: "CareerOrientation", label: "Hướng nghiệp" },
-              { value: "Reading", label: "Đọc hiểu" },
-              { value: "Writing", label: "Tập làm văn" },
-              { value: "MathematicalLogic", label: "Toán tư duy" },
-              { value: "ComputerScience", label: "Khoa học máy tính" },
-              { value: "Programming", label: "Lập trình" },
-              { value: "STEM", label: "STEM" },
-              { value: "LifeSkills", label: "Kỹ năng sống" },
-              { value: "EnvironmentalEducation", label: "Giáo dục môi trường" },
-              { value: "MoralEducation", label: "Giáo dục đạo đức" },
-              { value: "Astronomy", label: "Thiên văn học" },
-              { value: "Economics", label: "Kinh tế học" },
-              { value: "Psychology", label: "Tâm lý học" },
-              { value: "Philosophy", label: "Triết học" },
-            ]}
-          />
+          <Select placeholder="-- Chọn môn học --" options={subjectOptions} />
         </Form.Item>
 
         <Form.Item
