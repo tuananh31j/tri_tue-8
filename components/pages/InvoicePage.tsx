@@ -355,20 +355,23 @@ const InvoicePage = () => {
 
       // If paid and has complete data in Firebase, use it directly
       if (status === "paid" && typeof data === "object" && data.studentId) {
-        invoicesMap[key] = {
-          id: key,
-          studentId: data.studentId,
-          studentName: data.studentName || "",
-          studentCode: data.studentCode || "",
-          month: data.month ?? 0,
-          year: data.year ?? 0,
-          totalSessions: data.totalSessions ?? 0,
-          totalAmount: data.totalAmount ?? 0,
-          discount: data.discount ?? 0,
-          finalAmount: data.finalAmount ?? 0,
-          status: "paid",
-          sessions: data.sessions || [],
-        };
+        // Only include if it matches the selected month/year
+        if (data.month === studentMonth) {
+          invoicesMap[key] = {
+            id: key,
+            studentId: data.studentId,
+            studentName: data.studentName || "",
+            studentCode: data.studentCode || "",
+            month: data.month ?? 0,
+            year: data.year ?? 0,
+            totalSessions: data.totalSessions ?? 0,
+            totalAmount: data.totalAmount ?? 0,
+            discount: data.discount ?? 0,
+            finalAmount: data.finalAmount ?? 0,
+            status: "paid",
+            sessions: data.sessions || [],
+          };
+        }
       }
     });
 
@@ -493,22 +496,25 @@ const InvoicePage = () => {
 
       // If paid and has complete data in Firebase, use it directly
       if (status === "paid" && typeof data === "object" && data.teacherId) {
-        salariesMap[key] = {
-          id: key,
-          teacherId: data.teacherId,
-          teacherName: data.teacherName || "",
-          teacherCode: data.teacherCode || "",
-          bienChe: data.bienChe || "Chưa phân loại",
-          month: data.month ?? 0,
-          year: data.year ?? 0,
-          totalSessions: data.totalSessions ?? 0,
-          totalHours: data.totalHours ?? 0,
-          totalMinutes: data.totalMinutes ?? 0,
-          totalSalary: data.totalSalary ?? 0,
-          totalAllowance: data.totalAllowance ?? 0,
-          status: "paid",
-          sessions: data.sessions || [],
-        };
+        // Only include if it matches the selected month/year
+        if (data.month === teacherMonth && data.year === teacherYear) {
+          salariesMap[key] = {
+            id: key,
+            teacherId: data.teacherId,
+            teacherName: data.teacherName || "",
+            teacherCode: data.teacherCode || "",
+            bienChe: data.bienChe || "Chưa phân loại",
+            month: data.month ?? 0,
+            year: data.year ?? 0,
+            totalSessions: data.totalSessions ?? 0,
+            totalHours: data.totalHours ?? 0,
+            totalMinutes: data.totalMinutes ?? 0,
+            totalSalary: data.totalSalary ?? 0,
+            totalAllowance: data.totalAllowance ?? 0,
+            status: "paid",
+            sessions: data.sessions || [],
+          };
+        }
       }
     });
 
@@ -1874,8 +1880,7 @@ const InvoicePage = () => {
   ];
 
   const studentTab = (
-       <Space direction="vertical" className="w-full">
-
+    <Space direction="vertical" className="w-full">
       {/* Filters */}
       <Card className="mb-4">
         <Row gutter={[16, 16]}>
