@@ -1007,36 +1007,28 @@ const InvoicePage = () => {
       }
     > = {};
 
+    // Calculate average price per session
+    const avgPricePerSession = invoice.totalSessions > 0
+      ? invoice.totalAmount / invoice.totalSessions
+      : 0;
+
     invoice.sessions.forEach((session) => {
       const className = session["Tên lớp"] || "";
       const classCode = session["Mã lớp"] || "";
       const key = `${classCode}-${className}`;
-
-      // Find course price
-      const course = courses.find((c) => {
-        const subjectMatch = className
-          .toLowerCase()
-          .includes(c["Môn học"]?.toLowerCase() || "");
-        const gradeMatch = classCode.match(/\d+/) || className.match(/\d+/);
-        const gradeNumber = gradeMatch ? parseInt(gradeMatch[0]) : null;
-        const gradeEquals = gradeNumber !== null && c.Khối === gradeNumber;
-        return subjectMatch || gradeEquals;
-      });
-
-      const pricePerSession = course?.Giá || 0;
 
       if (!classSummary[key]) {
         classSummary[key] = {
           className,
           classCode,
           sessionCount: 0,
-          pricePerSession,
+          pricePerSession: avgPricePerSession,
           totalPrice: 0,
         };
       }
 
       classSummary[key].sessionCount++;
-      classSummary[key].totalPrice += pricePerSession;
+      classSummary[key].totalPrice = classSummary[key].pricePerSession * classSummary[key].sessionCount;
     });
 
     const classRows = Object.values(classSummary);
@@ -1254,15 +1246,15 @@ const InvoicePage = () => {
               )
               .join("")}
             <tr style="background: #f9f9f9;">
-              <td colspan="2" style="border: 1px solid #000; padding: 8px; text-align: right;"><strong>Tổng lương cơ bản</strong></td>
+              <td colspan="2" style="border: 1px solid #000; padding: 8px; text-align: left;"><strong>Tổng lương cơ bản</strong></td>
               <td colspan="2" style="border: 1px solid #000; padding: 8px; text-align: right;"><strong>${salary.totalSalary.toLocaleString("vi-VN")}</strong></td>
             </tr>
             <tr style="background: #f9f9f9;">
-              <td colspan="2" style="border: 1px solid #000; padding: 8px; text-align: right;"><strong>Tổng phụ cấp</strong></td>
+              <td colspan="2" style="border: 1px solid #000; padding: 8px; text-align: left;"><strong>Tổng phụ cấp</strong></td>
               <td colspan="2" style="border: 1px solid #000; padding: 8px; text-align: right;"><strong>${salary.totalAllowance.toLocaleString("vi-VN")}</strong></td>
             </tr>
             <tr style="background: #e8f5e9; font-weight: bold;">
-              <td colspan="2" style="border: 1px solid #000; padding: 8px; text-align: right; font-size: 16px;">TỔNG LƯƠNG</td>
+              <td colspan="2" style="border: 1px solid #000; padding: 8px; text-align: left; font-size: 16px;">TỔNG LƯƠNG</td>
               <td colspan="2" style="border: 1px solid #000; padding: 8px; text-align: right; font-size: 16px;">${grandTotal.toLocaleString("vi-VN")}</td>
             </tr>
           </tbody>

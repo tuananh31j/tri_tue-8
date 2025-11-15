@@ -113,7 +113,7 @@ const courses: Course[] = [
 
 const HomePage = () => {
   return (
-    <div className="bg-gradient-to-b from-blue-50 to-white">
+    <div>
       {/* Hero Banner */}
       <div>
         <img
