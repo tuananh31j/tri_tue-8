@@ -15,6 +15,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { ref, onValue, push, update, remove, set } from "firebase/database";
 import { database } from "../../firebase";
 import { subjectOptions, gradeOptions } from "../../utils/selectOptions";
+import WrapperContent from "@/components/WrapperContent";
 
 interface Course {
   id: string;
@@ -277,21 +278,14 @@ const CourseManagement = () => {
   ];
 
   return (
-    <div style={{ padding: "24px" }}>
-      <div
-        style={{
-          marginBottom: "16px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <h1 style={{ margin: 0 }}>Quản lý khóa học</h1>
+    <WrapperContent
+      title="Quản lý khóa học"
+      toolbar={
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           Thêm khóa học
         </Button>
-      </div>
-
+      }
+    >
       <Table
         columns={columns}
         dataSource={courses}
@@ -378,7 +372,10 @@ const CourseManagement = () => {
             label="Lương GV Part-time/buổi (VNĐ)"
             name="Lương GV Part-time"
             rules={[
-              { required: true, message: "Vui lòng nhập lương GV Part-time!" },
+              {
+                required: true,
+                message: "Vui lòng nhập lương GV Part-time!",
+              },
               {
                 type: "number",
                 min: 0,
@@ -404,7 +401,10 @@ const CourseManagement = () => {
             label="Lương GV Full-time/buổi (VNĐ)"
             name="Lương GV Full-time"
             rules={[
-              { required: true, message: "Vui lòng nhập lương GV Full-time!" },
+              {
+                required: true,
+                message: "Vui lòng nhập lương GV Full-time!",
+              },
               {
                 type: "number",
                 min: 0,
@@ -427,7 +427,7 @@ const CourseManagement = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </WrapperContent>
   );
 };
 
