@@ -10,6 +10,7 @@ import {
   IconCalendar,
   IconReceipt,
   IconSchool,
+  IconCurrencyDollar,
 } from "@tabler/icons-react";
 import * as React from "react";
 import { NavDocuments } from "@/components/NavDocument";
@@ -42,6 +43,12 @@ const data = {
       title: "Hóa đơn",
       url: "/workspace/invoice",
       icon: IconReceipt,
+      adminOnly: true,
+    },
+    {
+      title: "Tổng hợp tài chính",
+      url: "/workspace/financial-summary",
+      icon: IconCurrencyDollar,
       adminOnly: true,
     },
     {

@@ -22,6 +22,7 @@ import {
   message,
   Popconfirm,
   Dropdown,
+  Tabs,
 } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -35,12 +36,18 @@ import {
   UserOutlined,
   MoreOutlined,
   FileTextOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import WrapperContent from "@/components/WrapperContent";
 import Loader from "@/components/Loader";
 import { Empty } from "antd/lib";
 import StudentReportButton from "@/components/StudentReportButton";
+import ReactApexChart from "react-apexcharts";
+import type { ApexOptions } from "apexcharts";
+
+const { TabPane } = Tabs;
+const { Text } = Typography;
 
 const STUDENT_LIST_URL = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh.json`;
 const SCHEDULE_URL = `${DATABASE_URL_BASE}/datasheet/Th%E1%BB%9Di_kho%C3%A1_bi%E1%BB%83u.json`;
@@ -83,6 +90,7 @@ const StudentListView: React.FC = () => {
   const [extensionHistory, setExtensionHistory] = useState<any[]>([]);
   const [isEditExtensionModalOpen, setEditExtensionModalOpen] = useState(false);
   const [editingExtension, setEditingExtension] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState("list");
 
   // Form instances
   const [editStudentForm] = Form.useForm();
@@ -1474,18 +1482,36 @@ const StudentListView: React.FC = () => {
       isLoading={loading}
       title="Quản lý học sinh"
       toolbar={
-        <Button
-          type="primary"
-          onClick={handleAddStudent}
-          icon={<PlusOutlined />}
-        >
-          Thêm mới học sinh
-        </Button>
+        activeTab === "list" ? (
+          <Button
+            type="primary"
+            onClick={handleAddStudent}
+            icon={<PlusOutlined />}
+          >
+            Thêm mới học sinh
+          </Button>
+        ) : null
       }
     >
-      {/* Filters */}
-      {/* Search Box */}
-      <Card title="Tìm kiếm học sinh" className="mb-6">
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        size="large"
+        style={{ marginTop: -16 }}
+      >
+        {/* Tab 1: Danh sách học sinh */}
+        <TabPane
+          tab={
+            <span>
+              <UserOutlined />
+              Danh sách học sinh
+            </span>
+          }
+          key="list"
+        >
+          {/* Filters */}
+          {/* Search Box */}
+          <Card title="Tìm kiếm học sinh" className="mb-6">
         <Input
           placeholder="Nhập tên học sinh"
           value={searchTerm}
@@ -1946,40 +1972,7 @@ const StudentListView: React.FC = () => {
                             : `${months[new Date().getMonth()]} ${new Date().getFullYear()}`}
                         </Typography.Text>
                       </div>
-                      <Button
-                        type="primary"
-                        onClick={() => {
-                          const fromDate = startDate
-                            ? new Date(startDate)
-                            : new Date(
-                                new Date().getFullYear(),
-                                new Date().getMonth(),
-                                1
-                              );
-                          const toDate = endDate
-                            ? new Date(endDate)
-                            : new Date(
-                                new Date().getFullYear(),
-                                new Date().getMonth() + 1,
-                                0
-                              );
-                          printReport(
-                            selectedStudent,
-                            getStudentEventsByDateRange(
-                              selectedStudent["Họ và tên"],
-                              fromDate,
-                              toDate
-                            )
-                          );
-                        }}
-                        style={{
-                          backgroundColor: "#36797f",
-                          borderColor: "#36797f",
-                        }}
-                        size="small"
-                      >
-                        In báo cáo
-                      </Button>
+
                     </div>
                     {(() => {
                       const fromDate = startDate
@@ -2788,7 +2781,510 @@ const StudentListView: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+
+        </TabPane>
+
+        {/* Tab 2: Danh sách học phí */}
+        <TabPane
+          tab={
+            <span>
+              <DollarOutlined />
+              Danh sách học phí
+            </span>
+          }
+          key="tuition"
+        >
+          <StudentTuitionTab
+            students={displayStudents}
+            extensionHistory={extensionHistory}
+            attendanceSessions={attendanceSessions}
+          />
+        </TabPane>
+      </Tabs>
     </WrapperContent>
+  );
+};
+
+// Component Tab Học phí
+const StudentTuitionTab: React.FC<{
+  students: any[];
+  extensionHistory: any[];
+  attendanceSessions: any[];
+}> = ({ students, extensionHistory, attendanceSessions }) => {
+  const [selectedMonth, setSelectedMonth] = useState(dayjs());
+  const [studentInvoices, setStudentInvoices] = useState<Record<string, any>>({});
+  const [courses, setCourses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+
+  // Load student invoices from Firebase
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        const response = await fetch(`${DATABASE_URL_BASE}/datasheet/Phiếu_thu_học_phí.json`);
+        const data = await response.json();
+        if (data) {
+          setStudentInvoices(data);
+        }
+      } catch (error) {
+        console.error("Error fetching invoices:", error);
+      }
+    };
+    fetchInvoices();
+  }, []);
+
+  // Load courses
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch(`${DATABASE_URL_BASE}/datasheet/Khóa_học.json`);
+        const data = await response.json();
+        if (data) {
+          const coursesArray = Object.entries(data).map(([id, course]: [string, any]) => ({
+            id,
+            ...course,
+          }));
+          setCourses(coursesArray);
+        }
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+      }
+    };
+    fetchCourses();
+  }, []);
+
+  // Load classes
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const response = await fetch(`${DATABASE_URL_BASE}/datasheet/Lớp_học.json`);
+        const data = await response.json();
+        if (data) {
+          const classesArray = Object.entries(data).map(([id, cls]: [string, any]) => ({
+            id,
+            ...cls,
+          }));
+          setClasses(classesArray);
+        }
+      } catch (error) {
+        console.error("Error fetching classes:", error);
+      }
+    };
+    fetchClasses();
+  }, []);
+
+  // Tính toán thống kê theo tháng
+  const monthlyStats = useMemo(() => {
+    const month = selectedMonth.month();
+    const year = selectedMonth.year();
+
+    const stats = students.map((student) => {
+      // Lọc attendance sessions theo tháng (có mặt)
+      const monthSessions = attendanceSessions.filter((session) => {
+        const sessionDate = dayjs(session["Ngày"]);
+        if (sessionDate.month() !== month || sessionDate.year() !== year) return false;
+        
+        const record = session["Điểm danh"]?.find(
+          (r: any) => r["Student ID"] === student.id
+        );
+        return record?.["Có mặt"] === true;
+      });
+
+      // Tính học phí tháng này dựa trên số buổi học và giá khóa học
+      let monthRevenue = 0;
+      monthSessions.forEach((session) => {
+        const classId = session["Class ID"];
+        const classInfo = classes.find((c) => c.id === classId);
+        
+        if (classInfo) {
+          const course = courses.find((c) => 
+            c.Khối === classInfo.Khối && c["Môn học"] === classInfo["Môn học"]
+          );
+          if (course) {
+            monthRevenue += course.Giá || 0;
+          }
+        }
+      });
+
+      // Tìm hóa đơn của học sinh trong tháng này
+      const invoiceKey = `${student.id}-${month}-${year}`;
+      const invoice = studentInvoices[invoiceKey];
+      
+      let paidAmount = 0;
+      let invoiceStatus = "unpaid";
+      let discount = 0;
+      
+      if (invoice && typeof invoice === "object") {
+        invoiceStatus = invoice.status || "unpaid";
+        paidAmount = invoice.status === "paid" ? (invoice.finalAmount || 0) : 0;
+        discount = invoice.discount || 0;
+      }
+
+      // Tính tổng doanh thu từ tất cả các tháng (đã thanh toán)
+      let totalRevenue = 0;
+      Object.entries(studentInvoices).forEach(([key, inv]: [string, any]) => {
+        if (key.startsWith(`${student.id}-`) && typeof inv === "object" && inv.status === "paid") {
+          totalRevenue += inv.finalAmount || 0;
+        }
+      });
+
+      return {
+        ...student,
+        monthSessions: monthSessions.length,
+        monthRevenue, // Học phí tháng này (chưa trừ giảm giá)
+        discount, // Giảm giá
+        finalMonthRevenue: Math.max(0, monthRevenue - discount), // Học phí sau giảm giá
+        paidAmount, // Số tiền đã thanh toán
+        invoiceStatus, // Trạng thái thanh toán
+        totalRevenue, // Tổng doanh thu đã thanh toán
+      };
+    });
+
+    return stats;
+  }, [students, attendanceSessions, selectedMonth, studentInvoices, courses, classes]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount);
+  };
+
+  const columns = [
+    {
+      title: "Họ và tên",
+      dataIndex: ["Họ và tên"],
+      key: "name",
+      fixed: "left" as const,
+      width: 180,
+      render: (text: string) => <strong>{text}</strong>,
+    },
+    {
+      title: "Số buổi học",
+      dataIndex: "monthSessions",
+      key: "monthSessions",
+      align: "center" as const,
+      width: 100,
+      render: (sessions: number) => <Tag color="purple">{sessions} buổi</Tag>,
+    },
+    {
+      title: "Học phí tháng này",
+      dataIndex: "monthRevenue",
+      key: "monthRevenue",
+      align: "right" as const,
+      width: 150,
+      render: (amount: number) => (
+        <Text style={{ fontWeight: "bold", fontSize: 13 }}>
+          {formatCurrency(amount)}
+        </Text>
+      ),
+    },
+    {
+      title: "Giảm giá",
+      dataIndex: "discount",
+      key: "discount",
+      align: "right" as const,
+      width: 120,
+      render: (amount: number) => (
+        <Text type={amount > 0 ? "warning" : "secondary"} style={{ fontSize: 12 }}>
+          {amount > 0 ? `-${formatCurrency(amount)}` : "-"}
+        </Text>
+      ),
+    },
+    {
+      title: "Phải thu",
+      dataIndex: "finalMonthRevenue",
+      key: "finalMonthRevenue",
+      align: "right" as const,
+      width: 150,
+      render: (amount: number) => (
+        <Tag color="orange" style={{ fontWeight: "bold", fontSize: 13 }}>
+          {formatCurrency(amount)}
+        </Tag>
+      ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "invoiceStatus",
+      key: "invoiceStatus",
+      align: "center" as const,
+      width: 120,
+      render: (status: string, record: any) => {
+        if (record.monthSessions === 0) {
+          return <Tag color="default">Không học</Tag>;
+        }
+        return status === "paid" ? (
+          <Tag color="success">Đã thu</Tag>
+        ) : (
+          <Tag color="error">Chưa thu</Tag>
+        );
+      },
+    },
+    {
+      title: "Tổng đã thu",
+      dataIndex: "totalRevenue",
+      key: "totalRevenue",
+      align: "right" as const,
+      width: 150,
+      render: (amount: number) => (
+        <Tag color="green" style={{ fontWeight: "bold", fontSize: 13 }}>
+          {formatCurrency(amount)}
+        </Tag>
+      ),
+    },
+  ];
+
+  const totalMonthRevenue = monthlyStats.reduce(
+    (sum, s) => sum + s.monthRevenue,
+    0
+  );
+  const totalDiscount = monthlyStats.reduce(
+    (sum, s) => sum + s.discount,
+    0
+  );
+  const totalFinalMonthRevenue = monthlyStats.reduce(
+    (sum, s) => sum + s.finalMonthRevenue,
+    0
+  );
+  const totalPaidAmount = monthlyStats.reduce(
+    (sum, s) => sum + s.paidAmount,
+    0
+  );
+  const totalRevenue = monthlyStats.reduce(
+    (sum, s) => sum + s.totalRevenue,
+    0
+  );
+
+  // Dữ liệu cho biểu đồ cột so sánh (Top 10 học sinh có học phí cao nhất)
+  const topStudents = [...monthlyStats]
+    .filter(s => s.monthSessions > 0)
+    .sort((a, b) => b.finalMonthRevenue - a.finalMonthRevenue)
+    .slice(0, 10);
+
+  const barChartOptions: ApexOptions = {
+    chart: {
+      type: "bar",
+      height: 350,
+      toolbar: { show: true },
+    },
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: "55%",
+        borderRadius: 4,
+      },
+    },
+    dataLabels: {
+      enabled: false,
+    },
+    stroke: {
+      show: true,
+      width: 2,
+      colors: ["transparent"],
+    },
+    xaxis: {
+      categories: topStudents.map((s) => s["Họ và tên"]),
+      labels: {
+        rotate: -45,
+        style: {
+          fontSize: "11px",
+        },
+      },
+    },
+    yaxis: {
+      title: {
+        text: "Triệu VNĐ",
+      },
+      labels: {
+        formatter: (val: number) => val.toFixed(1) + "M",
+      },
+    },
+    fill: {
+      opacity: 1,
+    },
+    tooltip: {
+      y: {
+        formatter: (val: number) => formatCurrency(val * 1000000),
+      },
+    },
+    legend: {
+      position: "top",
+    },
+    colors: ["#fa8c16", "#52c41a"],
+  };
+
+  const barChartSeries = [
+    {
+      name: "Học phí tháng này",
+      data: topStudents.map((s) => s.monthRevenue / 1000000), // Đổi sang triệu
+    },
+    {
+      name: "Đã thanh toán",
+      data: topStudents.map((s) => s.paidAmount / 1000000),
+    },
+  ];
+
+  // Dữ liệu cho biểu đồ tròn tổng quan
+  const pieChartOptions: ApexOptions = {
+    chart: {
+      type: "donut",
+      height: 350,
+    },
+    labels: ["Đã thanh toán", "Chưa thanh toán"],
+    colors: ["#52c41a", "#ff4d4f"],
+    legend: {
+      position: "bottom",
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: (val: number) => val.toFixed(1) + "%",
+    },
+    tooltip: {
+      y: {
+        formatter: (val: number) => formatCurrency(val),
+      },
+    },
+  };
+
+  const pieChartSeries = [
+    totalPaidAmount,
+    totalFinalMonthRevenue - totalPaidAmount
+  ];
+
+  return (
+    <div>
+      <Card style={{ marginBottom: 16 }}>
+        <Row gutter={16} align="middle">
+          <Col span={6}>
+            <div>
+              <label style={{ fontWeight: 500, marginBottom: 8, display: "block" }}>
+                Chọn tháng:
+              </label>
+              <DatePicker
+                picker="month"
+                value={selectedMonth}
+                onChange={(date) => date && setSelectedMonth(date)}
+                format="MM/YYYY"
+                style={{ width: "100%" }}
+              />
+            </div>
+          </Col>
+          <Col span={6}>
+            <Statistic
+              title="Học phí tháng này"
+              value={formatCurrency(totalMonthRevenue)}
+              valueStyle={{ color: "#fa8c16", fontSize: 18 }}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic
+              title="Giảm giá"
+              value={formatCurrency(totalDiscount)}
+              valueStyle={{ color: "#ff4d4f", fontSize: 18 }}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic
+              title="Phải thu"
+              value={formatCurrency(totalFinalMonthRevenue)}
+              valueStyle={{ color: "#1890ff", fontSize: 18 }}
+            />
+          </Col>
+        </Row>
+        <Row gutter={16} style={{ marginTop: 16 }}>
+          <Col span={6} offset={6}>
+            <Statistic
+              title="Đã thu"
+              value={formatCurrency(totalPaidAmount)}
+              valueStyle={{ color: "#52c41a", fontSize: 18 }}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic
+              title="Chưa thu"
+              value={formatCurrency(totalFinalMonthRevenue - totalPaidAmount)}
+              valueStyle={{ color: "#ff4d4f", fontSize: 18 }}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic
+              title="Tổng đã thu (Tất cả)"
+              value={formatCurrency(totalRevenue)}
+              valueStyle={{ color: "#52c41a", fontSize: 18 }}
+            />
+          </Col>
+        </Row>
+      </Card>
+
+      {/* Biểu đồ */}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={16}>
+          <Card title="Học phí theo học sinh (Top 10)">
+            <ReactApexChart
+              options={barChartOptions}
+              series={barChartSeries}
+              type="bar"
+              height={350}
+            />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card title="Tình trạng thu học phí">
+            <ReactApexChart
+              options={pieChartOptions}
+              series={pieChartSeries}
+              type="donut"
+              height={350}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card title={`Danh sách học phí tháng ${selectedMonth.format("MM/YYYY")}`}>
+        <Table
+          dataSource={monthlyStats}
+          columns={columns}
+          rowKey="id"
+          pagination={{ pageSize: 10 }}
+          scroll={{ x: 1200 }}
+          summary={() => (
+            <Table.Summary fixed>
+              <Table.Summary.Row style={{ backgroundColor: "#fafafa", fontWeight: "bold" }}>
+                <Table.Summary.Cell index={0}>
+                  <strong>TỔNG CỘNG</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={1} align="center">
+                  <Tag color="purple">
+                    {monthlyStats.reduce((sum, s) => sum + s.monthSessions, 0)} buổi
+                  </Tag>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={2} align="right">
+                  <strong>{formatCurrency(totalMonthRevenue)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={3} align="right">
+                  <strong style={{ color: "#ff4d4f" }}>
+                    {totalDiscount > 0 ? `-${formatCurrency(totalDiscount)}` : "-"}
+                  </strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={4} align="right">
+                  <Tag color="orange" style={{ fontWeight: "bold", fontSize: 13 }}>
+                    {formatCurrency(totalFinalMonthRevenue)}
+                  </Tag>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={5} align="center">
+                  -
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={6} align="right">
+                  <Tag color="green" style={{ fontWeight: "bold", fontSize: 13 }}>
+                    {formatCurrency(totalRevenue)}
+                  </Tag>
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
+            </Table.Summary>
+          )}
+        />
+      </Card>
+    </div>
   );
 };
 

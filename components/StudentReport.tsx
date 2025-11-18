@@ -13,6 +13,8 @@ import {
   Alert,
   Spin,
   Input,
+  Radio,
+  Space,
 } from "antd";
 import {
   PrinterOutlined,
@@ -59,6 +61,7 @@ const StudentReport = ({
   const [aiComment, setAiComment] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [commentError, setCommentError] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"session" | "monthly">("session");
 
   // Reset state when modal closes
   const handleClose = () => {
@@ -322,298 +325,341 @@ const StudentReport = ({
     }
   };
 
-  const handlePrint = () => {
-    if (!printRef.current) return;
+  const generateMonthlyPrintContent = () => {
+    // Group sessions by month
+    const monthlyData: {
+      [key: string]: {
+        month: string;
+        sessions: AttendanceSession[];
+      };
+    } = {};
 
+    studentSessions.forEach((session) => {
+      const monthKey = dayjs(session["Ngày"]).format("YYYY-MM");
+      const monthLabel = dayjs(session["Ngày"]).format("MM/YYYY");
+
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = {
+          month: monthLabel,
+          sessions: [],
+        };
+      }
+      monthlyData[monthKey].sessions.push(session);
+    });
+
+    // Calculate stats for each month
+    const monthlyStats = Object.entries(monthlyData)
+      .map(([key, data]) => {
+        let presentCount = 0;
+        let lateCount = 0;
+        let absentCount = 0;
+        let totalScore = 0;
+        let scoreCount = 0;
+        let totalMinutes = 0;
+
+        data.sessions.forEach((session) => {
+          const record = session["Điểm danh"]?.find(
+            (r) => r["Student ID"] === student.id
+          );
+          if (record) {
+            if (record["Có mặt"]) {
+              presentCount++;
+              if (record["Đi muộn"]) lateCount++;
+
+              const [startH, startM] = session["Giờ bắt đầu"]
+                .split(":")
+                .map(Number);
+              const [endH, endM] = session["Giờ kết thúc"]
+                .split(":")
+                .map(Number);
+              const minutes = endH * 60 + endM - (startH * 60 + startM);
+              if (minutes > 0) totalMinutes += minutes;
+            } else {
+              absentCount++;
+            }
+
+            if (record["Điểm"] !== null && record["Điểm"] !== undefined) {
+              totalScore += record["Điểm"];
+              scoreCount++;
+            }
+          }
+        });
+
+        const avgScore = scoreCount > 0 ? totalScore / scoreCount : 0;
+        const attendanceRate =
+          data.sessions.length > 0
+            ? (presentCount / data.sessions.length) * 100
+            : 0;
+        const totalHours = totalMinutes / 60;
+
+        return {
+          key,
+          month: data.month,
+          totalSessions: data.sessions.length,
+          presentCount,
+          lateCount,
+          absentCount,
+          avgScore,
+          attendanceRate,
+          totalHours,
+        };
+      })
+      .sort((a, b) => b.key.localeCompare(a.key));
+
+    return `
+      <div class="report-header">
+        <h1>BÁO CÁO TỔNG HỢP THEO THÁNG</h1>
+        <p>Ngày xuất: ${dayjs().format("DD/MM/YYYY HH:mm")}</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Thông tin học sinh</div>
+        <table>
+          <tr><th>Họ và tên</th><td>${student["Họ và tên"]}</td></tr>
+          <tr><th>Mã học sinh</th><td>${student["Mã học sinh"] || "-"}</td></tr>
+          <tr><th>Ngày sinh</th><td>${student["Ngày sinh"] ? dayjs(student["Ngày sinh"]).format("DD/MM/YYYY") : "-"}</td></tr>
+          <tr><th>Số điện thoại</th><td>${student["Số điện thoại"] || "-"}</td></tr>
+          <tr><th>Email</th><td>${student["Email"] || "-"}</td></tr>
+          <tr><th>Địa chỉ</th><td>${student["Địa chỉ"] || "-"}</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Thống kê tổng quan</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${stats.totalSessions}</div>
+            <div class="stat-label">Tổng số buổi</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.presentSessions}</div>
+            <div class="stat-label">Số buổi có mặt</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.absentSessions}</div>
+            <div class="stat-label">Số buổi vắng</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${attendanceRate}%</div>
+            <div class="stat-label">Tỷ lệ tham gia</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.totalHours}</div>
+            <div class="stat-label">Tổng số giờ học</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(() => {
+              const scores = studentSessions
+                .map(
+                  (s) =>
+                    s["Điểm danh"]?.find((r) => r["Student ID"] === student.id)?.[
+                      "Điểm"
+                    ]
+                )
+                .filter(
+                  (score) => score !== undefined && score !== null
+                ) as number[];
+              if (scores.length === 0) return 0;
+              return (
+                scores.reduce((a, b) => a + b, 0) / scores.length
+              ).toFixed(1);
+            })()} / 10</div>
+            <div class="stat-label">Điểm trung bình</div>
+          </div>
+        </div>
+      </div>
+
+      ${aiComment ? `
+      <div class="section">
+        <div class="section-title">Nhận xét học sinh</div>
+        <div class="comment-box">${aiComment.replace(/\n/g, "<br/>")}</div>
+      </div>
+      ` : ""}
+
+      <div class="section">
+        <div class="section-title">Tổng hợp theo tháng</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Tháng</th>
+              <th>Số buổi</th>
+              <th>Có mặt</th>
+              <th>Đi muộn</th>
+              <th>Vắng</th>
+              <th>Tỷ lệ tham gia</th>
+              <th>Điểm TB</th>
+              <th>Tổng giờ học</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${monthlyStats
+              .map(
+                (stat) => `
+              <tr>
+                <td style="font-weight: bold;">${stat.month}</td>
+                <td style="text-align: center;">${stat.totalSessions}</td>
+                <td style="text-align: center; color: #52c41a; font-weight: bold;">${stat.presentCount}</td>
+                <td style="text-align: center; color: ${stat.lateCount > 0 ? "#fa8c16" : "#999"};">${stat.lateCount || "-"}</td>
+                <td style="text-align: center; color: ${stat.absentCount > 0 ? "#f5222d" : "#999"};">${stat.absentCount || "-"}</td>
+                <td style="text-align: center; color: ${stat.attendanceRate >= 80 ? "#52c41a" : stat.attendanceRate >= 60 ? "#fa8c16" : "#f5222d"}; font-weight: bold;">
+                  ${stat.attendanceRate.toFixed(1)}%
+                </td>
+                <td style="text-align: center; color: ${stat.avgScore >= 8 ? "#52c41a" : stat.avgScore >= 5 ? "#fa8c16" : "#f5222d"}; font-weight: bold;">
+                  ${stat.avgScore > 0 ? stat.avgScore.toFixed(1) : "-"}
+                </td>
+                <td style="text-align: center;">${stat.totalHours.toFixed(1)}h</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footer">
+        <p>Báo cáo được tạo tự động từ hệ thống quản lý học sinh.</p>
+        <p>Mọi thắc mắc xin liên hệ giáo viên phụ trách.</p>
+      </div>
+    `;
+  };
+
+  const handlePrint = () => {
     const printWindow = window.open("", "", "width=1000,height=800");
     if (!printWindow) return;
 
-    const content = printRef.current.innerHTML;
+    // Generate content based on view mode
+    let content = "";
+    
+    if (viewMode === "monthly") {
+      // Generate monthly report
+      content = generateMonthlyPrintContent();
+    } else {
+      // Use existing session detail report
+      if (!printRef.current) return;
+      content = printRef.current.innerHTML;
+    }
+
+    // Common CSS styles
+    const styles = `
+      <style>
+        @page {
+          size: A4;
+          margin: 20mm;
+        }
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          color: #333;
+          line-height: 1.6;
+          background: #fff;
+        }
+        h1, h2, h3 {
+          margin: 0;
+          color: #004aad;
+        }
+        .report-header {
+          text-align: center;
+          border-bottom: 3px solid #004aad;
+          padding-bottom: 10px;
+          margin-bottom: 20px;
+        }
+        .report-header h1 {
+          font-size: 24px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        .report-header p {
+          font-size: 13px;
+          color: #666;
+        }
+        .section {
+          margin-bottom: 25px;
+        }
+        .section-title {
+          font-weight: bold;
+          color: #004aad;
+          border-left: 4px solid #004aad;
+          padding-left: 10px;
+          margin-bottom: 10px;
+          font-size: 16px;
+          text-transform: uppercase;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 8px;
+          font-size: 13px;
+        }
+        th, td {
+          border: 1px solid #ccc;
+          padding: 6px 8px;
+          text-align: left;
+          vertical-align: middle;
+        }
+        th {
+          background-color: #004aad;
+          color: #fff;
+          text-align: center;
+        }
+        tr:nth-child(even) {
+          background-color: #f8f9fa;
+        }
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 8px;
+          margin-top: 10px;
+        }
+        .stat-card {
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          padding: 6px 8px;
+          background: #fafafa;
+          text-align: center;
+        }
+        .stat-value {
+          font-size: 16px;
+          font-weight: 600;
+          color: #004aad;
+        }
+        .stat-label {
+          font-size: 12px;
+          color: #666;
+        }
+        .comment-box {
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          padding: 12px;
+          background: #fefefe;
+          white-space: pre-wrap;
+          font-size: 14px;
+          line-height: 1.7;
+        }
+        .footer {
+          margin-top: 40px;
+          text-align: center;
+          font-size: 12px;
+          color: #888;
+          border-top: 1px solid #ccc;
+          padding-top: 10px;
+        }
+        @media print {
+          body { margin: 0; }
+          .no-print { display: none; }
+        }
+      </style>
+    `;
 
     printWindow.document.write(`
-        <html>
-            <head>
-                <meta charset="UTF-8" />
-                <title>Báo cáo học tập - ${student["Họ và tên"]}</title>
-                <style>
-                    @page {
-                        size: A4;
-                        margin: 20mm;
-                    }
-                    body {
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                        color: #333;
-                        line-height: 1.6;
-                        background: #fff;
-                    }
-
-                    h1, h2, h3 {
-                        margin: 0;
-                        color: #004aad;
-                    }
-
-                    .report-header {
-                        text-align: center;
-                        border-bottom: 3px solid #004aad;
-                        padding-bottom: 10px;
-                        margin-bottom: 20px;
-                    }
-
-                    .report-header h1 {
-                        font-size: 24px;
-                        text-transform: uppercase;
-                        letter-spacing: 1px;
-                    }
-
-                    .report-header p {
-                        font-size: 13px;
-                        color: #666;
-                    }
-
-                    .section {
-                        margin-bottom: 25px;
-                    }
-
-                    .section-title {
-                        font-weight: bold;
-                        color: #004aad;
-                        border-left: 4px solid #004aad;
-                        padding-left: 10px;
-                        margin-bottom: 10px;
-                        font-size: 16px;
-                        text-transform: uppercase;
-                    }
-
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-top: 8px;
-                        font-size: 13px;
-                    }
-
-                    th, td {
-                        border: 1px solid #ccc;
-                        padding: 6px 8px;
-                        text-align: left;
-                        vertical-align: middle;
-                    }
-
-                    th {
-                        background-color: #004aad;
-                        color: #fff;
-                        text-align: center;
-                    }
-
-                    tr:nth-child(even) {
-                        background-color: #f8f9fa;
-                    }
-
-                    .stats-grid {
-                        display: grid;
-                        grid-template-columns: repeat(3, 1fr);
-
-                        gap: 12px;
-                    }
-
-                    .stat-card {
-                        border: 1px solid #ddd;
-                        border-radius: 6px;
-                        padding: 10px;
-                        background: #f9f9f9;
-                        text-align: center;
-                    }
-
-                    .stat-value {
-                        font-size: 20px;
-                        font-weight: bold;
-                        color: #004aad;
-                    }
-
-                    .stat-label {
-                        font-size: 13px;
-                        color: #555;
-                    }
-
-                    .comment-box {
-                        border: 1px solid #ddd;
-                        border-radius: 6px;
-                        padding: 12px;
-                        background: #fefefe;
-                        white-space: pre-wrap;
-                        font-size: 14px;
-                        line-height: 1.7;
-                    }
-
-                    .footer {
-                        margin-top: 40px;
-                        text-align: center;
-                        font-size: 12px;
-                        color: #888;
-                        border-top: 1px solid #ccc;
-                        padding-top: 10px;
-                    }
-
-                    .stats-grid {
-                        display: grid;
-                        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                        gap: 8px;
-                        margin-top: 10px;
-                    }
-
-                    .stat-card {
-                        border: 1px solid #ddd;
-                        border-radius: 6px;
-                        padding: 6px 8px;
-                        background: #fafafa;
-                        text-align: center;
-                    }
-
-                    .stat-value {
-                        font-size: 16px;
-                        font-weight: 600;
-                        color: #004aad;
-                    }
-
-                    .stat-label {
-                        font-size: 12px;
-                        color: #666;
-                    }
-
-                    @media print {
-                        body { margin: 0; }
-                        .no-print { display: none; }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="report-header">
-                    <h1>BÁO CÁO HỌC TẬP</h1>
-                    <p>Ngày xuất: ${dayjs().format("DD/MM/YYYY HH:mm")}</p>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Thông tin học sinh</div>
-                    <table>
-                        <tr><th>Họ và tên</th><td>${student["Họ và tên"]}</td></tr>
-                        <tr><th>Mã học sinh</th><td>${student["Mã học sinh"] || "-"}</td></tr>
-                        <tr><th>Ngày sinh</th><td>${student["Ngày sinh"] ? dayjs(student["Ngày sinh"]).format("DD/MM/YYYY") : "-"}</td></tr>
-                        <tr><th>Số điện thoại</th><td>${student["Số điện thoại"] || "-"}</td></tr>
-                        <tr><th>Email</th><td>${student["Email"] || "-"}</td></tr>
-                        <tr><th>Địa chỉ</th><td>${student["Địa chỉ"] || "-"}</td></tr>
-                    </table>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Thống kê chuyên cần</div>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-value">${stats.totalSessions}</div>
-                            <div class="stat-label">Tổng số buổi</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${stats.presentSessions}</div>
-                            <div class="stat-label">Số buổi có mặt</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${stats.absentSessions}</div>
-                            <div class="stat-label">Số buổi vắng</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${attendanceRate}%</div>
-                            <div class="stat-label">Tỷ lệ tham gia</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${stats.totalHours}</div>
-                            <div class="stat-label">Tổng số giờ học</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${(() => {
-                              const scores = studentSessions
-                                .map(
-                                  (s) =>
-                                    s["Điểm danh"]?.find(
-                                      (r) => r["Student ID"] === student.id
-                                    )?.["Điểm"]
-                                )
-                                .filter(
-                                  (score) =>
-                                    score !== undefined && score !== null
-                                ) as number[];
-                              if (scores.length === 0) return 0;
-                              return (
-                                scores.reduce((a, b) => a + b, 0) /
-                                scores.length
-                              ).toFixed(1);
-                            })()} / 10</div>
-                            <div class="stat-label">Điểm trung bình</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Nhận xét học sinh</div>
-                    <div class="comment-box">${aiComment ? aiComment.replace(/\n/g, "<br/>") : "Chưa có nhận xét."}</div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Lịch sử học tập</div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ngày</th>
-                                <th>Lớp học</th>
-                                <th>Giờ học</th>
-                                <th>Trạng thái</th>
-                                <th>Điểm</th>
-                                <th>Bài tập</th>
-                                <th>Ghi chú</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${studentSessions
-                              .map((s) => {
-                                const record = s["Điểm danh"]?.find(
-                                  (r) => r["Student ID"] === student.id
-                                );
-                                const completed =
-                                  record?.["Bài tập hoàn thành"];
-                                const total = s["Bài tập"]?.["Tổng số bài"];
-                                const homework =
-                                  completed !== undefined && total
-                                    ? `${completed}/${total}`
-                                    : "-";
-                                const status = record
-                                  ? record["Có mặt"]
-                                    ? record["Đi muộn"]
-                                      ? "Đi muộn"
-                                      : "Có mặt"
-                                    : record["Vắng có phép"]
-                                      ? "Vắng có phép"
-                                      : "Vắng không phép"
-                                  : "-";
-                                return `
-                                    <tr>
-                                        <td>${dayjs(s["Ngày"]).format("DD/MM/YYYY")}</td>
-                                        <td>${s["Tên lớp"]}</td>
-                                        <td>${s["Giờ bắt đầu"]} - ${s["Giờ kết thúc"]}</td>
-                                        <td>${status}</td>
-                                        <td>${record?.["Điểm"] ?? "-"}</td>
-                                        <td>${homework}</td>
-                                        <td>${record?.["Ghi chú"] || "-"}</td>
-                                    </tr>
-                                `;
-                              })
-                              .join("")}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="footer">
-                    <p>Báo cáo được tạo tự động từ hệ thống quản lý học sinh.</p>
-                    <p>Mọi thắc mắc xin liên hệ giáo viên phụ trách.</p>
-                </div>
-            </body>
-        </html>
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <title>Báo cáo học tập - ${student["Họ và tên"]}</title>
+          ${styles}
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
     `);
 
     printWindow.document.close();
@@ -702,6 +748,25 @@ const StudentReport = ({
               {student["Địa chỉ"] || "-"}
             </Descriptions.Item>
           </Descriptions>
+        </Card>
+
+        {/* View Mode Selection */}
+        <Card size="small" style={{ marginBottom: 16 }}>
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <div style={{ fontWeight: 500, marginBottom: 8 }}>Chế độ xem:</div>
+            <Radio.Group
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value)}
+              buttonStyle="solid"
+            >
+              <Radio.Button value="session">
+                📋 Báo cáo theo buổi (Chi tiết)
+              </Radio.Button>
+              <Radio.Button value="monthly">
+                📊 Báo cáo theo tháng (Tổng hợp)
+              </Radio.Button>
+            </Radio.Group>
+          </Space>
         </Card>
 
         {/* Statistics */}
@@ -833,16 +898,189 @@ const StudentReport = ({
           />
         </Card>
 
-        {/* Session History */}
-        <Card title="Lịch sử học tập" size="small">
-          <Table
-            columns={columns}
-            dataSource={studentSessions}
-            rowKey="id"
-            pagination={{ pageSize: 10, showSizeChanger: false }}
-            size="small"
-          />
-        </Card>
+        {/* Session History or Monthly Summary */}
+        {viewMode === "session" ? (
+          <Card title="Lịch sử học tập (Chi tiết theo buổi)" size="small">
+            <Table
+              columns={columns}
+              dataSource={studentSessions}
+              rowKey="id"
+              pagination={{ pageSize: 10, showSizeChanger: false }}
+              size="small"
+            />
+          </Card>
+        ) : (
+          <Card title="Tổng hợp theo tháng" size="small">
+            <Table
+              columns={[
+                {
+                  title: "Tháng",
+                  dataIndex: "month",
+                  key: "month",
+                  render: (text: string) => <strong>{text}</strong>,
+                },
+                {
+                  title: "Số buổi",
+                  dataIndex: "totalSessions",
+                  key: "totalSessions",
+                  align: "center" as const,
+                },
+                {
+                  title: "Có mặt",
+                  dataIndex: "presentCount",
+                  key: "presentCount",
+                  align: "center" as const,
+                  render: (count: number) => <Tag color="green">{count}</Tag>,
+                },
+                {
+                  title: "Đi muộn",
+                  dataIndex: "lateCount",
+                  key: "lateCount",
+                  align: "center" as const,
+                  render: (count: number) =>
+                    count > 0 ? <Tag color="orange">{count}</Tag> : "-",
+                },
+                {
+                  title: "Vắng",
+                  dataIndex: "absentCount",
+                  key: "absentCount",
+                  align: "center" as const,
+                  render: (count: number) =>
+                    count > 0 ? <Tag color="red">{count}</Tag> : "-",
+                },
+                {
+                  title: "Tỷ lệ tham gia",
+                  dataIndex: "attendanceRate",
+                  key: "attendanceRate",
+                  align: "center" as const,
+                  render: (rate: number) => (
+                    <Tag
+                      color={
+                        rate >= 80 ? "green" : rate >= 60 ? "orange" : "red"
+                      }
+                    >
+                      {rate.toFixed(1)}%
+                    </Tag>
+                  ),
+                },
+                {
+                  title: "Điểm TB",
+                  dataIndex: "avgScore",
+                  key: "avgScore",
+                  align: "center" as const,
+                  render: (score: number) =>
+                    score > 0 ? (
+                      <Tag
+                        color={
+                          score >= 8 ? "green" : score >= 5 ? "orange" : "red"
+                        }
+                      >
+                        {score.toFixed(1)}
+                      </Tag>
+                    ) : (
+                      "-"
+                    ),
+                },
+                {
+                  title: "Tổng giờ học",
+                  dataIndex: "totalHours",
+                  key: "totalHours",
+                  align: "center" as const,
+                  render: (hours: number) => `${hours.toFixed(1)}h`,
+                },
+              ]}
+              dataSource={(() => {
+                // Group sessions by month
+                const monthlyData: {
+                  [key: string]: {
+                    month: string;
+                    sessions: AttendanceSession[];
+                  };
+                } = {};
+
+                studentSessions.forEach((session) => {
+                  const monthKey = dayjs(session["Ngày"]).format("YYYY-MM");
+                  const monthLabel = dayjs(session["Ngày"]).format("MM/YYYY");
+
+                  if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = {
+                      month: monthLabel,
+                      sessions: [],
+                    };
+                  }
+                  monthlyData[monthKey].sessions.push(session);
+                });
+
+                // Calculate stats for each month
+                return Object.entries(monthlyData)
+                  .map(([key, data]) => {
+                    let presentCount = 0;
+                    let lateCount = 0;
+                    let absentCount = 0;
+                    let totalScore = 0;
+                    let scoreCount = 0;
+                    let totalMinutes = 0;
+
+                    data.sessions.forEach((session) => {
+                      const record = session["Điểm danh"]?.find(
+                        (r) => r["Student ID"] === student.id
+                      );
+                      if (record) {
+                        if (record["Có mặt"]) {
+                          presentCount++;
+                          if (record["Đi muộn"]) lateCount++;
+
+                          // Calculate hours
+                          const [startH, startM] = session["Giờ bắt đầu"]
+                            .split(":")
+                            .map(Number);
+                          const [endH, endM] = session["Giờ kết thúc"]
+                            .split(":")
+                            .map(Number);
+                          const minutes =
+                            endH * 60 + endM - (startH * 60 + startM);
+                          if (minutes > 0) totalMinutes += minutes;
+                        } else {
+                          absentCount++;
+                        }
+
+                        if (
+                          record["Điểm"] !== null &&
+                          record["Điểm"] !== undefined
+                        ) {
+                          totalScore += record["Điểm"];
+                          scoreCount++;
+                        }
+                      }
+                    });
+
+                    const avgScore =
+                      scoreCount > 0 ? totalScore / scoreCount : 0;
+                    const attendanceRate =
+                      data.sessions.length > 0
+                        ? (presentCount / data.sessions.length) * 100
+                        : 0;
+                    const totalHours = totalMinutes / 60;
+
+                    return {
+                      key,
+                      month: data.month,
+                      totalSessions: data.sessions.length,
+                      presentCount,
+                      lateCount,
+                      absentCount,
+                      avgScore,
+                      attendanceRate,
+                      totalHours,
+                    };
+                  })
+                  .sort((a, b) => b.key.localeCompare(a.key)); // Sort by month descending
+              })()}
+              pagination={{ pageSize: 12, showSizeChanger: false }}
+              size="small"
+            />
+          </Card>
+        )}
 
         {/* Footer */}
         <div

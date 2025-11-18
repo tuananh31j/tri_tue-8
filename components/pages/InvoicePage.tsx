@@ -1001,6 +1001,7 @@ const InvoicePage = () => {
       {
         className: string;
         classCode: string;
+        subject: string;
         sessionCount: number;
         pricePerSession: number;
         totalPrice: number;
@@ -1016,12 +1017,17 @@ const InvoicePage = () => {
     invoice.sessions.forEach((session) => {
       const className = session["Tên lớp"] || "";
       const classCode = session["Mã lớp"] || "";
-      const key = `${classCode}-${className}`;
+      const classId = session["Class ID"];
+      const classInfo = classes.find((c) => c.id === classId);
+      const subject = classInfo?.["Môn học"] || "N/A";
+      
+      const key = `${classCode}-${className}-${subject}`;
 
       if (!classSummary[key]) {
         classSummary[key] = {
           className,
           classCode,
+          subject,
           sessionCount: 0,
           pricePerSession: avgPricePerSession,
           totalPrice: 0,
@@ -1062,6 +1068,7 @@ const InvoicePage = () => {
             <tr style="background: #36797f; color: white;">
               <th style="border: 1px solid #ddd; padding: 8px;">STT</th>
               <th style="border: 1px solid #ddd; padding: 8px;">Lớp</th>
+              <th style="border: 1px solid #ddd; padding: 8px;">Môn học</th>
               <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Số buổi</th>
               <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Giá/buổi</th>
               <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Tổng tiền</th>
@@ -1074,6 +1081,7 @@ const InvoicePage = () => {
               <tr>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${i + 1}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${classData.className}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${classData.subject}</td>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${classData.sessionCount}</td>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${classData.pricePerSession.toLocaleString("vi-VN")} đ</td>
                 <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${classData.totalPrice.toLocaleString("vi-VN")} đ</td>
@@ -1082,21 +1090,21 @@ const InvoicePage = () => {
               )
               .join("")}
             <tr style="background: #f5f5f5; font-weight: bold;">
-              <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-start: right;">Tổng học phí:</td>
+              <td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: right;">Tổng học phí:</td>
               <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${invoice.totalAmount.toLocaleString("vi-VN")} đ</td>
             </tr>
             ${
               invoice.discount > 0
                 ? `
             <tr style="background: #fff; color: #f5222d;">
-              <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-start: right;"><strong>Miễn giảm:</strong></td>
+              <td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>Miễn giảm:</strong></td>
               <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">-${invoice.discount.toLocaleString("vi-VN")} đ</td>
             </tr>
             `
                 : ""
             }
             <tr style="background: #36797f; color: white; font-size: 16px;">
-              <td colspan="4" style="border: 1px solid #ddd; padding: 12px; text-start: right;"><strong>Thành tiền:</strong></td>
+              <td colspan="5" style="border: 1px solid #ddd; padding: 12px; text-align: right;"><strong>Thành tiền:</strong></td>
               <td style="border: 1px solid #ddd; padding: 12px; text-align: right; font-weight: bold;">${invoice.finalAmount.toLocaleString("vi-VN")} đ</td>
             </tr>
           </tbody>
@@ -1363,6 +1371,7 @@ const InvoicePage = () => {
       {
         className: string;
         classCode: string;
+        subject: string;
         sessionCount: number;
         pricePerSession: number;
         totalPrice: number;
@@ -1381,12 +1390,16 @@ const InvoicePage = () => {
         firebaseData.sessions.forEach((session: any) => {
           const className = session["Tên lớp"] || "";
           const classCode = session["Mã lớp"] || "";
-          const key = `${classCode}-${className}`;
+          const classId = session["Class ID"];
+          const classInfo = classes.find((c) => c.id === classId);
+          const subject = classInfo?.["Môn học"] || "N/A";
+          const key = `${classCode}-${className}-${subject}`;
 
           if (!classSummary[key]) {
             classSummary[key] = {
               className,
               classCode,
+              subject,
               sessionCount: 0,
               pricePerSession: 0,
               totalPrice: 0,
@@ -1410,11 +1423,12 @@ const InvoicePage = () => {
       record.sessions.forEach((session) => {
         const className = session["Tên lớp"] || "";
         const classCode = session["Mã lớp"] || "";
-        const key = `${classCode}-${className}`;
-
+        
         // Find class info using Class ID from session
         const classId = session["Class ID"];
         const classInfo = classes.find((c) => c.id === classId);
+        const subject = classInfo?.["Môn học"] || "N/A";
+        const key = `${classCode}-${className}-${subject}`;
 
         // Find course using Khối and Môn học from class info
         const course = classInfo
@@ -1445,6 +1459,7 @@ const InvoicePage = () => {
           classSummary[key] = {
             className,
             classCode,
+            subject,
             sessionCount: 0,
             pricePerSession,
             totalPrice: 0,
@@ -1463,12 +1478,18 @@ const InvoicePage = () => {
         title: "Tên lớp",
         dataIndex: "className",
         key: "className",
-        width: 250,
+        width: 200,
       },
       {
         title: "Mã lớp",
         dataIndex: "classCode",
         key: "classCode",
+        width: 100,
+      },
+      {
+        title: "Môn học",
+        dataIndex: "subject",
+        key: "subject",
         width: 120,
       },
       {
@@ -1483,7 +1504,7 @@ const InvoicePage = () => {
         title: "Giá/buổi",
         dataIndex: "pricePerSession",
         key: "pricePerSession",
-        width: 150,
+        width: 130,
         align: "right" as const,
         render: (price: number) => (
           <Text style={{ color: "#52c41a" }}>
@@ -1495,7 +1516,7 @@ const InvoicePage = () => {
         title: "Tổng tiền",
         dataIndex: "totalPrice",
         key: "totalPrice",
-        width: 150,
+        width: 130,
         align: "right" as const,
         render: (total: number) => (
           <Text strong style={{ color: "#1890ff" }}>
@@ -1510,7 +1531,7 @@ const InvoicePage = () => {
         columns={expandColumns}
         dataSource={classData}
         pagination={false}
-        rowKey={(row) => `${row.classCode}-${row.className}`}
+        rowKey={(row) => `${row.classCode}-${row.className}-${row.subject}`}
         size="small"
         style={{ margin: "0 48px" }}
       />

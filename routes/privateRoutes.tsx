@@ -1,5 +1,6 @@
 import AttendanceView from "@/components/pages/AttendanceView";
 import InvoicePage from "@/components/pages/InvoicePage";
+import FinancialSummaryPage from "@/components/pages/FinancialSummaryPage";
 import StudentListView from "@/components/pages/StudentListView";
 import TeacherListView from "@/components/pages/TeacherListView";
 import ClassManagement from "@/components/pages/ClassManagement";
@@ -29,6 +30,14 @@ const privateRoutes = [
         element: (
           <Authoriation>
             <InvoicePage />
+          </Authoriation>
+        ),
+      },
+      {
+        path: "financial-summary",
+        element: (
+          <Authoriation>
+            <FinancialSummaryPage />
           </Authoriation>
         ),
       },
