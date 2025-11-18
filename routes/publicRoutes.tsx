@@ -2,6 +2,7 @@ import HomePage from "@/components/pages/HomePage";
 import Login from "@/components/pages/Login";
 import NotFoundPage from "@/components/pages/NotFoundPage";
 import TeacherOnboarding from "@/components/TeacherOnboarding";
+import ParentPortal from "@/components/pages/ParentPortal";
 import MainLayout from "@/layouts/MainLayout";
 import { Empty } from "antd";
 import { Navigate } from "react-router-dom";
@@ -36,6 +37,10 @@ const publicRoutes = [
   {
     path: "onboarding",
     element: <TeacherOnboarding />,
+  },
+  {
+    path: "parent-portal",
+    element: <ParentPortal />,
   },
 
   {

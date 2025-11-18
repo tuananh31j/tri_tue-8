@@ -227,6 +227,7 @@ const StudentListView: React.FC = () => {
         phone: editingStudent["Số điện thoại"] || "",
         status: editingStudent["Trạng thái"] || "",
         address: editingStudent["Địa chỉ"] || "",
+        password: editingStudent["Mật khẩu"] || "",
       });
     } else if (!editingStudent && isEditModalOpen) {
       // Reset form when adding new student
@@ -2389,6 +2390,7 @@ const StudentListView: React.FC = () => {
               "Số điện thoại": values.phone,
               "Trạng thái": values.status,
               "Địa chỉ": values.address,
+              "Mật khẩu": values.password || "",
               "Số giờ đã gia hạn": editingStudent?.["Số giờ đã gia hạn"] || 0,
             };
             // Preserve the ID if editing an existing student
@@ -2423,6 +2425,15 @@ const StudentListView: React.FC = () => {
             <Col span={12}>
               <Form.Item label="Trạng thái" name="status">
                 <Input placeholder="Nhập trạng thái" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item 
+                label="Mật khẩu (Phụ huynh)" 
+                name="password"
+                extra="Mật khẩu để phụ huynh đăng nhập xem thông tin học sinh"
+              >
+                <Input.Password placeholder="Nhập mật khẩu" />
               </Form.Item>
             </Col>
             <Col span={24}>

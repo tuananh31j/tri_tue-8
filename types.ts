@@ -18,7 +18,7 @@ export type ScheduleEvent = {
 
 export type FilterType = 'all' | 'study' | 'work';
 
-export type UserRole = 'admin' | 'teacher';
+export type UserRole = 'admin' | 'teacher' | 'parent';
 
 export interface UserProfile {
     uid: string;
@@ -27,6 +27,9 @@ export interface UserProfile {
     teacherName?: string; // Optional display name used in legacy schedule/attendance matching
     role: UserRole;
     teacherId?: string; // Link to Giáo_viên record
+    studentId?: string; // Link to student record (for parent role)
+    studentName?: string; // Student name (for parent role)
+    studentCode?: string; // Student code (for parent role)
     position?: string; // Position from Giáo_viên table (Admin, Giáo viên, etc.)
     isAdmin?: boolean; // True if position === "Admin"
     createdAt: string;

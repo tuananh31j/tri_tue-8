@@ -48,6 +48,10 @@ const ClassManagement = () => {
   const [filterStatus, setFilterStatus] = useState<
     "all" | "active" | "inactive"
   >("all");
+  const [filterSubject, setFilterSubject] = useState<string>("all");
+  const [filterGrade, setFilterGrade] = useState<string>("all");
+  const [filterTeacher, setFilterTeacher] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [students, setStudents] = useState<any[]>([]);
   const [attendanceSessions, setAttendanceSessions] = useState<any[]>([]);
 
@@ -115,9 +119,69 @@ const ClassManagement = () => {
     fetchData();
   }, []);
 
-  const filteredClasses = classes.filter(
-    (c) => filterStatus === "all" || c["Trạng thái"] === filterStatus
-  );
+  // Get unique values for filters
+  const uniqueSubjects = useMemo(() => {
+    const subjects = new Set(classes.map((c) => c["Môn học"]));
+    return Array.from(subjects).sort();
+  }, [classes]);
+
+  const uniqueGrades = useMemo(() => {
+    const grades = new Set(classes.map((c) => c["Khối"]));
+    return Array.from(grades).sort((a, b) => Number(a) - Number(b));
+  }, [classes]);
+
+  const uniqueTeachers = useMemo(() => {
+    const teachers = new Set(classes.map((c) => c["Giáo viên chủ nhiệm"]));
+    return Array.from(teachers).sort();
+  }, [classes]);
+
+  // Apply all filters
+  const filteredClasses = useMemo(() => {
+    return classes.filter((c) => {
+      // Status filter
+      if (filterStatus !== "all" && c["Trạng thái"] !== filterStatus) {
+        return false;
+      }
+
+      // Subject filter
+      if (filterSubject !== "all" && c["Môn học"] !== filterSubject) {
+        return false;
+      }
+
+      // Grade filter
+      if (filterGrade !== "all" && c["Khối"].toString() !== filterGrade) {
+        return false;
+      }
+
+      // Teacher filter
+      if (filterTeacher !== "all" && c["Giáo viên chủ nhiệm"] !== filterTeacher) {
+        return false;
+      }
+
+      // Search filter (search in class name, code, teacher)
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        const matchName = c["Tên lớp"]?.toLowerCase().includes(search);
+        const matchCode = c["Mã lớp"]?.toLowerCase().includes(search);
+        const matchTeacher = c["Giáo viên chủ nhiệm"]?.toLowerCase().includes(search);
+        
+        if (!matchName && !matchCode && !matchTeacher) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [classes, filterStatus, filterSubject, filterGrade, filterTeacher, searchTerm]);
+
+  // Reset all filters
+  const handleResetFilters = () => {
+    setFilterStatus("all");
+    setFilterSubject("all");
+    setFilterGrade("all");
+    setFilterTeacher("all");
+    setSearchTerm("");
+  };
 
   const columns = [
     {
@@ -240,29 +304,158 @@ const ClassManagement = () => {
     <WrapperContent
       title="Quản lý lớp học"
       toolbar={
-        <Space>
-          <Select
-            value={filterStatus}
-            onChange={setFilterStatus}
-            style={{ width: 150 }}
-          >
-            <Select.Option value="all">Tất cả</Select.Option>
-            <Select.Option value="active">Hoạt động</Select.Option>
-            <Select.Option value="inactive">Ngừng</Select.Option>
-          </Select>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditingClass(null);
-              setIsModalOpen(true);
-            }}
-          >
-            Thêm lớp học
-          </Button>
-        </Space>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => {
+            setEditingClass(null);
+            setIsModalOpen(true);
+          }}
+        >
+          Thêm lớp học
+        </Button>
       }
     >
+      {/* Filter Section */}
+      <Card style={{ marginBottom: 16 }}>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+                Tìm kiếm:
+              </label>
+              <Input
+                placeholder="Tên lớp, mã lớp, giáo viên..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                allowClear
+              />
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+                Trạng thái:
+              </label>
+              <Select
+                value={filterStatus}
+                onChange={setFilterStatus}
+                style={{ width: "100%" }}
+              >
+                <Select.Option value="all">Tất cả</Select.Option>
+                <Select.Option value="active">Hoạt động</Select.Option>
+                <Select.Option value="inactive">Ngừng</Select.Option>
+              </Select>
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+                Môn học:
+              </label>
+              <Select
+                value={filterSubject}
+                onChange={setFilterSubject}
+                style={{ width: "100%" }}
+                showSearch
+                optionFilterProp="children"
+              >
+                <Select.Option value="all">Tất cả</Select.Option>
+                {uniqueSubjects.map((subject) => (
+                  <Select.Option key={subject} value={subject}>
+                    {subjectMap[subject] || subject}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+                Khối:
+              </label>
+              <Select
+                value={filterGrade}
+                onChange={setFilterGrade}
+                style={{ width: "100%" }}
+              >
+                <Select.Option value="all">Tất cả</Select.Option>
+                {uniqueGrades.map((grade) => (
+                  <Select.Option key={grade} value={grade.toString()}>
+                    Khối {grade}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+                Giáo viên:
+              </label>
+              <Select
+                value={filterTeacher}
+                onChange={setFilterTeacher}
+                style={{ width: "100%" }}
+                showSearch
+                optionFilterProp="children"
+              >
+                <Select.Option value="all">Tất cả</Select.Option>
+                {uniqueTeachers.map((teacher) => (
+                  <Select.Option key={teacher} value={teacher}>
+                    {teacher}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+                &nbsp;
+              </label>
+              <Button onClick={handleResetFilters} block>
+                Xóa bộ lọc
+              </Button>
+            </div>
+          </Col>
+        </Row>
+        <Row style={{ marginTop: 16 }}>
+          <Col span={24}>
+            <Space>
+              <Tag color="blue">
+                Tìm thấy: {filteredClasses.length} / {classes.length} lớp học
+              </Tag>
+              {filterStatus !== "all" && (
+                <Tag color="green" closable onClose={() => setFilterStatus("all")}>
+                  Trạng thái: {filterStatus === "active" ? "Hoạt động" : "Ngừng"}
+                </Tag>
+              )}
+              {filterSubject !== "all" && (
+                <Tag color="purple" closable onClose={() => setFilterSubject("all")}>
+                  Môn: {subjectMap[filterSubject] || filterSubject}
+                </Tag>
+              )}
+              {filterGrade !== "all" && (
+                <Tag color="orange" closable onClose={() => setFilterGrade("all")}>
+                  Khối {filterGrade}
+                </Tag>
+              )}
+              {filterTeacher !== "all" && (
+                <Tag color="cyan" closable onClose={() => setFilterTeacher("all")}>
+                  GV: {filterTeacher}
+                </Tag>
+              )}
+              {searchTerm && (
+                <Tag color="magenta" closable onClose={() => setSearchTerm("")}>
+                  Tìm kiếm: "{searchTerm}"
+                </Tag>
+              )}
+            </Space>
+          </Col>
+        </Row>
+      </Card>
+
       <Table
         columns={columns}
         dataSource={filteredClasses}

@@ -19,6 +19,7 @@ import { isAdmin } from "../config/admins";
 
 const USERS_URL = `${DATABASE_URL_BASE}/datasheet/Users.json`;
 const TEACHERS_URL = `${DATABASE_URL_BASE}/datasheet/Gi%C3%A1o_vi%C3%AAn.json`;
+const STUDENTS_URL = `${DATABASE_URL_BASE}/datasheet/Danh_s%C3%A1ch_h%E1%BB%8Dc_sinh.json`;
 
 // Session storage keys
 const SESSION_KEYS = {
@@ -65,6 +66,10 @@ interface AuthContextType {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signInWithTeacherCredentials: (
     email: string,
+    password: string
+  ) => Promise<void>;
+  signInWithParentCredentials: (
+    studentCode: string,
     password: string
   ) => Promise<void>;
   signOut: () => Promise<void>;
@@ -382,6 +387,85 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const signInWithParentCredentials = async (
+    studentCode: string,
+    password: string
+  ) => {
+    try {
+      console.log("👨‍👩‍👧 Signing in with parent credentials:", studentCode);
+
+      // Fetch students from Firebase
+      const response = await fetch(STUDENTS_URL);
+      if (!response.ok) {
+        throw new Error("Failed to fetch students data");
+      }
+
+      const studentsData = await response.json();
+      if (!studentsData) {
+        throw new Error("No students found");
+      }
+
+      // Find student by student code and password
+      const studentEntry = Object.entries(studentsData).find(
+        ([id, student]: [string, any]) => {
+          const code = student?.["Mã học sinh"] || "";
+          const pwd = student?.["Mật khẩu"] || "";
+          return (
+            code.toLowerCase() === studentCode.toLowerCase() &&
+            pwd === password
+          );
+        }
+      );
+
+      if (!studentEntry) {
+        throw new Error("Mã học sinh hoặc mật khẩu không đúng");
+      }
+
+      const [studentId, studentData] = studentEntry as [string, any];
+
+      // Check if password is set
+      if (!studentData["Mật khẩu"]) {
+        throw new Error("Tài khoản chưa được kích hoạt. Vui lòng liên hệ nhà trường.");
+      }
+
+      // Create a mock user object for parent login
+      const mockUser = {
+        uid: `parent_${studentId}`,
+        email: studentData["Email"] || `${studentCode}@parent.local`,
+        emailVerified: true,
+        displayName: `Phụ huynh ${studentData["Họ và tên"]}`,
+      } as User;
+
+      // Create user profile for parent
+      const profile: UserProfile = {
+        uid: mockUser.uid,
+        email: mockUser.email!,
+        displayName: mockUser.displayName!,
+        role: "parent" as UserRole,
+        studentId: studentId,
+        studentName: studentData["Họ và tên"],
+        studentCode: studentData["Mã học sinh"],
+        isAdmin: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Set the current user and profile directly
+      setCurrentUser(mockUser);
+      setUserProfile(profile);
+      setNeedsOnboarding(false);
+
+      // Save to session storage
+      saveToSession(SESSION_KEYS.CURRENT_USER, mockUser);
+      saveToSession(SESSION_KEYS.USER_PROFILE, profile);
+      saveToSession(SESSION_KEYS.NEEDS_ONBOARDING, false);
+
+      console.log("✅ Parent sign in successful:", profile);
+    } catch (error) {
+      console.error("❌ Error signing in with parent credentials:", error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     try {
       // Clear local state first (for teacher authentication)
@@ -489,6 +573,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signUpWithEmail,
     signInWithEmail,
     signInWithTeacherCredentials,
+    signInWithParentCredentials,
     signOut,
     completeOnboarding,
   };

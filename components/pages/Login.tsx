@@ -1,14 +1,15 @@
 import { useAuth } from "@/contexts/AuthContext";
 import React, { useLayoutEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Form, Input, Button, Alert, Spin } from "antd";
-import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { Form, Input, Button, Alert, Tabs } from "antd";
+import { UserOutlined, LockOutlined, IdcardOutlined } from "@ant-design/icons";
 
 const Login: React.FC = () => {
-  const { signInWithTeacherCredentials } = useAuth();
+  const { signInWithTeacherCredentials, signInWithParentCredentials } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [activeTab, setActiveTab] = useState("teacher");
   const navigate = useNavigate();
   const { currentUser, userProfile } = useAuth();
 
@@ -45,6 +46,25 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleParentSubmit = async (values: any) => {
+    setError("");
+    setSuccess("");
+
+    const { studentCode, password } = values;
+
+    try {
+      setLoading(true);
+      await signInWithParentCredentials(studentCode.trim(), password);
+      setSuccess("Đăng nhập thành công! Chuyển hướng...");
+      navigate("/parent-portal");
+    } catch (err: any) {
+      console.error("Parent login error:", err);
+      setError(err.message || "Đăng nhập không thành công. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useLayoutEffect(() => {
     if (currentUser) {
       navigate("/workspace/students");
@@ -75,7 +95,7 @@ const Login: React.FC = () => {
             Đăng nhập hệ thống
           </h2>
           <p className="text-center text-sm text-gray-600 mb-4 sm:mb-6">
-            Nhập thông tin tài khoản của bạn được cung cấp bởi quản trị viên
+            Chọn loại tài khoản để đăng nhập
           </p>
 
           {error && (
@@ -100,74 +120,163 @@ const Login: React.FC = () => {
             />
           )}
 
-          {/* Login/Register Form */}
-          {/* Email/Password Form */}
-          <Form
-            onFinish={handleEmailPasswordSubmit}
-            layout="vertical"
-            className="mb-4"
-          >
-            <Form.Item
-              label={
-                <span className="text-sm font-semibold text-gray-700">
-                  Email
-                </span>
-              }
-              name="email"
-              rules={[
-                { required: true, message: "Vui lòng nhập email của bạn" },
-                { type: "email", message: "Vui lòng nhập email hợp lệ" },
-              ]}
-            >
-              <Input
-                prefix={<UserOutlined />}
-                placeholder="email@example.com"
-                disabled={loading}
-              />
-            </Form.Item>
+          <Tabs
+            activeKey={activeTab}
+            onChange={(key) => {
+              setActiveTab(key);
+              setError("");
+              setSuccess("");
+            }}
+            items={[
+              {
+                key: "teacher",
+                label: (
+                  <span>
+                    <UserOutlined /> Giáo viên / Quản trị
+                  </span>
+                ),
+                children: (
+                  <Form
+                    onFinish={handleEmailPasswordSubmit}
+                    layout="vertical"
+                    className="mb-4"
+                  >
+                    <Form.Item
+                      label={
+                        <span className="text-sm font-semibold text-gray-700">
+                          Email
+                        </span>
+                      }
+                      name="email"
+                      rules={[
+                        { required: true, message: "Vui lòng nhập email của bạn" },
+                        { type: "email", message: "Vui lòng nhập email hợp lệ" },
+                      ]}
+                    >
+                      <Input
+                        prefix={<UserOutlined />}
+                        placeholder="email@example.com"
+                        disabled={loading}
+                      />
+                    </Form.Item>
 
-            <Form.Item
-              label={
-                <span className="text-sm font-semibold text-gray-700">
-                  Mật khẩu
-                </span>
-              }
-              name="password"
-              rules={[{ required: true, message: "Vui lòng điền mật khẩu" }]}
-            >
-              <Input.Password
-                prefix={<LockOutlined />}
-                placeholder="••••••••"
-                disabled={loading}
-              />
-            </Form.Item>
+                    <Form.Item
+                      label={
+                        <span className="text-sm font-semibold text-gray-700">
+                          Mật khẩu
+                        </span>
+                      }
+                      name="password"
+                      rules={[{ required: true, message: "Vui lòng điền mật khẩu" }]}
+                    >
+                      <Input.Password
+                        prefix={<LockOutlined />}
+                        placeholder="••••••••"
+                        disabled={loading}
+                      />
+                    </Form.Item>
 
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                block
-                loading={loading}
-                style={{
-                  backgroundColor: "#36797f",
-                  borderColor: "#36797f",
-                  fontWeight: "bold",
-                  fontSize: "16px",
-                  height: "48px",
-                }}
-              >
-                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
-              </Button>
-            </Form.Item>
+                    <Form.Item>
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        block
+                        loading={loading}
+                        style={{
+                          backgroundColor: "#36797f",
+                          borderColor: "#36797f",
+                          fontWeight: "bold",
+                          fontSize: "16px",
+                          height: "48px",
+                        }}
+                      >
+                        {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+                      </Button>
+                    </Form.Item>
 
-            {/* Info text */}
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
-                Bạn chưa có tài khoản? Liên hệ quản trị viên để được cấp quyền
-                truy cập.
-              </p>
-            </div>
-          </Form>
+                    <div className="mt-4 text-center">
+                      <p className="text-sm text-gray-600">
+                        Bạn chưa có tài khoản? Liên hệ quản trị viên để được cấp quyền truy cập.
+                      </p>
+                    </div>
+                  </Form>
+                ),
+              },
+              {
+                key: "parent",
+                label: (
+                  <span>
+                    <IdcardOutlined /> Phụ huynh
+                  </span>
+                ),
+                children: (
+                  <Form
+                    onFinish={handleParentSubmit}
+                    layout="vertical"
+                    className="mb-4"
+                  >
+                    <Form.Item
+                      label={
+                        <span className="text-sm font-semibold text-gray-700">
+                          Mã học sinh
+                        </span>
+                      }
+                      name="studentCode"
+                      rules={[
+                        { required: true, message: "Vui lòng nhập mã học sinh" },
+                      ]}
+                    >
+                      <Input
+                        prefix={<IdcardOutlined />}
+                        placeholder="VD: HS001"
+                        disabled={loading}
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      label={
+                        <span className="text-sm font-semibold text-gray-700">
+                          Mật khẩu
+                        </span>
+                      }
+                      name="password"
+                      rules={[{ required: true, message: "Vui lòng điền mật khẩu" }]}
+                    >
+                      <Input.Password
+                        prefix={<LockOutlined />}
+                        placeholder="••••••••"
+                        disabled={loading}
+                      />
+                    </Form.Item>
+
+                    <Form.Item>
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        block
+                        loading={loading}
+                        style={{
+                          backgroundColor: "#36797f",
+                          borderColor: "#36797f",
+                          fontWeight: "bold",
+                          fontSize: "16px",
+                          height: "48px",
+                        }}
+                      >
+                        {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+                      </Button>
+                    </Form.Item>
+
+                    <div className="mt-4 text-center">
+                      <p className="text-sm text-gray-600">
+                        Chưa có mật khẩu? Liên hệ nhà trường để được cấp tài khoản.
+                      </p>
+                    </div>
+                  </Form>
+                ),
+              },
+            ]}
+          />
         </div>
 
         {/* Footer */}
