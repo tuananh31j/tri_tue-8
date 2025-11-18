@@ -66,10 +66,14 @@ const Login: React.FC = () => {
   };
 
   useLayoutEffect(() => {
-    if (currentUser) {
-      navigate("/workspace/students");
+    if (currentUser && userProfile) {
+      if (userProfile.role === "parent") {
+        navigate("/parent-portal");
+      } else {
+        navigate("/workspace/students");
+      }
     }
-  }, [currentUser]);
+  }, [currentUser, userProfile, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">

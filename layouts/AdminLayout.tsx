@@ -23,8 +23,13 @@ export default function AdminLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  // Authorization: require admin (or explicit isAdmin flag)
-  // If the app should allow teachers, adjust this check accordingly.
+  // If user is parent, redirect to parent portal
+  if (userProfile?.role === "parent") {
+    return <Navigate to="/parent-portal" replace />;
+  }
+
+  // Authorization: require admin or teacher
+  // Parents are not allowed in workspace
   console.log(userProfile,'sdfsdfsdfsdfs')
   
   return (
