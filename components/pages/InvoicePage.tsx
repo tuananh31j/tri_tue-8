@@ -1008,9 +1008,10 @@ const InvoicePage = () => {
     > = {};
 
     // Calculate average price per session
-    const avgPricePerSession = invoice.totalSessions > 0
-      ? invoice.totalAmount / invoice.totalSessions
-      : 0;
+    const avgPricePerSession =
+      invoice.totalSessions > 0
+        ? invoice.totalAmount / invoice.totalSessions
+        : 0;
 
     invoice.sessions.forEach((session) => {
       const className = session["Tên lớp"] || "";
@@ -1028,7 +1029,8 @@ const InvoicePage = () => {
       }
 
       classSummary[key].sessionCount++;
-      classSummary[key].totalPrice = classSummary[key].pricePerSession * classSummary[key].sessionCount;
+      classSummary[key].totalPrice =
+        classSummary[key].pricePerSession * classSummary[key].sessionCount;
     });
 
     const classRows = Object.values(classSummary);
@@ -1218,7 +1220,7 @@ const InvoicePage = () => {
 
         <div style="margin-bottom: 20px;">
           <p style="margin: 5px 0;"><strong>Họ và tên:</strong> ${salary.teacherName}</p>
-          <p style="margin: 5px 0;"><strong>Môn Phụ Trách:</strong> ${teacher?.["Chuyên môn"] || "Đa môn"}</p>
+
           <p style="margin: 5px 0;"><strong>Tổng số buổi dạy:</strong> ${salary.totalSessions} buổi</p>
           <p style="margin: 5px 0;"><strong>Trợ cấp đi lại:</strong> ${travelAllowancePerSession.toLocaleString("vi-VN")} VNĐ/buổi</p>
         </div>
