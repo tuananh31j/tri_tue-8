@@ -200,7 +200,7 @@ const CourseManagement = () => {
       },
     },
     {
-      title: "Giá (VNĐ)",
+      title: "Giá/buổi",
       dataIndex: "Giá",
       key: "price",
       width: 150,
@@ -343,7 +343,7 @@ const CourseManagement = () => {
           </Form.Item>
 
           <Form.Item
-            label="Giá (VNĐ)"
+            label="Giá/buổi"
             name="Giá"
             rules={[
               { required: true, message: "Vui lòng nhập giá!" },

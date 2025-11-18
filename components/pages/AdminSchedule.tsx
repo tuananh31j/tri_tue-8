@@ -117,7 +117,7 @@ const AdminSchedule = () => {
 
   const isToday = (date: Dayjs) => date.isSame(dayjs(), "day");
 
-  if (activeClasses.length === 0)
+  if (activeClasses.length === 0 && !loading)
     return (
       <div style={{ padding: "24px" }}>
         <Empty description="Chưa có lớp học nào" />
