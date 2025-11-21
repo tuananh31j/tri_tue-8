@@ -428,6 +428,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error("Tài khoản chưa được kích hoạt. Vui lòng liên hệ nhà trường.");
       }
 
+      // Check if student status is "Hủy" (cancelled)
+      if (studentData["Trạng thái"] === "Hủy") {
+        throw new Error("Tài khoản học sinh đã bị hủy. Vui lòng liên hệ với trung tâm để biết thêm chi tiết.");
+      }
+
       // Create a mock user object for parent login
       const mockUser = {
         uid: `parent_${studentId}`,

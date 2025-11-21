@@ -15,6 +15,7 @@ import {
   Input,
   Radio,
   Space,
+  DatePicker,
 } from "antd";
 import {
   PrinterOutlined,
@@ -62,6 +63,7 @@ const StudentReport = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [commentError, setCommentError] = useState<string>("");
   const [viewMode, setViewMode] = useState<"session" | "monthly">("session");
+  const [selectedMonth, setSelectedMonth] = useState<dayjs.Dayjs | null>(dayjs());
 
   // Reset state when modal closes
   const handleClose = () => {
@@ -326,89 +328,66 @@ const StudentReport = ({
   };
 
   const generateMonthlyPrintContent = () => {
-    // Group sessions by month
-    const monthlyData: {
-      [key: string]: {
-        month: string;
-        sessions: AttendanceSession[];
-      };
-    } = {};
+    // Filter sessions by selected month
+    const filteredSessions = selectedMonth
+      ? studentSessions.filter((session) => {
+          const sessionDate = dayjs(session["Ngày"]);
+          return (
+            sessionDate.month() === selectedMonth.month() &&
+            sessionDate.year() === selectedMonth.year()
+          );
+        })
+      : studentSessions;
 
-    studentSessions.forEach((session) => {
-      const monthKey = dayjs(session["Ngày"]).format("YYYY-MM");
-      const monthLabel = dayjs(session["Ngày"]).format("MM/YYYY");
-
-      if (!monthlyData[monthKey]) {
-        monthlyData[monthKey] = {
-          month: monthLabel,
-          sessions: [],
-        };
+    // Get status text and color
+    const getStatusText = (record: any) => {
+      if (record["Có mặt"]) {
+        return record["Đi muộn"] ? "Đi muộn" : "Có mặt";
+      } else {
+        return record["Vắng có phép"] ? "Vắng có phép" : "Vắng không phép";
       }
-      monthlyData[monthKey].sessions.push(session);
+    };
+
+    const getStatusColor = (record: any) => {
+      if (record["Có mặt"]) {
+        return record["Đi muộn"] ? "#fa8c16" : "#52c41a";
+      } else {
+        return record["Vắng có phép"] ? "#1890ff" : "#f5222d";
+      }
+    };
+
+    // Calculate stats for selected month
+    let presentCount = 0;
+    let absentCount = 0;
+    let totalScore = 0;
+    let scoreCount = 0;
+
+    filteredSessions.forEach((session) => {
+      const record = session["Điểm danh"]?.find(
+        (r) => r["Student ID"] === student.id
+      );
+      if (record) {
+        if (record["Có mặt"]) {
+          presentCount++;
+        } else {
+          absentCount++;
+        }
+        if (record["Điểm"] !== null && record["Điểm"] !== undefined) {
+          totalScore += record["Điểm"];
+          scoreCount++;
+        }
+      }
     });
 
-    // Calculate stats for each month
-    const monthlyStats = Object.entries(monthlyData)
-      .map(([key, data]) => {
-        let presentCount = 0;
-        let lateCount = 0;
-        let absentCount = 0;
-        let totalScore = 0;
-        let scoreCount = 0;
-        let totalMinutes = 0;
-
-        data.sessions.forEach((session) => {
-          const record = session["Điểm danh"]?.find(
-            (r) => r["Student ID"] === student.id
-          );
-          if (record) {
-            if (record["Có mặt"]) {
-              presentCount++;
-              if (record["Đi muộn"]) lateCount++;
-
-              const [startH, startM] = session["Giờ bắt đầu"]
-                .split(":")
-                .map(Number);
-              const [endH, endM] = session["Giờ kết thúc"]
-                .split(":")
-                .map(Number);
-              const minutes = endH * 60 + endM - (startH * 60 + startM);
-              if (minutes > 0) totalMinutes += minutes;
-            } else {
-              absentCount++;
-            }
-
-            if (record["Điểm"] !== null && record["Điểm"] !== undefined) {
-              totalScore += record["Điểm"];
-              scoreCount++;
-            }
-          }
-        });
-
-        const avgScore = scoreCount > 0 ? totalScore / scoreCount : 0;
-        const attendanceRate =
-          data.sessions.length > 0
-            ? (presentCount / data.sessions.length) * 100
-            : 0;
-        const totalHours = totalMinutes / 60;
-
-        return {
-          key,
-          month: data.month,
-          totalSessions: data.sessions.length,
-          presentCount,
-          lateCount,
-          absentCount,
-          avgScore,
-          attendanceRate,
-          totalHours,
-        };
-      })
-      .sort((a, b) => b.key.localeCompare(a.key));
+    const avgScore = scoreCount > 0 ? (totalScore / scoreCount).toFixed(1) : "0";
+    const attendanceRate =
+      filteredSessions.length > 0
+        ? ((presentCount / filteredSessions.length) * 100).toFixed(1)
+        : "0";
 
     return `
       <div class="report-header">
-        <h1>BÁO CÁO TỔNG HỢP THEO THÁNG</h1>
+        <h1>BÁO CÁO THEO THÁNG ${selectedMonth?.format("MM/YYYY") || ""}</h1>
         <p>Ngày xuất: ${dayjs().format("DD/MM/YYYY HH:mm")}</p>
       </div>
 
@@ -425,18 +404,18 @@ const StudentReport = ({
       </div>
 
       <div class="section">
-        <div class="section-title">Thống kê tổng quan</div>
+        <div class="section-title">Thống kê tháng ${selectedMonth?.format("MM/YYYY") || ""}</div>
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-value">${stats.totalSessions}</div>
+            <div class="stat-value">${filteredSessions.length}</div>
             <div class="stat-label">Tổng số buổi</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${stats.presentSessions}</div>
+            <div class="stat-value">${presentCount}</div>
             <div class="stat-label">Số buổi có mặt</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${stats.absentSessions}</div>
+            <div class="stat-value">${absentCount}</div>
             <div class="stat-label">Số buổi vắng</div>
           </div>
           <div class="stat-card">
@@ -444,22 +423,7 @@ const StudentReport = ({
             <div class="stat-label">Tỷ lệ tham gia</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${(() => {
-              const scores = studentSessions
-                .map(
-                  (s) =>
-                    s["Điểm danh"]?.find((r) => r["Student ID"] === student.id)?.[
-                      "Điểm"
-                    ]
-                )
-                .filter(
-                  (score) => score !== undefined && score !== null
-                ) as number[];
-              if (scores.length === 0) return 0;
-              return (
-                scores.reduce((a, b) => a + b, 0) / scores.length
-              ).toFixed(1);
-            })()} / 10</div>
+            <div class="stat-value">${avgScore} / 10</div>
             <div class="stat-label">Điểm trung bình</div>
           </div>
         </div>
@@ -473,38 +437,50 @@ const StudentReport = ({
       ` : ""}
 
       <div class="section">
-        <div class="section-title">Tổng hợp theo tháng</div>
+        <div class="section-title">Lịch sử học tập chi tiết</div>
         <table>
           <thead>
             <tr>
-              <th>Tháng</th>
-              <th>Số buổi</th>
-              <th>Có mặt</th>
-              <th>Đi muộn</th>
-              <th>Vắng</th>
-              <th>Tỷ lệ tham gia</th>
-              <th>Điểm TB</th>
+              <th style="width: 80px;">Ngày</th>
+              <th>Lớp học</th>
+              <th style="width: 100px;">Giờ học</th>
+              <th style="width: 100px;">Trạng thái</th>
+              <th style="width: 60px;">Điểm</th>
+              <th style="width: 80px;">Bài tập</th>
+              <th>Ghi chú</th>
             </tr>
           </thead>
           <tbody>
-            ${monthlyStats
-              .map(
-                (stat) => `
+            ${filteredSessions
+              .map((session) => {
+                const studentRecord = session["Điểm danh"]?.find(
+                  (r) => r["Student ID"] === student.id
+                );
+                const completed = studentRecord?.["Bài tập hoàn thành"];
+                const total = session["Bài tập"]?.["Tổng số bài"];
+                const homework =
+                  completed !== undefined && total
+                    ? `${completed}/${total}`
+                    : "-";
+                const statusText = studentRecord
+                  ? getStatusText(studentRecord)
+                  : "-";
+                const statusColor = studentRecord
+                  ? getStatusColor(studentRecord)
+                  : "#999";
+
+                return `
               <tr>
-                <td style="font-weight: bold;">${stat.month}</td>
-                <td style="text-align: center;">${stat.totalSessions}</td>
-                <td style="text-align: center; color: #52c41a; font-weight: bold;">${stat.presentCount}</td>
-                <td style="text-align: center; color: ${stat.lateCount > 0 ? "#fa8c16" : "#999"};">${stat.lateCount || "-"}</td>
-                <td style="text-align: center; color: ${stat.absentCount > 0 ? "#f5222d" : "#999"};">${stat.absentCount || "-"}</td>
-                <td style="text-align: center; color: ${stat.attendanceRate >= 80 ? "#52c41a" : stat.attendanceRate >= 60 ? "#fa8c16" : "#f5222d"}; font-weight: bold;">
-                  ${stat.attendanceRate.toFixed(1)}%
-                </td>
-                <td style="text-align: center; color: ${stat.avgScore >= 8 ? "#52c41a" : stat.avgScore >= 5 ? "#fa8c16" : "#f5222d"}; font-weight: bold;">
-                  ${stat.avgScore > 0 ? stat.avgScore.toFixed(1) : "-"}
-                </td>
+                <td style="text-align: center;">${dayjs(session["Ngày"]).format("DD/MM/YYYY")}</td>
+                <td>${session["Tên lớp"]}</td>
+                <td style="text-align: center;">${session["Giờ bắt đầu"]} - ${session["Giờ kết thúc"]}</td>
+                <td style="text-align: center; color: ${statusColor}; font-weight: bold;">${statusText}</td>
+                <td style="text-align: center; font-weight: bold;">${studentRecord?.["Điểm"] ?? "-"}</td>
+                <td style="text-align: center;">${homework}</td>
+                <td>${studentRecord?.["Ghi chú"] || "-"}</td>
               </tr>
-            `
-              )
+            `;
+              })
               .join("")}
           </tbody>
         </table>
@@ -1031,166 +1007,38 @@ const StudentReport = ({
             />
           </Card>
         ) : (
-          <Card title="Tổng hợp theo tháng" size="small">
+          <Card 
+            title={
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Báo cáo theo tháng - {selectedMonth?.format("MM/YYYY")}</span>
+                <DatePicker
+                  picker="month"
+                  format="MM/YYYY"
+                  placeholder="Chọn tháng"
+                  value={selectedMonth}
+                  onChange={(date) => setSelectedMonth(date)}
+                  style={{ width: 150 }}
+                />
+              </div>
+            }
+            size="small"
+          >
             <Table
-              columns={[
-                {
-                  title: "Tháng",
-                  dataIndex: "month",
-                  key: "month",
-                  render: (text: string) => <strong>{text}</strong>,
-                },
-                {
-                  title: "Số buổi",
-                  dataIndex: "totalSessions",
-                  key: "totalSessions",
-                  align: "center" as const,
-                },
-                {
-                  title: "Có mặt",
-                  dataIndex: "presentCount",
-                  key: "presentCount",
-                  align: "center" as const,
-                  render: (count: number) => <Tag color="green">{count}</Tag>,
-                },
-                {
-                  title: "Đi muộn",
-                  dataIndex: "lateCount",
-                  key: "lateCount",
-                  align: "center" as const,
-                  render: (count: number) =>
-                    count > 0 ? <Tag color="orange">{count}</Tag> : "-",
-                },
-                {
-                  title: "Vắng",
-                  dataIndex: "absentCount",
-                  key: "absentCount",
-                  align: "center" as const,
-                  render: (count: number) =>
-                    count > 0 ? <Tag color="red">{count}</Tag> : "-",
-                },
-                {
-                  title: "Tỷ lệ tham gia",
-                  dataIndex: "attendanceRate",
-                  key: "attendanceRate",
-                  align: "center" as const,
-                  render: (rate: number) => (
-                    <Tag
-                      color={
-                        rate >= 80 ? "green" : rate >= 60 ? "orange" : "red"
-                      }
-                    >
-                      {rate.toFixed(1)}%
-                    </Tag>
-                  ),
-                },
-                {
-                  title: "Điểm TB",
-                  dataIndex: "avgScore",
-                  key: "avgScore",
-                  align: "center" as const,
-                  render: (score: number) =>
-                    score > 0 ? (
-                      <Tag
-                        color={
-                          score >= 8 ? "green" : score >= 5 ? "orange" : "red"
-                        }
-                      >
-                        {score.toFixed(1)}
-                      </Tag>
-                    ) : (
-                      "-"
-                    ),
-                },
-              ]}
+              columns={columns}
               dataSource={(() => {
-                // Group sessions by month
-                const monthlyData: {
-                  [key: string]: {
-                    month: string;
-                    sessions: AttendanceSession[];
-                  };
-                } = {};
-
-                studentSessions.forEach((session) => {
-                  const monthKey = dayjs(session["Ngày"]).format("YYYY-MM");
-                  const monthLabel = dayjs(session["Ngày"]).format("MM/YYYY");
-
-                  if (!monthlyData[monthKey]) {
-                    monthlyData[monthKey] = {
-                      month: monthLabel,
-                      sessions: [],
-                    };
-                  }
-                  monthlyData[monthKey].sessions.push(session);
+                // Filter sessions by selected month
+                if (!selectedMonth) return studentSessions;
+                
+                return studentSessions.filter((session) => {
+                  const sessionDate = dayjs(session["Ngày"]);
+                  return (
+                    sessionDate.month() === selectedMonth.month() &&
+                    sessionDate.year() === selectedMonth.year()
+                  );
                 });
-
-                // Calculate stats for each month
-                return Object.entries(monthlyData)
-                  .map(([key, data]) => {
-                    let presentCount = 0;
-                    let lateCount = 0;
-                    let absentCount = 0;
-                    let totalScore = 0;
-                    let scoreCount = 0;
-                    let totalMinutes = 0;
-
-                    data.sessions.forEach((session) => {
-                      const record = session["Điểm danh"]?.find(
-                        (r) => r["Student ID"] === student.id
-                      );
-                      if (record) {
-                        if (record["Có mặt"]) {
-                          presentCount++;
-                          if (record["Đi muộn"]) lateCount++;
-
-                          // Calculate hours
-                          const [startH, startM] = session["Giờ bắt đầu"]
-                            .split(":")
-                            .map(Number);
-                          const [endH, endM] = session["Giờ kết thúc"]
-                            .split(":")
-                            .map(Number);
-                          const minutes =
-                            endH * 60 + endM - (startH * 60 + startM);
-                          if (minutes > 0) totalMinutes += minutes;
-                        } else {
-                          absentCount++;
-                        }
-
-                        if (
-                          record["Điểm"] !== null &&
-                          record["Điểm"] !== undefined
-                        ) {
-                          totalScore += record["Điểm"];
-                          scoreCount++;
-                        }
-                      }
-                    });
-
-                    const avgScore =
-                      scoreCount > 0 ? totalScore / scoreCount : 0;
-                    const attendanceRate =
-                      data.sessions.length > 0
-                        ? (presentCount / data.sessions.length) * 100
-                        : 0;
-                    const totalHours = totalMinutes / 60;
-
-                    return {
-                      key,
-                      month: data.month,
-                      totalSessions: data.sessions.length,
-                      presentCount,
-                      lateCount,
-                      absentCount,
-                      avgScore,
-                      attendanceRate,
-                      totalHours,
-                    };
-                  })
-                  .sort((a, b) => b.key.localeCompare(a.key)); // Sort by month descending
               })()}
-              pagination={{ pageSize: 12, showSizeChanger: false }}
+              rowKey="id"
+              pagination={{ pageSize: 10, showSizeChanger: false }}
               size="small"
             />
           </Card>

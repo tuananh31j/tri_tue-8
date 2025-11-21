@@ -21,6 +21,7 @@ import {
   Space,
   Calendar,
   Modal,
+  DatePicker,
 } from "antd";
 import type { Dayjs } from "dayjs";
 import {
@@ -51,6 +52,7 @@ const ParentPortal: React.FC = () => {
   const [attendanceSessions, setAttendanceSessions] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [scheduleEvents, setScheduleEvents] = useState<any[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<dayjs.Dayjs | null>(dayjs());
 
   // Check authentication
   useEffect(() => {
@@ -80,6 +82,20 @@ const ParentPortal: React.FC = () => {
           `${DATABASE_URL_BASE}/datasheet/Danh_sách_học_sinh/${userProfile.studentId}.json`
         );
         const studentData = await studentRes.json();
+        
+        // Check if student status is "Hủy" (cancelled)
+        if (studentData?.["Trạng thái"] === "Hủy") {
+          Modal.error({
+            title: "Không thể truy cập",
+            content: "Tài khoản học sinh đã bị hủy. Vui lòng liên hệ với trung tâm để biết thêm chi tiết.",
+            onOk: async () => {
+              await signOut();
+              navigate("/login");
+            },
+          });
+          return;
+        }
+        
         setStudent(studentData);
 
         // Fetch all classes
@@ -196,6 +212,531 @@ const ParentPortal: React.FC = () => {
       .slice(0, 10);
   }, [attendanceSessions]);
 
+  // Print full report function
+  const handlePrintFullReport = () => {
+    if (!student || !userProfile) return;
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    // Get status text and color
+    const getStatusText = (record: any) => {
+      if (record["Có mặt"]) {
+        return record["Đi muộn"] ? "Đi muộn" : "Có mặt";
+      } else {
+        return record["Vắng có phép"] ? "Vắng có phép" : "Vắng không phép";
+      }
+    };
+
+    const getStatusColor = (record: any) => {
+      if (record["Có mặt"]) {
+        return record["Đi muộn"] ? "#fa8c16" : "#52c41a";
+      } else {
+        return record["Vắng có phép"] ? "#1890ff" : "#f5222d";
+      }
+    };
+
+    const content = `
+      <div class="report-header">
+        <h1>BÁO CÁO HỌC TẬP</h1>
+        <p>Ngày xuất: ${dayjs().format("DD/MM/YYYY HH:mm")}</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Thông tin học sinh</div>
+        <table>
+          <tr><th>Họ và tên</th><td>${userProfile.studentName || student["Họ và tên"] || ""}</td></tr>
+          <tr><th>Mã học sinh</th><td>${userProfile.studentCode || student["Mã học sinh"] || "-"}</td></tr>
+          <tr><th>Ngày sinh</th><td>${student["Ngày sinh"] ? dayjs(student["Ngày sinh"]).format("DD/MM/YYYY") : "-"}</td></tr>
+          <tr><th>Số điện thoại</th><td>${student["Số điện thoại"] || "-"}</td></tr>
+          <tr><th>Email</th><td>${student["Email"] || "-"}</td></tr>
+          <tr><th>Địa chỉ</th><td>${student["Địa chỉ"] || "-"}</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Thống kê tổng quan</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${stats.totalSessions}</div>
+            <div class="stat-label">Tổng số buổi</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.attendedSessions}</div>
+            <div class="stat-label">Số buổi có mặt</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.absentSessions}</div>
+            <div class="stat-label">Số buổi vắng</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.attendanceRate.toFixed(1)}%</div>
+            <div class="stat-label">Tỷ lệ tham gia</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.averageScore.toFixed(1)} / 10</div>
+            <div class="stat-label">Điểm trung bình</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Lịch sử học tập chi tiết</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 80px;">Ngày</th>
+              <th>Lớp học</th>
+              <th style="width: 100px;">Giờ học</th>
+              <th style="width: 100px;">Trạng thái</th>
+              <th style="width: 60px;">Điểm</th>
+              <th style="width: 80px;">Bài tập</th>
+              <th>Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${attendanceSessions
+              .sort((a, b) => new Date(b["Ngày"]).getTime() - new Date(a["Ngày"]).getTime())
+              .map((session) => {
+                const studentRecord = session["Điểm danh"]?.find(
+                  (r: any) => r["Student ID"] === userProfile.studentId
+                );
+                const completed = studentRecord?.["Bài tập hoàn thành"];
+                const total = session["Bài tập"]?.["Tổng số bài"];
+                const homework =
+                  completed !== undefined && total
+                    ? `${completed}/${total}`
+                    : "-";
+                const statusText = studentRecord
+                  ? getStatusText(studentRecord)
+                  : "-";
+                const statusColor = studentRecord
+                  ? getStatusColor(studentRecord)
+                  : "#999";
+
+                return `
+              <tr>
+                <td style="text-align: center;">${dayjs(session["Ngày"]).format("DD/MM/YYYY")}</td>
+                <td>${session["Tên lớp"]}</td>
+                <td style="text-align: center;">${session["Giờ bắt đầu"]} - ${session["Giờ kết thúc"]}</td>
+                <td style="text-align: center; color: ${statusColor}; font-weight: bold;">${statusText}</td>
+                <td style="text-align: center; font-weight: bold;">${studentRecord?.["Điểm"] ?? "-"}</td>
+                <td style="text-align: center;">${homework}</td>
+                <td>${studentRecord?.["Ghi chú"] || "-"}</td>
+              </tr>
+            `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footer">
+        <p>Báo cáo được tạo tự động từ hệ thống quản lý học sinh.</p>
+        <p>Mọi thắc mắc xin liên hệ giáo viên phụ trách.</p>
+      </div>
+    `;
+
+    const styles = `
+      <style>
+        @page {
+          size: A4;
+          margin: 20mm;
+        }
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          color: #333;
+          line-height: 1.6;
+          background: #fff;
+        }
+        h1, h2, h3 {
+          margin: 0;
+          color: #004aad;
+        }
+        .report-header {
+          text-align: center;
+          border-bottom: 3px solid #004aad;
+          padding-bottom: 10px;
+          margin-bottom: 20px;
+        }
+        .report-header h1 {
+          font-size: 24px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        .report-header p {
+          font-size: 13px;
+          color: #666;
+        }
+        .section {
+          margin-bottom: 25px;
+        }
+        .section-title {
+          font-weight: bold;
+          color: #004aad;
+          border-left: 4px solid #004aad;
+          padding-left: 10px;
+          margin-bottom: 10px;
+          font-size: 16px;
+          text-transform: uppercase;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 8px;
+          font-size: 13px;
+        }
+        th, td {
+          border: 1px solid #ccc;
+          padding: 6px 8px;
+          text-align: left;
+          vertical-align: middle;
+        }
+        th {
+          background-color: #004aad;
+          color: #fff;
+          text-align: center;
+        }
+        tr:nth-child(even) {
+          background-color: #f8f9fa;
+        }
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 8px;
+          margin-top: 10px;
+        }
+        .stat-card {
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          padding: 6px 8px;
+          background: #fafafa;
+          text-align: center;
+        }
+        .stat-value {
+          font-size: 16px;
+          font-weight: 600;
+          color: #004aad;
+        }
+        .stat-label {
+          font-size: 12px;
+          color: #666;
+        }
+        .footer {
+          margin-top: 40px;
+          text-align: center;
+          font-size: 12px;
+          color: #888;
+          border-top: 1px solid #ccc;
+          padding-top: 10px;
+        }
+        @media print {
+          body { margin: 0; }
+        }
+      </style>
+    `;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <title>Báo cáo học tập - ${userProfile.studentName}</title>
+          ${styles}
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+  };
+
+  // Print monthly report function
+  const handlePrintMonthlyReport = () => {
+    if (!student || !userProfile || !selectedMonth) return;
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    // Filter sessions by selected month
+    const filteredSessions = attendanceSessions.filter((session) => {
+      const sessionDate = dayjs(session["Ngày"]);
+      return (
+        sessionDate.month() === selectedMonth.month() &&
+        sessionDate.year() === selectedMonth.year()
+      );
+    }).sort((a, b) => new Date(b["Ngày"]).getTime() - new Date(a["Ngày"]).getTime());
+
+    // Calculate stats for selected month
+    let presentCount = 0;
+    let absentCount = 0;
+    let totalScore = 0;
+    let scoreCount = 0;
+
+    filteredSessions.forEach((session) => {
+      const record = session["Điểm danh"]?.find(
+        (r: any) => r["Student ID"] === userProfile.studentId
+      );
+      if (record) {
+        if (record["Có mặt"]) {
+          presentCount++;
+        } else {
+          absentCount++;
+        }
+        if (record["Điểm"] !== null && record["Điểm"] !== undefined) {
+          totalScore += record["Điểm"];
+          scoreCount++;
+        }
+      }
+    });
+
+    const avgScore = scoreCount > 0 ? (totalScore / scoreCount).toFixed(1) : "0";
+    const attendanceRate =
+      filteredSessions.length > 0
+        ? ((presentCount / filteredSessions.length) * 100).toFixed(1)
+        : "0";
+
+    // Get status text and color
+    const getStatusText = (record: any) => {
+      if (record["Có mặt"]) {
+        return record["Đi muộn"] ? "Đi muộn" : "Có mặt";
+      } else {
+        return record["Vắng có phép"] ? "Vắng có phép" : "Vắng không phép";
+      }
+    };
+
+    const getStatusColor = (record: any) => {
+      if (record["Có mặt"]) {
+        return record["Đi muộn"] ? "#fa8c16" : "#52c41a";
+      } else {
+        return record["Vắng có phép"] ? "#1890ff" : "#f5222d";
+      }
+    };
+
+    const content = `
+      <div class="report-header">
+        <h1>BÁO CÁO THEO THÁNG ${selectedMonth.format("MM/YYYY")}</h1>
+        <p>Ngày xuất: ${dayjs().format("DD/MM/YYYY HH:mm")}</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Thông tin học sinh</div>
+        <table>
+          <tr><th>Họ và tên</th><td>${userProfile.studentName || student["Họ và tên"] || ""}</td></tr>
+          <tr><th>Mã học sinh</th><td>${userProfile.studentCode || student["Mã học sinh"] || "-"}</td></tr>
+          <tr><th>Ngày sinh</th><td>${student["Ngày sinh"] ? dayjs(student["Ngày sinh"]).format("DD/MM/YYYY") : "-"}</td></tr>
+          <tr><th>Số điện thoại</th><td>${student["Số điện thoại"] || "-"}</td></tr>
+          <tr><th>Email</th><td>${student["Email"] || "-"}</td></tr>
+          <tr><th>Địa chỉ</th><td>${student["Địa chỉ"] || "-"}</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Thống kê tháng ${selectedMonth.format("MM/YYYY")}</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${filteredSessions.length}</div>
+            <div class="stat-label">Tổng số buổi</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${presentCount}</div>
+            <div class="stat-label">Số buổi có mặt</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${absentCount}</div>
+            <div class="stat-label">Số buổi vắng</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${attendanceRate}%</div>
+            <div class="stat-label">Tỷ lệ tham gia</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${avgScore} / 10</div>
+            <div class="stat-label">Điểm trung bình</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Lịch sử học tập chi tiết</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 80px;">Ngày</th>
+              <th>Lớp học</th>
+              <th style="width: 100px;">Giờ học</th>
+              <th style="width: 100px;">Trạng thái</th>
+              <th style="width: 60px;">Điểm</th>
+              <th style="width: 80px;">Bài tập</th>
+              <th>Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredSessions
+              .map((session) => {
+                const studentRecord = session["Điểm danh"]?.find(
+                  (r: any) => r["Student ID"] === userProfile.studentId
+                );
+                const completed = studentRecord?.["Bài tập hoàn thành"];
+                const total = session["Bài tập"]?.["Tổng số bài"];
+                const homework =
+                  completed !== undefined && total
+                    ? `${completed}/${total}`
+                    : "-";
+                const statusText = studentRecord
+                  ? getStatusText(studentRecord)
+                  : "-";
+                const statusColor = studentRecord
+                  ? getStatusColor(studentRecord)
+                  : "#999";
+
+                return `
+              <tr>
+                <td style="text-align: center;">${dayjs(session["Ngày"]).format("DD/MM/YYYY")}</td>
+                <td>${session["Tên lớp"]}</td>
+                <td style="text-align: center;">${session["Giờ bắt đầu"]} - ${session["Giờ kết thúc"]}</td>
+                <td style="text-align: center; color: ${statusColor}; font-weight: bold;">${statusText}</td>
+                <td style="text-align: center; font-weight: bold;">${studentRecord?.["Điểm"] ?? "-"}</td>
+                <td style="text-align: center;">${homework}</td>
+                <td>${studentRecord?.["Ghi chú"] || "-"}</td>
+              </tr>
+            `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footer">
+        <p>Báo cáo được tạo tự động từ hệ thống quản lý học sinh.</p>
+        <p>Mọi thắc mắc xin liên hệ giáo viên phụ trách.</p>
+      </div>
+    `;
+
+    const styles = `
+      <style>
+        @page {
+          size: A4;
+          margin: 20mm;
+        }
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          color: #333;
+          line-height: 1.6;
+          background: #fff;
+        }
+        h1, h2, h3 {
+          margin: 0;
+          color: #004aad;
+        }
+        .report-header {
+          text-align: center;
+          border-bottom: 3px solid #004aad;
+          padding-bottom: 10px;
+          margin-bottom: 20px;
+        }
+        .report-header h1 {
+          font-size: 24px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        .report-header p {
+          font-size: 13px;
+          color: #666;
+        }
+        .section {
+          margin-bottom: 25px;
+        }
+        .section-title {
+          font-weight: bold;
+          color: #004aad;
+          border-left: 4px solid #004aad;
+          padding-left: 10px;
+          margin-bottom: 10px;
+          font-size: 16px;
+          text-transform: uppercase;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 8px;
+          font-size: 13px;
+        }
+        th, td {
+          border: 1px solid #ccc;
+          padding: 6px 8px;
+          text-align: left;
+          vertical-align: middle;
+        }
+        th {
+          background-color: #004aad;
+          color: #fff;
+          text-align: center;
+        }
+        tr:nth-child(even) {
+          background-color: #f8f9fa;
+        }
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 8px;
+          margin-top: 10px;
+        }
+        .stat-card {
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          padding: 6px 8px;
+          background: #fafafa;
+          text-align: center;
+        }
+        .stat-value {
+          font-size: 16px;
+          font-weight: 600;
+          color: #004aad;
+        }
+        .stat-label {
+          font-size: 12px;
+          color: #666;
+        }
+        .footer {
+          margin-top: 40px;
+          text-align: center;
+          font-size: 12px;
+          color: #888;
+          border-top: 1px solid #ccc;
+          padding-top: 10px;
+        }
+        @media print {
+          body { margin: 0; }
+        }
+      </style>
+    `;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <title>Báo cáo tháng ${selectedMonth.format("MM/YYYY")} - ${userProfile.studentName}</title>
+          ${styles}
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+  };
+
   // Prepare calendar data
   const calendarData = useMemo(() => {
     const data: Record<string, any[]> = {};
@@ -260,6 +801,34 @@ const ParentPortal: React.FC = () => {
 
   if (!currentUser || !userProfile || userProfile.role !== "parent") {
     return null;
+  }
+
+  // Show message if student is cancelled
+  if (student?.["Trạng thái"] === "Hủy") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card style={{ maxWidth: 500, textAlign: "center" }}>
+          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            <div style={{ fontSize: 48 }}>⚠️</div>
+            <Title level={3}>Tài khoản đã bị hủy</Title>
+            <Paragraph>
+              Tài khoản học sinh của bạn đã bị hủy. Vui lòng liên hệ với trung tâm để biết thêm chi tiết.
+            </Paragraph>
+            <Button
+              type="primary"
+              danger
+              size="large"
+              onClick={async () => {
+                await signOut();
+                navigate("/login");
+              }}
+            >
+              Đăng xuất
+            </Button>
+          </Space>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -892,7 +1461,36 @@ const ParentPortal: React.FC = () => {
                       </Col>
 
                       <Col span={24}>
-                        <Card title="Nhận xét chung">
+                        <Card 
+                          title="Nhận xét chung"
+                          extra={
+                            <Space>
+                              <Button
+                                type="primary"
+                                icon={<FileTextOutlined />}
+                                onClick={handlePrintFullReport}
+                              >
+                                Xem báo cáo toàn bộ
+                              </Button>
+                              <DatePicker
+                                picker="month"
+                                format="MM/YYYY"
+                                placeholder="Chọn tháng"
+                                value={selectedMonth}
+                                onChange={(date) => setSelectedMonth(date)}
+                                style={{ width: 120 }}
+                              />
+                              <Button
+                                type="default"
+                                icon={<FileTextOutlined />}
+                                onClick={handlePrintMonthlyReport}
+                                disabled={!selectedMonth}
+                              >
+                                Xem báo cáo tháng
+                              </Button>
+                            </Space>
+                          }
+                        >
                           <Paragraph>
                             {stats.attendanceRate >= 90 && stats.averageScore >= 8 ? (
                               <Text type="success">
@@ -1046,6 +1644,87 @@ const ParentPortal: React.FC = () => {
                         },
                       ]}
                     />
+                  </div>
+                ),
+              },
+              {
+                key: "documents",
+                label: (
+                  <span>
+                    <FileTextOutlined /> Tài liệu học tập
+                  </span>
+                ),
+                children: (
+                  <div>
+                    {classes.length === 0 ? (
+                      <Empty description="Chưa có lớp học nào" />
+                    ) : (
+                      <Row gutter={[16, 16]}>
+                        {classes.map((cls) => (
+                          <Col xs={24} key={cls.id}>
+                            <Card
+                              title={
+                                <Space>
+                                  <BookOutlined />
+                                  {cls["Tên lớp"]} - {cls["Môn học"]}
+                                </Space>
+                              }
+                              extra={
+                                <Tag color={cls["Trạng thái"] === "active" ? "green" : "red"}>
+                                  {cls["Trạng thái"] === "active" ? "Đang học" : "Đã kết thúc"}
+                                </Tag>
+                              }
+                            >
+                              {cls["Tài liệu"] && cls["Tài liệu"].length > 0 ? (
+                                <List
+                                  dataSource={cls["Tài liệu"]}
+                                  renderItem={(doc: any) => (
+                                    <List.Item
+                                      actions={[
+                                        <Button
+                                          type="link"
+                                          icon={<DownloadOutlined />}
+                                          href={doc.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        >
+                                          Tải xuống
+                                        </Button>,
+                                      ]}
+                                    >
+                                      <List.Item.Meta
+                                        avatar={<FileTextOutlined style={{ fontSize: 24, color: "#1890ff" }} />}
+                                        title={doc.name || doc.title}
+                                        description={
+                                          <Space direction="vertical" size="small">
+                                            {doc.description && <Text type="secondary">{doc.description}</Text>}
+                                            {doc.uploadedAt && (
+                                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                                Đăng tải: {dayjs(doc.uploadedAt).format("DD/MM/YYYY HH:mm")}
+                                              </Text>
+                                            )}
+                                            {doc.uploadedBy && (
+                                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                                Bởi: {doc.uploadedBy}
+                                              </Text>
+                                            )}
+                                          </Space>
+                                        }
+                                      />
+                                    </List.Item>
+                                  )}
+                                />
+                              ) : (
+                                <Empty
+                                  description="Chưa có tài liệu nào"
+                                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                />
+                              )}
+                            </Card>
+                          </Col>
+                        ))}
+                      </Row>
+                    )}
                   </div>
                 ),
               },

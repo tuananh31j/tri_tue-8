@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Card, Table, Tag, Tabs, Descriptions, Empty, Button, Modal, Space } from "antd";
-import { UserAddOutlined, HistoryOutlined, FileTextOutlined } from "@ant-design/icons";
+import { Card, Table, Tag, Tabs, Descriptions, Empty, Button, Modal, Space, Input, Form, message, List, Popconfirm } from "antd";
+import { UserAddOutlined, HistoryOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, LinkOutlined } from "@ant-design/icons";
 import { useClasses } from "../../hooks/useClasses";
 import { useAuth } from "../../contexts/AuthContext";
 import { Class } from "../../types";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, update } from "firebase/database";
 import { database } from "../../firebase";
 import { useNavigate } from "react-router-dom";
 import AddStudentModal from "../AddStudentModal";
@@ -32,6 +32,9 @@ const TeacherClassView = () => {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [attendanceSessions, setAttendanceSessions] = useState<any[]>([]);
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
+  const [selectedClassForDoc, setSelectedClassForDoc] = useState<Class | null>(null);
+  const [documentForm] = Form.useForm();
 
   const teacherId = userProfile?.teacherId || userProfile?.uid || "";
 
@@ -119,6 +122,55 @@ const TeacherClassView = () => {
 
   const getClassStudents = (classData: Class) => {
     return students.filter((s) => classData["Student IDs"]?.includes(s.id));
+  };
+
+  // Add document to class
+  const handleAddDocument = async (values: any) => {
+    if (!selectedClassForDoc) return;
+
+    try {
+      const classRef = ref(database, `datasheet/Lớp_học/${selectedClassForDoc.id}`);
+      const currentDocuments = selectedClassForDoc["Tài liệu"] || [];
+      
+      const newDocument = {
+        name: values.name,
+        description: values.description || "",
+        url: values.url,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: teacherData?.["Họ và tên"] || userProfile?.displayName || "Giáo viên",
+      };
+
+      const updatedDocuments = [...currentDocuments, newDocument];
+      
+      await update(classRef, {
+        "Tài liệu": updatedDocuments,
+      });
+
+      message.success("Đã thêm tài liệu thành công!");
+      setIsDocumentModalOpen(false);
+      documentForm.resetFields();
+    } catch (error) {
+      console.error("Error adding document:", error);
+      message.error("Lỗi khi thêm tài liệu");
+    }
+  };
+
+  // Delete document from class
+  const handleDeleteDocument = async (classData: Class, docIndex: number) => {
+    try {
+      const classRef = ref(database, `datasheet/Lớp_học/${classData.id}`);
+      const currentDocuments = classData["Tài liệu"] || [];
+      const updatedDocuments = currentDocuments.filter((_, index) => index !== docIndex);
+      
+      await update(classRef, {
+        "Tài liệu": updatedDocuments,
+      });
+
+      message.success("Đã xóa tài liệu thành công!");
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      message.error("Lỗi khi xóa tài liệu");
+    }
   };
 
   const handleOpenScoreModal = (student: Student, classData: Class) => {
@@ -281,6 +333,7 @@ const TeacherClassView = () => {
                     Thêm học sinh
                   </Button>
                 }
+                style={{ marginBottom: 16 }}
               >
                 <Table
                   columns={studentColumns(classData)}
@@ -289,6 +342,73 @@ const TeacherClassView = () => {
                   pagination={false}
                   scroll={{ x: 1000 }}
                 />
+              </Card>
+
+              <Card
+                title="Tài liệu học tập"
+                extra={
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      setSelectedClassForDoc(classData);
+                      setIsDocumentModalOpen(true);
+                    }}
+                  >
+                    Thêm tài liệu
+                  </Button>
+                }
+              >
+                {classData["Tài liệu"] && classData["Tài liệu"].length > 0 ? (
+                  <List
+                    dataSource={classData["Tài liệu"]}
+                    renderItem={(doc: any, index: number) => (
+                      <List.Item
+                        actions={[
+                          <Button
+                            type="link"
+                            icon={<LinkOutlined />}
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Mở
+                          </Button>,
+                          <Popconfirm
+                            title="Xóa tài liệu"
+                            description="Bạn có chắc chắn muốn xóa tài liệu này?"
+                            onConfirm={() => handleDeleteDocument(classData, index)}
+                            okText="Xóa"
+                            cancelText="Hủy"
+                          >
+                            <Button
+                              type="link"
+                              danger
+                              icon={<DeleteOutlined />}
+                            >
+                              Xóa
+                            </Button>
+                          </Popconfirm>,
+                        ]}
+                      >
+                        <List.Item.Meta
+                          avatar={<FileTextOutlined style={{ fontSize: 24, color: "#1890ff" }} />}
+                          title={doc.name}
+                          description={
+                            <Space direction="vertical" size="small">
+                              {doc.description && <div>{doc.description}</div>}
+                              <div style={{ fontSize: 12, color: "#999" }}>
+                                Đăng tải: {new Date(doc.uploadedAt).toLocaleString("vi-VN")} bởi {doc.uploadedBy}
+                              </div>
+                            </Space>
+                          }
+                        />
+                      </List.Item>
+                    )}
+                  />
+                ) : (
+                  <Empty description="Chưa có tài liệu nào" />
+                )}
               </Card>
             </div>
           ),
@@ -303,6 +423,60 @@ const TeacherClassView = () => {
         }}
         classData={selectedClass}
       />
+
+      {/* Add Document Modal */}
+      <Modal
+        title="Thêm tài liệu học tập"
+        open={isDocumentModalOpen}
+        onCancel={() => {
+          setIsDocumentModalOpen(false);
+          setSelectedClassForDoc(null);
+          documentForm.resetFields();
+        }}
+        onOk={() => documentForm.submit()}
+        okText="Thêm"
+        cancelText="Hủy"
+        width={600}
+      >
+        <Form
+          form={documentForm}
+          layout="vertical"
+          onFinish={handleAddDocument}
+        >
+          <Form.Item
+            label="Tên tài liệu"
+            name="name"
+            rules={[{ required: true, message: "Vui lòng nhập tên tài liệu" }]}
+          >
+            <Input placeholder="Ví dụ: Bài giảng tuần 1" />
+          </Form.Item>
+
+          <Form.Item
+            label="Mô tả"
+            name="description"
+          >
+            <Input.TextArea 
+              rows={3} 
+              placeholder="Mô tả ngắn về tài liệu (không bắt buộc)"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Link tài liệu"
+            name="url"
+            rules={[
+              { required: true, message: "Vui lòng nhập link tài liệu" },
+              { type: "url", message: "Link không hợp lệ" },
+            ]}
+            extra="Có thể dùng Google Drive, Dropbox, OneDrive, v.v."
+          >
+            <Input 
+              placeholder="https://drive.google.com/file/d/..." 
+              prefix={<LinkOutlined />}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* Score Detail Modal */}
       {selectedStudent && (
