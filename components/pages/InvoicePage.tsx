@@ -20,6 +20,8 @@ import {
   message,
   Upload,
   Image,
+  Drawer,
+  Divider,
 } from "antd";
 import type { UploadFile } from "antd";
 import {
@@ -98,6 +100,7 @@ interface StudentInvoice {
   status: "paid" | "unpaid";
   sessions: AttendanceSession[];
   invoiceImage?: string; // Base64 image data
+  previousUnpaid?: StudentInvoice[]; // Previous unpaid invoices
 }
 
 interface TeacherSalary {
@@ -349,9 +352,10 @@ const InvoicePage = () => {
     return totalAllowance;
   };
 
-  // Calculate student invoices
+  // Calculate student invoices with accumulated unpaid amounts
   const studentInvoices = useMemo(() => {
     const invoicesMap: Record<string, StudentInvoice> = {};
+    const unpaidByStudent: Record<string, StudentInvoice[]> = {};
 
     // First, load all paid invoices from Firebase (these are immutable)
     Object.entries(studentInvoiceStatus).forEach(([key, data]) => {
@@ -387,19 +391,21 @@ const InvoicePage = () => {
       const sessionMonth = sessionDate.getMonth();
       const sessionYear = sessionDate.getFullYear();
 
-      if (
-        sessionMonth === studentMonth &&
-        // sessionYear === studentYear &&
-        session["Điểm danh"]
-      ) {
+      if (session["Điểm danh"]) {
         session["Điểm danh"].forEach((record: any) => {
           const studentId = record["Student ID"];
           if (!studentId || !record["Có mặt"]) return;
 
           const key = `${studentId}-${sessionMonth}-${sessionYear}`;
 
+          // Check if this month's invoice is already paid
+          const invoiceData = studentInvoiceStatus[key];
+          const isPaid =
+            typeof invoiceData === "object" && invoiceData?.status === "paid" ||
+            invoiceData === "paid";
+
           // Skip if already loaded from Firebase as paid
-          if (invoicesMap[key]?.status === "paid") return;
+          if (isPaid && invoicesMap[key]) return;
 
           const student = students.find((s) => s.id === studentId);
           if (!student) return;
@@ -409,7 +415,6 @@ const InvoicePage = () => {
           const classInfo = classes.find((c) => c.id === classId);
 
           // Find course using Khối and Môn học from class info
-          // Handle both value (Mathematics) and label (Toán) formats
           const course = classInfo
             ? courses.find((c) => {
                 if (c.Khối !== classInfo.Khối) return false;
@@ -435,7 +440,6 @@ const InvoicePage = () => {
           const pricePerSession = course?.Giá || 0;
 
           if (!invoicesMap[key]) {
-            const invoiceData = studentInvoiceStatus[key];
             const discount =
               typeof invoiceData === "object" && invoiceData !== null
                 ? invoiceData.discount || 0
@@ -478,7 +482,50 @@ const InvoicePage = () => {
       }
     });
 
-    return Object.values(invoicesMap);
+    // Group unpaid invoices by student
+    Object.values(invoicesMap).forEach((invoice) => {
+      if (invoice.status === "unpaid") {
+        if (!unpaidByStudent[invoice.studentId]) {
+          unpaidByStudent[invoice.studentId] = [];
+        }
+        unpaidByStudent[invoice.studentId].push(invoice);
+      }
+    });
+
+    // For the selected month, accumulate all previous unpaid amounts
+    const currentMonthInvoices: StudentInvoice[] = [];
+
+    Object.values(invoicesMap).forEach((invoice) => {
+      // Only show invoices for selected month or earlier unpaid ones
+      if (invoice.month === studentMonth && invoice.year === studentYear) {
+        // This is the current month invoice
+        if (invoice.status === "unpaid") {
+          // Find all previous unpaid invoices for this student
+          const studentUnpaid = unpaidByStudent[invoice.studentId] || [];
+          const previousUnpaid = studentUnpaid.filter(
+            (inv) =>
+              (inv.year < studentYear ||
+               (inv.year === studentYear && inv.month < studentMonth))
+          );
+
+          // Add previous unpaid amounts to current invoice
+          if (previousUnpaid.length > 0) {
+            invoice.previousUnpaid = previousUnpaid;
+            const previousTotal = previousUnpaid.reduce(
+              (sum, inv) => sum + inv.finalAmount,
+              0
+            );
+            invoice.finalAmount = invoice.finalAmount + previousTotal;
+          }
+        }
+        currentMonthInvoices.push(invoice);
+      } else if (invoice.status === "paid" && invoice.month === studentMonth) {
+        // Include paid invoices for the selected month
+        currentMonthInvoices.push(invoice);
+      }
+    });
+
+    return currentMonthInvoices;
   }, [
     sessions,
     students,
@@ -899,57 +946,50 @@ const InvoicePage = () => {
 
   // View and export invoice
   const viewStudentInvoice = (invoice: StudentInvoice) => {
-    const content = generateStudentInvoiceHTML(invoice);
-    const modal = Modal.info({
-      title: `Phiếu thu học phí - ${invoice.studentName}`,
-      width: 800,
-      maskClosable: true,
-      closable: true,
-      content: (
-        <div
-          id={`student-invoice-${invoice.id}`}
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
-      ),
-      footer: (
-        <Space>
-          <Button onClick={() => modal.destroy()}>Đóng</Button>
-          <Button
-            icon={<PrinterOutlined />}
-            onClick={() => printInvoice(content)}
-          >
-            In phiếu
-          </Button>
-        </Space>
-      ),
-    });
+    setSelectedInvoice(invoice);
+    setSelectedSalary(null);
+    setDrawerVisible(true);
   };
 
   const viewTeacherSalary = (salary: TeacherSalary) => {
-    const content = generateTeacherSalaryHTML(salary);
-    const modal = Modal.info({
-      title: `Phiếu lương giáo viên - ${salary.teacherName}`,
-      width: 800,
-      maskClosable: true,
-      closable: true,
-      content: (
-        <div
-          id={`teacher-salary-${salary.id}`}
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
-      ),
-      footer: (
-        <Space>
-          <Button onClick={() => modal.destroy()}>Đóng</Button>
-          <Button
-            icon={<PrinterOutlined />}
-            onClick={() => printInvoice(content)}
-          >
-            In phiếu
-          </Button>
-        </Space>
-      ),
-    });
+    setSelectedSalary(salary);
+    setSelectedInvoice(null);
+    setDrawerVisible(true);
+  };
+
+  const handlePrint = () => {
+    const printContent = document.getElementById('invoice-print-content');
+    if (!printContent) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>In phiếu</title>
+        <style>
+          body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+          }
+          @media print {
+            body { margin: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        ${printContent.innerHTML}
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
 
   // Generate VietQR URL with hardcoded bank info for students
@@ -1000,8 +1040,211 @@ const InvoicePage = () => {
     )}&accountName=${encodeURIComponent(accountName)}`;
   };
 
+  // Render student invoice content
+  const renderStudentInvoiceContent = (invoice: StudentInvoice) => {
+    // Find class info for grade
+    const firstSession = invoice.sessions[0];
+    const classId = firstSession?.["Class ID"];
+    const classInfo = classes.find((c) => c.id === classId);
+    const grade = classInfo?.Khối || "N/A";
+
+    // Get unique subjects
+    const subjects = Array.from(
+      new Set(
+        invoice.sessions.map((session) => {
+          const classId = session["Class ID"];
+          const classInfo = classes.find((c) => c.id === classId);
+          return classInfo?.["Môn học"] || "N/A";
+        })
+      )
+    ).join(", ");
+
+    return (
+      <div id="invoice-print-content" style={{ padding: "60px 80px", position: "relative", minHeight: "100vh", background: "white" }}>
+        {/* Background logo */}
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <img
+            src="/img/logo.png"
+            alt="Background Logo"
+            style={{
+              width: "auto",
+              height: "600px",
+              maxWidth: "600px",
+              objectFit: "contain",
+              opacity: 0.06,
+              filter: "grayscale(20%)",
+              userSelect: "none",
+            }}
+          />
+        </div>
+
+        {/* Content */}
+        <div style={{ position: "relative", zIndex: 1 }}>
+          {/* Header with QR on right */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "50px" }}>
+            <div style={{ flex: 1 }}>
+              <h1 style={{ color: "#ff0000", margin: "0 0 10px 0", fontSize: "32px", fontWeight: "bold", letterSpacing: "1px" }}>
+                PHIẾU THU HỌC PHÍ THÁNG {invoice.month + 1}
+              </h1>
+            </div>
+            <div style={{ textAlign: "center", marginLeft: "40px" }}>
+              <p style={{ margin: "0 0 5px 0", fontSize: "12px", color: "#666" }}>Quét mã để chuyển tiền đến</p>
+              <p style={{ margin: "0 0 3px 0", fontSize: "16px", fontWeight: "bold" }}>NGUYEN THI HOA</p>
+              <p style={{ margin: "0 0 10px 0", fontSize: "14px", fontWeight: "600" }}>4319888</p>
+              <img
+                src={generateVietQR(invoice.finalAmount.toString(), invoice.studentName, (invoice.month + 1).toString())}
+                alt="VietQR"
+                style={{
+                  width: "180px",
+                  height: "180px",
+                  border: "1px solid #d9d9d9",
+                  padding: "8px",
+                  borderRadius: "8px",
+                  background: "white",
+                }}
+              />
+              <div style={{ marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                <span style={{ fontWeight: "bold", color: "#ff0000", fontSize: "12px" }}>VPBank</span>
+                <span style={{ fontSize: "10px", color: "#666" }}>VIETOR</span>
+                <span style={{ fontSize: "10px", color: "#666" }}>napas 24/7</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Student info */}
+          <div style={{ marginBottom: "30px" }}>
+            <p style={{ margin: "8px 0", fontSize: "18px", lineHeight: "1.8" }}>
+              <span style={{ color: "#ff0000", fontWeight: "bold" }}>Họ và tên: </span>
+              <span style={{ fontWeight: "bold" }}>{invoice.studentName}</span>
+            </p>
+            <p style={{ margin: "8px 0", fontSize: "18px", lineHeight: "1.8" }}>
+              <span style={{ fontWeight: "bold" }}>Khối: </span>
+              {grade}
+            </p>
+            <p style={{ margin: "8px 0", fontSize: "18px", lineHeight: "1.8" }}>
+              <span style={{ fontWeight: "bold" }}>Môn học: </span>
+              {subjects}
+            </p>
+          </div>
+
+          <div style={{ borderTop: "2px solid #000", margin: "20px 0" }} />
+
+          {/* Fee breakdown */}
+          <div style={{ marginBottom: "25px" }}>
+            <p style={{ margin: "10px 0", fontSize: "18px", lineHeight: "1.8" }}>
+              <span style={{ fontWeight: "bold" }}>Tổng học phí: </span>
+              {invoice.totalAmount.toLocaleString("vi-VN")} VNĐ
+            </p>
+            {invoice.discount > 0 && (
+              <p style={{ margin: "10px 0", fontSize: "18px", lineHeight: "1.8" }}>
+                <span style={{ fontWeight: "bold" }}>Nợ học phí: </span>
+                {invoice.discount.toLocaleString("vi-VN")} VNĐ
+              </p>
+            )}
+            {invoice.previousUnpaid && invoice.previousUnpaid.length > 0 && (
+              <p style={{ margin: "10px 0", fontSize: "18px", lineHeight: "1.8" }}>
+                <span style={{ fontWeight: "bold" }}>Miễn giảm học phí: </span>
+                {invoice.previousUnpaid
+                  .map((inv) => `Tháng ${inv.month + 1}: ${inv.finalAmount.toLocaleString("vi-VN")} VNĐ`)
+                  .join(", ")}
+              </p>
+            )}
+          </div>
+
+          <div style={{ borderTop: "2px solid #000", margin: "20px 0" }} />
+
+          {/* Previous unpaid warning */}
+          {invoice.previousUnpaid && invoice.previousUnpaid.length > 0 && (
+            <div
+              style={{
+                background: "#fff9e6",
+                padding: "20px",
+                marginBottom: "25px",
+                borderLeft: "4px solid #faad14",
+              }}
+            >
+              <p style={{ margin: "0 0 10px 0", fontWeight: "bold", fontSize: "16px" }}>
+                Nợ học phí các tháng trước:
+              </p>
+              {invoice.previousUnpaid.map((unpaid) => (
+                <p key={unpaid.id} style={{ margin: "5px 0", fontSize: "15px" }}>
+                  • Tháng {unpaid.month + 1}/{unpaid.year}: {unpaid.finalAmount.toLocaleString("vi-VN")} đ
+                </p>
+              ))}
+              <p style={{ margin: "10px 0 0 0", fontWeight: "bold", fontSize: "16px" }}>
+                Tổng nợ: {invoice.previousUnpaid.reduce((sum, inv) => sum + inv.finalAmount, 0).toLocaleString("vi-VN")} đ
+              </p>
+            </div>
+          )}
+
+          {/* Total calculation */}
+          <div style={{ marginBottom: "30px" }}>
+            <p style={{ margin: "10px 0", fontSize: "18px", lineHeight: "1.8" }}>
+              <span style={{ fontWeight: "bold" }}>Tổng học phí tháng {invoice.month + 1}: </span>
+              {invoice.totalAmount.toLocaleString("vi-VN")} đ
+            </p>
+            {invoice.discount > 0 && (
+              <p style={{ margin: "10px 0", fontSize: "18px", lineHeight: "1.8", color: "#f5222d" }}>
+                <span style={{ fontWeight: "bold" }}>Miễn giảm học phí: </span>
+                -{invoice.discount.toLocaleString("vi-VN")} đ
+              </p>
+            )}
+            {invoice.previousUnpaid && invoice.previousUnpaid.length > 0 && (
+              <>
+                {invoice.previousUnpaid.map((unpaid) => (
+                  <p key={unpaid.id} style={{ margin: "10px 0", fontSize: "18px", lineHeight: "1.8" }}>
+                    <span style={{ fontWeight: "bold" }}>
+                      Nợ học phí tháng {unpaid.month + 1}/{unpaid.year}:{" "}
+                    </span>
+                    {unpaid.finalAmount.toLocaleString("vi-VN")} đ
+                  </p>
+                ))}
+              </>
+            )}
+          </div>
+
+          <div style={{ borderTop: "2px solid #000", margin: "20px 0" }} />
+
+          {/* Final amount - highlighted */}
+          <div style={{ margin: "30px 0" }}>
+            <p style={{ margin: 0, fontSize: "24px", fontWeight: "bold", lineHeight: "1.8" }}>
+              <span>Học phí thực: </span>
+              <span style={{ color: "#ff0000" }}>{invoice.finalAmount.toLocaleString("vi-VN")} VNĐ</span>
+            </p>
+          </div>
+
+          <div style={{ borderTop: "2px solid #000", margin: "20px 0" }} />
+
+          {/* Payment instructions */}
+          <div style={{ marginTop: "30px" }}>
+            <p style={{ margin: "8px 0", fontSize: "16px", fontWeight: "bold" }}>Ghi chú:</p>
+            <p style={{ margin: "8px 0", fontSize: "15px", lineHeight: "1.6" }}>
+              Phụ huynh vui lòng đóng học phí qua:
+            </p>
+            <p style={{ margin: "8px 0", fontSize: "16px", fontWeight: "bold" }}>STK: 4319888</p>
+            <p style={{ margin: "8px 0", fontSize: "15px", lineHeight: "1.6" }}>
+              Hoặc đóng tiền mặt (để phòng bị ghi rõ tiền đóng học phí Tháng {invoice.month + 1} và họ tên học sinh)
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const generateStudentInvoiceHTML = (invoice: StudentInvoice) => {
-    // Group sessions by class and calculate totals
+    // Group sessions by class and calculate totals for current month
     const classSummary: Record<
       string,
       {
@@ -1026,7 +1269,7 @@ const InvoicePage = () => {
       const classId = session["Class ID"];
       const classInfo = classes.find((c) => c.id === classId);
       const subject = classInfo?.["Môn học"] || "N/A";
-      
+
       const key = `${classCode}-${className}-${subject}`;
 
       if (!classSummary[key]) {
@@ -1047,6 +1290,9 @@ const InvoicePage = () => {
 
     const classRows = Object.values(classSummary);
 
+    // Calculate current month amount (before adding previous unpaid)
+    const currentMonthAmount = invoice.totalAmount - invoice.discount;
+
     return `
       <div style="font-family: Arial, sans-serif; padding: 20px; position: relative;">
         <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;">
@@ -1064,74 +1310,110 @@ const InvoicePage = () => {
         </div>
 
         <div style="margin-bottom: 20px;">
-          <p><strong>Học sinh:</strong> ${invoice.studentName}</p>
-          <p><strong>Mã học sinh:</strong> ${invoice.studentCode}</p>
-          <p><strong>Số buổi học:</strong> ${invoice.totalSessions} buổi</p>
+          <p><strong>Họ và tên:</strong> ${invoice.studentName}</p>
+          <p><strong>Khối:</strong> ${classRows.length > 0 ? classes.find(c => c["Tên lớp"] === classRows[0].className)?.Khối || "N/A" : "N/A"}</p>
+          <p><strong>Môn học:</strong> ${classRows.map(c => c.subject).join(", ")}</p>
         </div>
 
+        <div style="margin-bottom: 15px;">
+          <p style="margin: 5px 0;"><strong>Tổng học phí:</strong> ${invoice.totalAmount.toLocaleString("vi-VN")} VNĐ</p>
+          ${
+            invoice.discount > 0
+              ? `<p style="margin: 5px 0;"><strong>Nợ học phí:</strong> ${invoice.discount.toLocaleString("vi-VN")} VNĐ</p>`
+              : ""
+          }
+          ${
+            invoice.previousUnpaid && invoice.previousUnpaid.length > 0
+              ? `<p style="margin: 5px 0;"><strong>Miễn giảm học phí:</strong> ${invoice.previousUnpaid.map(inv => `Tháng ${inv.month + 1}: ${inv.finalAmount.toLocaleString("vi-VN")} VNĐ`).join(", ")}</p>`
+              : ""
+          }
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <p style="margin: 5px 0; font-size: 18px;"><strong>Học phí thực:</strong> ${currentMonthAmount.toLocaleString("vi-VN")} VNĐ</p>
+        </div>
+
+        ${
+          invoice.previousUnpaid && invoice.previousUnpaid.length > 0
+            ? `
+        <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+          <p style="margin: 0 0 10px 0; font-weight: bold; color: #856404;">Nợ học phí các tháng trước:</p>
+          ${invoice.previousUnpaid
+            .map(
+              (unpaid) => `
+            <p style="margin: 5px 0; color: #856404;">
+              • Tháng ${unpaid.month + 1}/${unpaid.year}: ${unpaid.finalAmount.toLocaleString("vi-VN")} đ
+            </p>
+          `
+            )
+            .join("")}
+          <p style="margin: 10px 0 0 0; font-weight: bold; color: #856404;">
+            Tổng nợ: ${invoice.previousUnpaid.reduce((sum, inv) => sum + inv.finalAmount, 0).toLocaleString("vi-VN")} đ
+          </p>
+        </div>
+        `
+            : ""
+        }
+
         <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-          <thead>
-            <tr style="background: #36797f; color: white;">
-              <th style="border: 1px solid #ddd; padding: 8px;">STT</th>
-              <th style="border: 1px solid #ddd; padding: 8px;">Lớp</th>
-              <th style="border: 1px solid #ddd; padding: 8px;">Môn học</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Số buổi</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Giá/buổi</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Tổng tiền</th>
-            </tr>
-          </thead>
           <tbody>
-            ${classRows
-              .map(
-                (classData, i) => `
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${i + 1}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${classData.className}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${classData.subject}</td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${classData.sessionCount}</td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${classData.pricePerSession.toLocaleString("vi-VN")} đ</td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${classData.totalPrice.toLocaleString("vi-VN")} đ</td>
-              </tr>
-            `
-              )
-              .join("")}
             <tr style="background: #f5f5f5; font-weight: bold;">
-              <td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: right;">Tổng học phí:</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">Tổng học phí tháng ${invoice.month + 1}</td>
               <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${invoice.totalAmount.toLocaleString("vi-VN")} đ</td>
             </tr>
             ${
               invoice.discount > 0
                 ? `
             <tr style="background: #fff; color: #f5222d;">
-              <td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>Miễn giảm:</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Miễn giảm học phí:</strong></td>
               <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">-${invoice.discount.toLocaleString("vi-VN")} đ</td>
             </tr>
             `
                 : ""
             }
+            ${
+              invoice.previousUnpaid && invoice.previousUnpaid.length > 0
+                ? invoice.previousUnpaid
+                    .map(
+                      (unpaid) => `
+            <tr style="background: #fff3cd;">
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">Nợ học phí tháng ${unpaid.month + 1}/${unpaid.year}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${unpaid.finalAmount.toLocaleString("vi-VN")} đ</td>
+            </tr>
+            `
+                    )
+                    .join("")
+                : ""
+            }
             <tr style="background: #36797f; color: white; font-size: 16px;">
-              <td colspan="5" style="border: 1px solid #ddd; padding: 12px; text-align: right;"><strong>Thành tiền:</strong></td>
+              <td style="border: 1px solid #ddd; padding: 12px; text-align: left;"><strong>Học phí thực:</strong></td>
               <td style="border: 1px solid #ddd; padding: 12px; text-align: right; font-weight: bold;">${invoice.finalAmount.toLocaleString("vi-VN")} đ</td>
             </tr>
           </tbody>
         </table>
 
+        <div style="margin-top: 20px;">
+          <p style="margin: 5px 0;"><strong>Ghi chú:</strong> Phụ huynh vui lòng đóng học phí qua:</p>
+          <p style="margin: 5px 0;"><strong>STK: 4319888</strong></p>
+          <p style="margin: 5px 0;">Hoặc đóng tiền mặt (để phòng bị ghi rõ tiền đóng học phí Tháng ${invoice.month + 1} và họ tên học sinh)</p>
+        </div>
+
         <div style="margin-top: 30px; text-align: center; display: flex; flex-direction: column; align-items: center;">
-          <p style="margin-bottom: 15px; font-size: 16px; font-weight: bold;">Quét mã QR để thanh toán</p>
+          <p style="margin-bottom: 15px; font-size: 16px; font-weight: bold;">Quét mã để chuyển tiền đến</p>
+          <p style="margin-bottom: 10px; font-weight: bold;">NGUYEN THI HOA</p>
+          <p style="margin-bottom: 10px;">4319888</p>
           <img
             src="${generateVietQR(invoice.finalAmount.toString(), invoice.studentName, (invoice.month + 1).toString())}"
             alt="VietQR"
             style="width: 200px; height: 200px; border: 1px solid #ddd; padding: 10px; border-radius: 8px;"
           />
-          <p style="margin-top: 10px; font-size: 14px; color: #666;">
-            Ngân hàng: VPBank - STK: 4319888<br/>
-            Người nhận: NGUYEN THI HOA
-          </p>
+          <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+            <span style="font-weight: bold;">VPBank</span>
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" alt="VPBank" style="height: 20px;" />
+            <span>napas 24/7</span>
+            <span>VIETOR</span>
+          </div>
         </div>
-
-        <p style="margin-top: 20px; text-align: center; color: #666; font-size: 12px;">
-          Ngày xuất: ${new Date().toLocaleDateString("vi-VN")}
-        </p>
         </div>
       </div>
     `;
@@ -1429,7 +1711,7 @@ const InvoicePage = () => {
       record.sessions.forEach((session) => {
         const className = session["Tên lớp"] || "";
         const classCode = session["Mã lớp"] || "";
-        
+
         // Find class info using Class ID from session
         const classId = session["Class ID"];
         const classInfo = classes.find((c) => c.id === classId);
@@ -1549,6 +1831,11 @@ const InvoicePage = () => {
   const [previewImage, setPreviewImage] = useState<string>("");
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  // State for drawer
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<StudentInvoice | null>(null);
+  const [selectedSalary, setSelectedSalary] = useState<TeacherSalary | null>(null);
+
   // Convert file to base64
   const getBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -1565,12 +1852,12 @@ const InvoicePage = () => {
       const base64 = await getBase64(file);
       const invoiceRef = ref(database, `datasheet/Phiếu_thu_học_phí/${invoiceId}`);
       const currentData = studentInvoiceStatus[invoiceId] || {};
-      
+
       await update(invoiceRef, {
         ...currentData,
         invoiceImage: base64,
       });
-      
+
       message.success("Đã tải ảnh hóa đơn lên");
       return false; // Prevent default upload behavior
     } catch (error) {
@@ -1586,12 +1873,12 @@ const InvoicePage = () => {
       const base64 = await getBase64(file);
       const salaryRef = ref(database, `datasheet/Phiếu_lương_giáo_viên/${salaryId}`);
       const currentData = teacherSalaryStatus[salaryId] || {};
-      
+
       await update(salaryRef, {
         ...currentData,
         invoiceImage: base64,
       });
-      
+
       message.success("Đã tải ảnh phiếu lương lên");
       return false; // Prevent default upload behavior
     } catch (error) {
@@ -1662,8 +1949,8 @@ const InvoicePage = () => {
         align: "center" as const,
         render: (_: any, record: StudentInvoice) => {
           const invoiceData = studentInvoiceStatus[record.id];
-          const hasImage = invoiceData && typeof invoiceData === "object" && invoiceData.invoiceImage;
-          
+          const hasImage = invoiceData && typeof invoiceData === "object" && "invoiceImage" in invoiceData && invoiceData.invoiceImage;
+
           return (
             <Space direction="vertical" size="small">
               {hasImage ? (
@@ -1671,8 +1958,10 @@ const InvoicePage = () => {
                   size="small"
                   icon={<EyeOutlined />}
                   onClick={() => {
-                    setPreviewImage(invoiceData.invoiceImage!);
-                    setPreviewOpen(true);
+                    if (typeof invoiceData === "object" && "invoiceImage" in invoiceData) {
+                      setPreviewImage(invoiceData.invoiceImage as string);
+                      setPreviewOpen(true);
+                    }
                   }}
                 >
                   Xem
@@ -1962,8 +2251,8 @@ const InvoicePage = () => {
       align: "center" as const,
       render: (_: any, record: TeacherSalary) => {
         const salaryData = teacherSalaryStatus[record.id];
-        const hasImage = salaryData && typeof salaryData === "object" && salaryData.invoiceImage;
-        
+        const hasImage = salaryData && typeof salaryData === "object" && "invoiceImage" in salaryData && salaryData.invoiceImage;
+
         return (
           <Space direction="vertical" size="small">
             {hasImage ? (
@@ -1971,8 +2260,10 @@ const InvoicePage = () => {
                 size="small"
                 icon={<EyeOutlined />}
                 onClick={() => {
-                  setPreviewImage(salaryData.invoiceImage!);
-                  setPreviewOpen(true);
+                  if (typeof salaryData === "object" && "invoiceImage" in salaryData) {
+                    setPreviewImage(salaryData.invoiceImage as string);
+                    setPreviewOpen(true);
+                  }
                 }}
               >
                 Xem
@@ -2260,7 +2551,7 @@ const InvoicePage = () => {
           },
         ]}
       />
-      
+
       {/* Image Preview Modal */}
       <Modal
         open={previewOpen}
@@ -2269,12 +2560,39 @@ const InvoicePage = () => {
         onCancel={() => setPreviewOpen(false)}
         width={800}
       >
-        <Image
-          alt="Invoice"
-          style={{ width: "100%" }}
-          src={previewImage}
-        />
+        <Image alt="Invoice" style={{ width: "100%" }} src={previewImage} />
       </Modal>
+
+      {/* Invoice Drawer */}
+      <Drawer
+        title={null}
+        placement="right"
+        width="80%"
+        onClose={() => {
+          setDrawerVisible(false);
+          setSelectedInvoice(null);
+          setSelectedSalary(null);
+        }}
+        open={drawerVisible}
+        styles={{
+          body: { padding: 0 },
+        }}
+        extra={
+          <Space>
+            <Button icon={<PrinterOutlined />} onClick={handlePrint} type="primary">
+              In phiếu
+            </Button>
+          </Space>
+        }
+      >
+        {selectedInvoice && renderStudentInvoiceContent(selectedInvoice)}
+        {selectedSalary && (
+          <div
+            id="invoice-print-content"
+            dangerouslySetInnerHTML={{ __html: generateTeacherSalaryHTML(selectedSalary) }}
+          />
+        )}
+      </Drawer>
     </WrapperContent>
   );
 };
