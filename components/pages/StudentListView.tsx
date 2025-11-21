@@ -1633,45 +1633,12 @@ const StudentListView: React.FC = () => {
                 key: "email",
               },
               {
-                title: "Số giờ học",
-                dataIndex: "hours",
-                key: "hours",
-                align: "center",
-                render: (text) => (
-                  <Tag color="blue" style={{ fontWeight: "bold" }}>
-                    {text}
-                  </Tag>
-                ),
-              },
-              {
-                title: "Số giờ gia hạn",
-                dataIndex: "hoursExtended",
-                key: "hoursExtended",
-                align: "center",
-                render: (text) => (
-                  <Tag color="orange" style={{ fontWeight: "bold" }}>
-                    {text}
-                  </Tag>
-                ),
-              },
-              {
-                title: "Số giờ còn lại",
-                dataIndex: "hoursRemaining",
-                key: "hoursRemaining",
-                align: "center",
-                render: (text) => (
-                  <Tag color="green" style={{ fontWeight: "bold" }}>
-                    {text}
-                  </Tag>
-                ),
-              },
-              {
                 title: "Buổi học",
                 dataIndex: "sessions",
                 key: "sessions",
                 align: "center",
                 render: (sessions) => (
-                  <Tag color="purple">{sessions} sessions</Tag>
+                  <Tag color="purple">{sessions} buổi</Tag>
                 ),
               },
               {

@@ -90,6 +90,7 @@ const ClassFormModal = ({
         endDate: editingClass["Ngày kết thúc"]
           ? dayjs(editingClass["Ngày kết thúc"])
           : null,
+        classroom: editingClass["Phòng học"],
         status: editingClass["Trạng thái"],
         notes: editingClass["Ghi chú"],
         schedules: schedules || [],
@@ -133,6 +134,7 @@ const ClassFormModal = ({
         "Ngày kết thúc": values.endDate
           ? values.endDate.format("YYYY-MM-DD")
           : "",
+        "Phòng học": values.classroom || "",
         "Ghi chú": values.notes || "",
         "Trạng thái": values.status,
         "Ngày tạo": editingClass?.["Ngày tạo"] || new Date().toISOString(),
@@ -263,6 +265,13 @@ const ClassFormModal = ({
             />
           </Form.Item>
         </Space>
+
+        <Form.Item
+          name="classroom"
+          label="Phòng học"
+        >
+          <Input placeholder="VD: Phòng 101, Tầng 2" />
+        </Form.Item>
 
         <Form.Item label="Lịch học trong tuần">
           <Form.List name="schedules">

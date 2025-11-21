@@ -10,6 +10,7 @@ import {
   Popconfirm,
   message,
   Tag,
+  Input,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { ref, onValue, push, update, remove, set } from "firebase/database";
@@ -24,12 +25,30 @@ interface Course {
   Giá: number;
   "Lương GV Part-time": number;
   "Lương GV Full-time": number;
+  "Lịch học"?: string;
+  "Giáo viên phụ trách"?: string;
+  "Teacher ID"?: string;
   "Ngày tạo": string;
   "Ngày cập nhật"?: string;
 }
 
+interface Teacher {
+  id: string;
+  "Họ và tên": string;
+  "Mã giáo viên": string;
+}
+
+interface Student {
+  id: string;
+  "Họ và tên": string;
+  "Khối": number;
+  "Môn học đăng ký"?: string[];
+}
+
 const CourseManagement = () => {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -69,6 +88,51 @@ const CourseManagement = () => {
     return () => unsubscribe();
   }, []);
 
+  // Fetch teachers from Firebase
+  useEffect(() => {
+    const teachersRef = ref(database, "datasheet/Giáo_viên");
+    const unsubscribe = onValue(teachersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const teacherList = Object.entries(data).map(([id, value]) => ({
+          id,
+          ...(value as Omit<Teacher, "id">),
+        }));
+        setTeachers(teacherList);
+      } else {
+        setTeachers([]);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch students from Firebase
+  useEffect(() => {
+    const studentsRef = ref(database, "datasheet/Học_sinh");
+    const unsubscribe = onValue(studentsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const studentList = Object.entries(data).map(([id, value]) => ({
+          id,
+          ...(value as Omit<Student, "id">),
+        }));
+        setStudents(studentList);
+      } else {
+        setStudents([]);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Calculate student count for each course
+  const getStudentCount = (course: Course) => {
+    return students.filter((student) => {
+      const matchGrade = student["Khối"] === course["Khối"];
+      const matchSubject = student["Môn học đăng ký"]?.includes(course["Môn học"]);
+      return matchGrade && matchSubject;
+    }).length;
+  };
+
   const handleAdd = () => {
     setEditingCourse(null);
     form.resetFields();
@@ -83,6 +147,8 @@ const CourseManagement = () => {
       Giá: record["Giá"],
       "Lương GV Part-time": record["Lương GV Part-time"],
       "Lương GV Full-time": record["Lương GV Full-time"],
+      "Lịch học": record["Lịch học"],
+      "Teacher ID": record["Teacher ID"],
     });
     setIsModalOpen(true);
   };
@@ -122,6 +188,10 @@ const CourseManagement = () => {
         return;
       }
 
+      const selectedTeacher = values["Teacher ID"]
+        ? teachers.find((t) => t.id === values["Teacher ID"])
+        : null;
+
       if (editingCourse) {
         // Update existing course
         const courseRef = ref(
@@ -134,6 +204,9 @@ const CourseManagement = () => {
           Giá: values["Giá"],
           "Lương GV Part-time": values["Lương GV Part-time"],
           "Lương GV Full-time": values["Lương GV Full-time"],
+          "Lịch học": values["Lịch học"] || "",
+          "Giáo viên phụ trách": selectedTeacher?.["Họ và tên"] || "",
+          "Teacher ID": values["Teacher ID"] || "",
           "Ngày cập nhật": timestamp,
         });
         message.success("Cập nhật khóa học thành công");
@@ -147,6 +220,9 @@ const CourseManagement = () => {
           Giá: values["Giá"],
           "Lương GV Part-time": values["Lương GV Part-time"],
           "Lương GV Full-time": values["Lương GV Full-time"],
+          "Lịch học": values["Lịch học"] || "",
+          "Giáo viên phụ trách": selectedTeacher?.["Họ và tên"] || "",
+          "Teacher ID": values["Teacher ID"] || "",
           "Ngày tạo": timestamp,
         };
         console.log("➕ Adding new course:", courseData);
@@ -210,7 +286,7 @@ const CourseManagement = () => {
       ),
     },
     {
-      title: "Lương GV PT/buổi",
+      title: "Lương giáo viên",
       dataIndex: "Lương GV Part-time",
       key: "salaryPartTime",
       width: 150,
@@ -221,7 +297,7 @@ const CourseManagement = () => {
       ),
     },
     {
-      title: "Lương GV FT/buổi",
+      title: "Lương trợ giảng",
       dataIndex: "Lương GV Full-time",
       key: "salaryFullTime",
       width: 150,
@@ -232,19 +308,27 @@ const CourseManagement = () => {
       ),
     },
     {
-      title: "Ngày tạo",
-      dataIndex: "Ngày tạo",
-      key: "createdAt",
-      width: 180,
-      render: (date: string) => new Date(date).toLocaleString("vi-VN"),
+      title: "Lịch học",
+      dataIndex: "Lịch học",
+      key: "schedule",
+      width: 200,
+      render: (schedule?: string) => schedule || "-",
     },
     {
-      title: "Ngày cập nhật",
-      dataIndex: "Ngày cập nhật",
-      key: "updatedAt",
+      title: "Giáo viên phụ trách",
+      dataIndex: "Giáo viên phụ trách",
+      key: "teacher",
       width: 180,
-      render: (date?: string) =>
-        date ? new Date(date).toLocaleString("vi-VN") : "-",
+      render: (teacher?: string) => teacher || "-",
+    },
+    {
+      title: "Số học sinh",
+      key: "studentCount",
+      width: 120,
+      align: "center" as const,
+      render: (_: any, record: Course) => (
+        <Tag color="purple">{getStudentCount(record)} học sinh</Tag>
+      ),
     },
     {
       title: "Thao tác",
@@ -423,6 +507,36 @@ const CourseManagement = () => {
               }
               min={0}
               step={10000}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Lịch học"
+            name="Lịch học"
+          >
+            <Input.TextArea
+              placeholder="VD: Thứ 2, 4, 6 - 18:00-20:00"
+              rows={3}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Giáo viên phụ trách"
+            name="Teacher ID"
+          >
+            <Select
+              placeholder="Chọn giáo viên"
+              showSearch
+              allowClear
+              filterOption={(input, option) =>
+                (option?.label ?? "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              options={teachers.map((t) => ({
+                value: t.id,
+                label: `${t["Họ và tên"]} (${t["Mã giáo viên"]})`,
+              }))}
             />
           </Form.Item>
         </Form>

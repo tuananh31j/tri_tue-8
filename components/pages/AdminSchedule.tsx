@@ -39,7 +39,7 @@ interface ScheduleEvent {
   date: string;
 }
 
-type FilterMode = "class" | "subject" | "teacher";
+type FilterMode = "class" | "subject" | "teacher" | "location";
 
 const TIME_SLOTS = [
   { label: "Sáng", start: "06:00", end: "12:00" },
@@ -100,6 +100,23 @@ const AdminSchedule = () => {
           id: t.id,
           label: t.name,
         }));
+      case "location":
+        // Get unique locations from both "Phòng học" and schedule "Địa điểm"
+        const locations = new Set<string>();
+        activeClasses.forEach((c) => {
+          if (c["Phòng học"] && c["Phòng học"].trim() !== "") {
+            locations.add(c["Phòng học"]);
+          }
+          c["Lịch học"]?.forEach((schedule) => {
+            if (schedule["Địa điểm"] && schedule["Địa điểm"].trim() !== "") {
+              locations.add(schedule["Địa điểm"]);
+            }
+          });
+        });
+        return Array.from(locations).sort().map((location) => ({
+          id: location,
+          label: location,
+        }));
       default:
         return [];
     }
@@ -118,6 +135,14 @@ const AdminSchedule = () => {
         return selectedItems.has(c["Môn học"]);
       case "teacher":
         return selectedItems.has(c["Teacher ID"]);
+      case "location":
+        // Check if class has matching location in "Phòng học" or any schedule "Địa điểm"
+        if (c["Phòng học"] && selectedItems.has(c["Phòng học"])) {
+          return true;
+        }
+        return c["Lịch học"]?.some((schedule) => 
+          schedule["Địa điểm"] && selectedItems.has(schedule["Địa điểm"])
+        ) || false;
       default:
         return true;
     }
@@ -235,7 +260,8 @@ const AdminSchedule = () => {
                 options={[
                   { value: "teacher", label: "🧑‍🏫 Theo Giáo viên" },
                   { value: "class", label: "📚 Theo Khối" },
-                  { value: "subject", label: "� Theo Môn nhọc" },
+                  { value: "subject", label: "📖 Theo Môn học" },
+                  { value: "location", label: "📍 Theo Địa điểm" },
                 ]}
               />
             </div>
@@ -485,12 +511,12 @@ const AdminSchedule = () => {
                                     <UserOutlined />{" "}
                                     {event.class["Giáo viên chủ nhiệm"]}
                                   </div>
-                                  {event.schedule["Địa điểm"] && (
+                                  {(event.class["Phòng học"] || event.schedule["Địa điểm"]) && (
                                     <div
-                                      style={{ fontSize: "11px", color: "#999" }}
+                                      style={{ fontSize: "11px", color: "#999", marginBottom: "4px" }}
                                     >
                                       <EnvironmentOutlined />{" "}
-                                      {event.schedule["Địa điểm"]}
+                                      {event.class["Phòng học"] || event.schedule["Địa điểm"]}
                                     </div>
                                   )}
                                   <div style={{ marginTop: "4px" }}>

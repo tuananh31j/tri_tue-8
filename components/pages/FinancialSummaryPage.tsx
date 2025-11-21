@@ -19,6 +19,8 @@ import {
   message,
   Tag,
   Popconfirm,
+  Upload,
+  Image,
 } from "antd";
 import {
   PlusOutlined,
@@ -29,7 +31,10 @@ import {
   FallOutlined,
   DownloadOutlined,
   BarChartOutlined,
+  FileImageOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
+import type { UploadFile } from "antd";
 import React, { useState, useEffect, useMemo } from "react";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
@@ -61,6 +66,7 @@ interface Expense {
   year: number;
   createdAt: string;
   createdBy?: string;
+  invoiceImage?: string; // Base64 image data
 }
 
 // Colors for charts
@@ -78,9 +84,15 @@ const FinancialSummaryPage = () => {
   const [isExpenseModalVisible, setIsExpenseModalVisible] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [form] = Form.useForm();
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [previewImage, setPreviewImage] = useState<string>("");
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Expense categories
   const expenseCategories = [
+    "Lương giáo viên",
+    "Lương nhân viên",
+    "Thưởng",
     "Tiền thuê mặt bằng",
     "Tiền điện",
     "Tiền nước",
@@ -229,15 +241,33 @@ const FinancialSummaryPage = () => {
     }));
   }, [filteredExpenses]);
 
+  // Convert file to base64
+  const getBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   // Handle add/edit expense
   const handleExpenseSubmit = async (values: any) => {
     try {
+      let invoiceImageData = editingExpense?.invoiceImage || "";
+      
+      // If there's a new image uploaded
+      if (fileList.length > 0 && fileList[0].originFileObj) {
+        invoiceImageData = await getBase64(fileList[0].originFileObj as File);
+      }
+
       const expenseData = {
         category: values.category,
         description: values.description || "",
         amount: values.amount,
         month: selectedMonth,
         year: selectedYear,
+        invoiceImage: invoiceImageData,
         createdAt: editingExpense?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -259,6 +289,7 @@ const FinancialSummaryPage = () => {
 
       setIsExpenseModalVisible(false);
       setEditingExpense(null);
+      setFileList([]);
       form.resetFields();
     } catch (error) {
       console.error("Error saving expense:", error);
@@ -290,11 +321,35 @@ const FinancialSummaryPage = () => {
         description: expense.description,
         amount: expense.amount,
       });
+      
+      // Load existing image if available
+      if (expense.invoiceImage) {
+        setFileList([
+          {
+            uid: "-1",
+            name: "invoice.png",
+            status: "done",
+            url: expense.invoiceImage,
+          },
+        ]);
+      } else {
+        setFileList([]);
+      }
     } else {
       setEditingExpense(null);
+      setFileList([]);
       form.resetFields();
     }
     setIsExpenseModalVisible(true);
+  };
+
+  // Handle image preview
+  const handlePreview = async (file: UploadFile) => {
+    if (!file.url && !file.preview) {
+      file.preview = await getBase64(file.originFileObj as File);
+    }
+    setPreviewImage(file.url || (file.preview as string));
+    setPreviewOpen(true);
   };
 
   // Expense table columns
@@ -322,6 +377,28 @@ const FinancialSummaryPage = () => {
           {amount.toLocaleString("vi-VN")} đ
         </Text>
       ),
+    },
+    {
+      title: "Hóa đơn",
+      dataIndex: "invoiceImage",
+      key: "invoiceImage",
+      width: 100,
+      align: "center" as const,
+      render: (image?: string) =>
+        image ? (
+          <Button
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => {
+              setPreviewImage(image);
+              setPreviewOpen(true);
+            }}
+          >
+            Xem
+          </Button>
+        ) : (
+          <Text type="secondary">-</Text>
+        ),
     },
     {
       title: "Thao tác",
@@ -866,12 +943,35 @@ const FinancialSummaryPage = () => {
             />
           </Form.Item>
 
+          <Form.Item label="Ảnh hóa đơn">
+            <Upload
+              listType="picture-card"
+              fileList={fileList}
+              onPreview={handlePreview}
+              onChange={({ fileList: newFileList }) => setFileList(newFileList)}
+              beforeUpload={() => false}
+              maxCount={1}
+              accept="image/*"
+            >
+              {fileList.length === 0 && (
+                <div>
+                  <FileImageOutlined />
+                  <div style={{ marginTop: 8 }}>Tải ảnh lên</div>
+                </div>
+              )}
+            </Upload>
+            <Text type="secondary" style={{ fontSize: "12px" }}>
+              Tải lên ảnh hóa đơn/chứng từ (không bắt buộc)
+            </Text>
+          </Form.Item>
+
           <Form.Item>
             <Space style={{ width: "100%", justifyContent: "flex-end" }}>
               <Button
                 onClick={() => {
                   setIsExpenseModalVisible(false);
                   setEditingExpense(null);
+                  setFileList([]);
                   form.resetFields();
                 }}
               >
@@ -883,6 +983,21 @@ const FinancialSummaryPage = () => {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal
+        open={previewOpen}
+        title="Xem ảnh hóa đơn"
+        footer={null}
+        onCancel={() => setPreviewOpen(false)}
+        width={800}
+      >
+        <Image
+          alt="Invoice"
+          style={{ width: "100%" }}
+          src={previewImage}
+        />
       </Modal>
     </WrapperContent>
   );

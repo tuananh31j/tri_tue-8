@@ -42,7 +42,7 @@ interface ScheduleEvent {
   durationMinutes: number;
 }
 
-type ViewMode = "all" | "subject";
+type ViewMode = "all" | "subject" | "location";
 
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6);
 
@@ -56,6 +56,7 @@ const TeacherSchedule = () => {
   );
   const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [selectedSubjects, setSelectedSubjects] = useState<Set<string>>(new Set());
+  const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
 
   const teacherId =
     teacherData?.id || userProfile?.teacherId || userProfile?.uid || "";
@@ -92,10 +93,46 @@ const TeacherSchedule = () => {
 
   const subjects = Array.from(new Set(myClasses.map((c) => c["Môn học"]))).sort();
 
-  const filteredClasses =
-    viewMode === "all" || selectedSubjects.size === 0
-      ? myClasses
-      : myClasses.filter((c) => selectedSubjects.has(c["Môn học"]));
+  // Get unique locations
+  const locations = (() => {
+    const locationSet = new Set<string>();
+    myClasses.forEach((c) => {
+      if (c["Phòng học"] && c["Phòng học"].trim() !== "") {
+        locationSet.add(c["Phòng học"]);
+      }
+      c["Lịch học"]?.forEach((schedule) => {
+        if (schedule["Địa điểm"] && schedule["Địa điểm"].trim() !== "") {
+          locationSet.add(schedule["Địa điểm"]);
+        }
+      });
+    });
+    return Array.from(locationSet).sort();
+  })();
+
+  const filteredClasses = (() => {
+    if (viewMode === "all") return myClasses;
+    
+    if (viewMode === "subject") {
+      return selectedSubjects.size === 0
+        ? myClasses
+        : myClasses.filter((c) => selectedSubjects.has(c["Môn học"]));
+    }
+    
+    if (viewMode === "location") {
+      return selectedLocations.size === 0
+        ? myClasses
+        : myClasses.filter((c) => {
+            if (c["Phòng học"] && selectedLocations.has(c["Phòng học"])) {
+              return true;
+            }
+            return c["Lịch học"]?.some((schedule) => 
+              schedule["Địa điểm"] && selectedLocations.has(schedule["Địa điểm"])
+            ) || false;
+          });
+    }
+    
+    return myClasses;
+  })();
 
   const timeToMinutes = (time: string): number => {
     const [hours, minutes] = time.split(":").map(Number);
@@ -206,11 +243,29 @@ const TeacherSchedule = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedSubjects.size === subjects.length) {
-      setSelectedSubjects(new Set());
-    } else {
-      setSelectedSubjects(new Set(subjects));
+    if (viewMode === "subject") {
+      if (selectedSubjects.size === subjects.length) {
+        setSelectedSubjects(new Set());
+      } else {
+        setSelectedSubjects(new Set(subjects));
+      }
+    } else if (viewMode === "location") {
+      if (selectedLocations.size === locations.length) {
+        setSelectedLocations(new Set());
+      } else {
+        setSelectedLocations(new Set(locations));
+      }
     }
+  };
+
+  const handleLocationToggle = (location: string) => {
+    const newSelected = new Set(selectedLocations);
+    if (newSelected.has(location)) {
+      newSelected.delete(location);
+    } else {
+      newSelected.add(location);
+    }
+    setSelectedLocations(newSelected);
   };
 
   if (myClasses.length === 0)
@@ -254,10 +309,12 @@ const TeacherSchedule = () => {
                 onChange={(value) => {
                   setViewMode(value);
                   setSelectedSubjects(new Set());
+                  setSelectedLocations(new Set());
                 }}
                 options={[
                   { value: "all", label: "📅 Lịch tổng hợp" },
                   { value: "subject", label: "📚 Lịch phân môn" },
+                  { value: "location", label: "📍 Lịch theo địa điểm" },
                 ]}
               />
             </div>
@@ -301,6 +358,50 @@ const TeacherSchedule = () => {
             {viewMode === "subject" && subjects.length === 0 && (
               <Empty
                 description="Không có môn học"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ margin: "20px 0" }}
+              />
+            )}
+
+            {/* Location Filter */}
+            {viewMode === "location" && locations.length > 0 && (
+              <>
+                <div style={{ marginBottom: "8px", paddingBottom: "8px", borderTop: "1px solid #f0f0f0", paddingTop: "8px" }}>
+                  <Checkbox
+                    checked={selectedLocations.size === locations.length}
+                    indeterminate={selectedLocations.size > 0 && selectedLocations.size < locations.length}
+                    onChange={handleSelectAll}
+                  >
+                    <strong>
+                      {selectedLocations.size === 0
+                        ? "Chọn tất cả"
+                        : `Đã chọn ${selectedLocations.size}/${locations.length}`}
+                    </strong>
+                  </Checkbox>
+                </div>
+
+                <div style={{ maxHeight: "350px", overflowY: "auto" }}>
+                  <Space direction="vertical" style={{ width: "100%" }} size="small">
+                    {locations.map((location) => (
+                      <Checkbox
+                        key={location}
+                        checked={selectedLocations.has(location)}
+                        onChange={() => handleLocationToggle(location)}
+                        style={{ width: "100%" }}
+                      >
+                        <span style={{ fontSize: "13px" }}>
+                          {location}
+                        </span>
+                      </Checkbox>
+                    ))}
+                  </Space>
+                </div>
+              </>
+            )}
+
+            {viewMode === "location" && locations.length === 0 && (
+              <Empty
+                description="Không có địa điểm"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 style={{ margin: "20px 0" }}
               />
@@ -501,7 +602,7 @@ const TeacherSchedule = () => {
                           >
                             {event.schedule["Giờ bắt đầu"]} - {event.schedule["Giờ kết thúc"]}
                           </div>
-                          {event.schedule["Địa điểm"] && (
+                          {(event.class["Phòng học"] || event.schedule["Địa điểm"]) && (
                             <div
                               style={{
                                 fontSize: "9px",
@@ -509,9 +610,10 @@ const TeacherSchedule = () => {
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
+                                marginBottom: "2px",
                               }}
                             >
-                              <EnvironmentOutlined /> {event.schedule["Địa điểm"]}
+                              <EnvironmentOutlined /> {event.class["Phòng học"] || event.schedule["Địa điểm"]}
                             </div>
                           )}
                           <div

@@ -18,13 +18,17 @@ import {
   Row,
   Col,
   message,
+  Upload,
+  Image,
 } from "antd";
+import type { UploadFile } from "antd";
 import {
   SearchOutlined,
   EyeOutlined,
   CheckCircleOutlined,
   DownloadOutlined,
   PrinterOutlined,
+  FileImageOutlined,
 } from "@ant-design/icons";
 import React, { useState, useEffect, useMemo } from "react";
 import dayjs from "dayjs";
@@ -93,6 +97,7 @@ interface StudentInvoice {
   finalAmount: number;
   status: "paid" | "unpaid";
   sessions: AttendanceSession[];
+  invoiceImage?: string; // Base64 image data
 }
 
 interface TeacherSalary {
@@ -110,6 +115,7 @@ interface TeacherSalary {
   totalAllowance: number;
   status: "paid" | "unpaid";
   sessions: AttendanceSession[];
+  invoiceImage?: string; // Base64 image data
 }
 
 const InvoicePage = () => {
@@ -1538,6 +1544,63 @@ const InvoicePage = () => {
     );
   };
 
+  // State for image upload
+  const [uploadingInvoiceId, setUploadingInvoiceId] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string>("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  // Convert file to base64
+  const getBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  // Handle image upload for student invoice
+  const handleStudentImageUpload = async (file: File, invoiceId: string) => {
+    try {
+      const base64 = await getBase64(file);
+      const invoiceRef = ref(database, `datasheet/Phiếu_thu_học_phí/${invoiceId}`);
+      const currentData = studentInvoiceStatus[invoiceId] || {};
+      
+      await update(invoiceRef, {
+        ...currentData,
+        invoiceImage: base64,
+      });
+      
+      message.success("Đã tải ảnh hóa đơn lên");
+      return false; // Prevent default upload behavior
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      message.error("Lỗi khi tải ảnh lên");
+      return false;
+    }
+  };
+
+  // Handle image upload for teacher salary
+  const handleTeacherImageUpload = async (file: File, salaryId: string) => {
+    try {
+      const base64 = await getBase64(file);
+      const salaryRef = ref(database, `datasheet/Phiếu_lương_giáo_viên/${salaryId}`);
+      const currentData = teacherSalaryStatus[salaryId] || {};
+      
+      await update(salaryRef, {
+        ...currentData,
+        invoiceImage: base64,
+      });
+      
+      message.success("Đã tải ảnh phiếu lương lên");
+      return false; // Prevent default upload behavior
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      message.error("Lỗi khi tải ảnh lên");
+      return false;
+    }
+  };
+
   // Student invoice columns - Memoized to prevent recreation
   const studentColumns = useMemo(
     () => [
@@ -1593,6 +1656,43 @@ const InvoicePage = () => {
         ),
       },
       {
+        title: "Hóa đơn",
+        key: "invoiceImage",
+        width: 120,
+        align: "center" as const,
+        render: (_: any, record: StudentInvoice) => {
+          const invoiceData = studentInvoiceStatus[record.id];
+          const hasImage = invoiceData && typeof invoiceData === "object" && invoiceData.invoiceImage;
+          
+          return (
+            <Space direction="vertical" size="small">
+              {hasImage ? (
+                <Button
+                  size="small"
+                  icon={<EyeOutlined />}
+                  onClick={() => {
+                    setPreviewImage(invoiceData.invoiceImage!);
+                    setPreviewOpen(true);
+                  }}
+                >
+                  Xem
+                </Button>
+              ) : (
+                <Upload
+                  accept="image/*"
+                  showUploadList={false}
+                  beforeUpload={(file) => handleStudentImageUpload(file, record.id)}
+                >
+                  <Button size="small" icon={<FileImageOutlined />}>
+                    Tải lên
+                  </Button>
+                </Upload>
+              )}
+            </Space>
+          );
+        },
+      },
+      {
         title: "Trạng thái",
         dataIndex: "status",
         key: "status",
@@ -1630,7 +1730,7 @@ const InvoicePage = () => {
         ),
       },
     ],
-    [updateStudentDiscount, viewStudentInvoice, updateStudentInvoiceStatus]
+    [updateStudentDiscount, viewStudentInvoice, updateStudentInvoiceStatus, studentInvoiceStatus]
   );
 
   // Expandable row render for teacher salary details
@@ -1854,6 +1954,43 @@ const InvoicePage = () => {
           đ
         </Text>
       ),
+    },
+    {
+      title: "Hóa đơn",
+      key: "invoiceImage",
+      width: 120,
+      align: "center" as const,
+      render: (_: any, record: TeacherSalary) => {
+        const salaryData = teacherSalaryStatus[record.id];
+        const hasImage = salaryData && typeof salaryData === "object" && salaryData.invoiceImage;
+        
+        return (
+          <Space direction="vertical" size="small">
+            {hasImage ? (
+              <Button
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => {
+                  setPreviewImage(salaryData.invoiceImage!);
+                  setPreviewOpen(true);
+                }}
+              >
+                Xem
+              </Button>
+            ) : (
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={(file) => handleTeacherImageUpload(file, record.id)}
+              >
+                <Button size="small" icon={<FileImageOutlined />}>
+                  Tải lên
+                </Button>
+              </Upload>
+            )}
+          </Space>
+        );
+      },
     },
     {
       title: "Trạng thái",
@@ -2123,6 +2260,21 @@ const InvoicePage = () => {
           },
         ]}
       />
+      
+      {/* Image Preview Modal */}
+      <Modal
+        open={previewOpen}
+        title="Xem ảnh hóa đơn"
+        footer={null}
+        onCancel={() => setPreviewOpen(false)}
+        width={800}
+      >
+        <Image
+          alt="Invoice"
+          style={{ width: "100%" }}
+          src={previewImage}
+        />
+      </Modal>
     </WrapperContent>
   );
 };
