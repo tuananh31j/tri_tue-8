@@ -31,6 +31,7 @@ import {
   DownloadOutlined,
   PrinterOutlined,
   FileImageOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import React, { useState, useEffect, useMemo } from "react";
 import dayjs from "dayjs";
@@ -750,7 +751,7 @@ const InvoicePage = () => {
         status === "paid" ? "Xác nhận thanh toán" : "Hủy xác nhận thanh toán",
       content:
         status === "paid"
-          ? "Bạn có chắc chắn muốn đánh dấu phiếu thu này đã thanh toán?"
+          ? "Bạn có chắc chắn muốn đánh dấu phiếu thu này Đã thu?"
           : "Bạn có chắc chắn muốn hủy trạng thái thanh toán?",
       okText: "Xác nhận",
       cancelText: "Hủy",
@@ -803,8 +804,8 @@ const InvoicePage = () => {
 
           message.success(
             status === "paid"
-              ? "Đã đánh dấu đã thanh toán"
-              : "Đã đánh dấu chưa thanh toán"
+              ? "Đã đánh dấu Đã thu"
+              : "Đã đánh dấu Chưa thu"
           );
         } catch (error) {
           console.error("Error updating student invoice status:", error);
@@ -822,10 +823,10 @@ const InvoicePage = () => {
       const currentStatus =
         typeof currentData === "object" ? currentData.status : currentData;
 
-      // Không cho phép cập nhật nếu đã thanh toán
+      // Không cho phép cập nhật nếu Đã thu
       if (currentStatus === "paid") {
         message.error(
-          "Không thể cập nhật phiếu đã thanh toán. Dữ liệu đã được lưu cố định."
+          "Không thể cập nhật phiếu Đã thu. Dữ liệu đã được lưu cố định."
         );
         return;
       }
@@ -859,7 +860,7 @@ const InvoicePage = () => {
         status === "paid" ? "Xác nhận thanh toán" : "Hủy xác nhận thanh toán",
       content:
         status === "paid"
-          ? "Bạn có chắc chắn muốn đánh dấu phiếu lương này đã thanh toán?"
+          ? "Bạn có chắc chắn muốn đánh dấu phiếu lương này Đã thu?"
           : "Bạn có chắc chắn muốn hủy trạng thái thanh toán?",
       okText: "Xác nhận",
       cancelText: "Hủy",
@@ -933,8 +934,8 @@ const InvoicePage = () => {
 
           message.success(
             status === "paid"
-              ? "Đã đánh dấu đã thanh toán"
-              : "Đã đánh dấu chưa thanh toán"
+              ? "Đã đánh dấu Đã thu"
+              : "Đã đánh dấu Chưa thu"
           );
         } catch (error) {
           console.error("❌ Error updating teacher salary status:", error);
@@ -1835,6 +1836,11 @@ const InvoicePage = () => {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<StudentInvoice | null>(null);
   const [selectedSalary, setSelectedSalary] = useState<TeacherSalary | null>(null);
+  
+  // State for edit modal
+  const [editInvoiceModalOpen, setEditInvoiceModalOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<StudentInvoice | null>(null);
+  const [editDiscount, setEditDiscount] = useState(0);
 
   // Convert file to base64
   const getBase64 = (file: File): Promise<string> => {
@@ -1988,14 +1994,14 @@ const InvoicePage = () => {
         width: 120,
         render: (status: "paid" | "unpaid") => (
           <Tag color={status === "paid" ? "green" : "red"}>
-            {status === "paid" ? "Đã thanh toán" : "Chưa thanh toán"}
+            {status === "paid" ? "Đã thu" : "Chưa thu"}
           </Tag>
         ),
       },
       {
         title: "Thao tác",
         key: "actions",
-        width: 200,
+        width: 250,
         render: (_: any, record: StudentInvoice) => (
           <Space>
             <Button
@@ -2004,6 +2010,22 @@ const InvoicePage = () => {
               onClick={() => viewStudentInvoice(record)}
             >
               Xem
+            </Button>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => {
+                if (record.status === "paid") {
+                  message.warning("Không thể chỉnh sửa phiếu đã thanh toán");
+                  return;
+                }
+                setEditingInvoice(record);
+                setEditDiscount(record.discount || 0);
+                setEditInvoiceModalOpen(true);
+              }}
+              disabled={record.status === "paid"}
+            >
+              Sửa
             </Button>
             {record.status !== "paid" && (
               <Button
@@ -2019,7 +2041,15 @@ const InvoicePage = () => {
         ),
       },
     ],
-    [updateStudentDiscount, viewStudentInvoice, updateStudentInvoiceStatus, studentInvoiceStatus]
+    [
+      updateStudentDiscount,
+      viewStudentInvoice,
+      updateStudentInvoiceStatus,
+      studentInvoiceStatus,
+      setEditingInvoice,
+      setEditDiscount,
+      setEditInvoiceModalOpen,
+    ]
   );
 
   // Expandable row render for teacher salary details
@@ -2223,16 +2253,16 @@ const InvoicePage = () => {
       width: 80,
       align: "center" as const,
     },
-    {
-      title: "Giờ dạy",
-      key: "hours",
-      width: 100,
-      render: (_: any, record: TeacherSalary) => (
-        <Text>
-          {record.totalHours}h {record.totalMinutes}p
-        </Text>
-      ),
-    },
+    // {
+    //   title: "Giờ dạy",
+    //   key: "hours",
+    //   width: 100,
+    //   render: (_: any, record: TeacherSalary) => (
+    //     <Text>
+    //       {record.totalHours}h {record.totalMinutes}p
+    //     </Text>
+    //   ),
+    // },
     {
       title: "Lương + Phụ cấp",
       key: "totalPay",
@@ -2290,7 +2320,7 @@ const InvoicePage = () => {
       width: 120,
       render: (status: "paid" | "unpaid") => (
         <Tag color={status === "paid" ? "green" : "red"}>
-          {status === "paid" ? "Đã thanh toán" : "Chưa thanh toán"}
+          {status === "paid" ? "Đã thu" : "Chưa thu"}
         </Tag>
       ),
     },
@@ -2353,8 +2383,8 @@ const InvoicePage = () => {
               style={{ width: "100%" }}
             >
               <Option value="all">Tất cả</Option>
-              <Option value="unpaid">Chưa thanh toán</Option>
-              <Option value="paid">Đã thanh toán</Option>
+              <Option value="unpaid">Chưa thu</Option>
+              <Option value="paid">Đã thu</Option>
             </Select>
           </Col>
           <Col xs={24} sm={12} md={12}>
@@ -2384,7 +2414,7 @@ const InvoicePage = () => {
         </Col>
         <Col span={8}>
           <Card>
-            <Text type="secondary">Đã thanh toán</Text>
+            <Text type="secondary">Đã thu</Text>
             <Title level={3} style={{ margin: "10px 0", color: "#52c41a" }}>
               {
                 filteredStudentInvoices.filter((i) => i.status === "paid")
@@ -2466,8 +2496,8 @@ const InvoicePage = () => {
               style={{ width: "100%" }}
             >
               <Option value="all">Tất cả</Option>
-              <Option value="unpaid">Chưa thanh toán</Option>
-              <Option value="paid">Đã thanh toán</Option>
+              <Option value="unpaid">Chưa thu</Option>
+              <Option value="paid">Đã thu</Option>
             </Select>
           </Col>
           <Col xs={24} sm={12} md={6}>
@@ -2497,7 +2527,7 @@ const InvoicePage = () => {
         </Col>
         <Col span={8}>
           <Card>
-            <Text type="secondary">Đã thanh toán</Text>
+            <Text type="secondary">Đã thu</Text>
             <Title level={3} style={{ margin: "10px 0", color: "#52c41a" }}>
               {
                 filteredTeacherSalaries.filter((s) => s.status === "paid")
@@ -2561,6 +2591,72 @@ const InvoicePage = () => {
         width={800}
       >
         <Image alt="Invoice" style={{ width: "100%" }} src={previewImage} />
+      </Modal>
+
+      {/* Edit Invoice Modal */}
+      <Modal
+        title="Chỉnh sửa phiếu thu học phí"
+        open={editInvoiceModalOpen}
+        onCancel={() => {
+          setEditInvoiceModalOpen(false);
+          setEditingInvoice(null);
+          setEditDiscount(0);
+        }}
+        onOk={async () => {
+          if (editingInvoice) {
+            await updateStudentDiscount(editingInvoice.id, editDiscount);
+            setEditInvoiceModalOpen(false);
+            setEditingInvoice(null);
+            setEditDiscount(0);
+          }
+        }}
+        okText="Lưu"
+        cancelText="Hủy"
+      >
+        {editingInvoice && (
+          <Space direction="vertical" style={{ width: "100%" }} size="large">
+            <div>
+              <Text strong>Học sinh: </Text>
+              <Text>{editingInvoice.studentName} ({editingInvoice.studentCode})</Text>
+            </div>
+            <div>
+              <Text strong>Tháng: </Text>
+              <Text>{editingInvoice.month + 1}/{editingInvoice.year}</Text>
+            </div>
+            <div>
+              <Text strong>Số buổi học: </Text>
+              <Text>{editingInvoice.totalSessions} buổi</Text>
+            </div>
+            <div>
+              <Text strong>Tổng tiền: </Text>
+              <Text style={{ color: "#36797f" }}>
+                {editingInvoice.totalAmount.toLocaleString("vi-VN")} đ
+              </Text>
+            </div>
+            <Divider />
+            <div>
+              <Text strong className="block mb-2">Miễn giảm học phí:</Text>
+              <InputNumber
+                style={{ width: "100%" }}
+                value={editDiscount}
+                onChange={(value) => setEditDiscount(value || 0)}
+                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                parser={(value) => Number(value!.replace(/\$\s?|(,*)/g, ""))}
+                addonAfter="đ"
+                min={0}
+                max={editingInvoice.totalAmount}
+                placeholder="Nhập số tiền miễn giảm"
+              />
+            </div>
+            <Divider />
+            <div>
+              <Text strong>Thành tiền: </Text>
+              <Text strong style={{ color: "#1890ff", fontSize: "16px" }}>
+                {Math.max(0, editingInvoice.totalAmount - editDiscount).toLocaleString("vi-VN")} đ
+              </Text>
+            </div>
+          </Space>
+        )}
       </Modal>
 
       {/* Invoice Drawer */}

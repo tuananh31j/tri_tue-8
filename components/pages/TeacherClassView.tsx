@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Card, Table, Tag, Tabs, Descriptions, Empty, Button } from "antd";
-import { UserAddOutlined, HistoryOutlined } from "@ant-design/icons";
+import { Card, Table, Tag, Tabs, Descriptions, Empty, Button, Modal, Space } from "antd";
+import { UserAddOutlined, HistoryOutlined, FileTextOutlined } from "@ant-design/icons";
 import { useClasses } from "../../hooks/useClasses";
 import { useAuth } from "../../contexts/AuthContext";
 import { Class } from "../../types";
@@ -8,6 +8,7 @@ import { ref, onValue } from "firebase/database";
 import { database } from "../../firebase";
 import { useNavigate } from "react-router-dom";
 import AddStudentModal from "../AddStudentModal";
+import ScoreDetailModal from "../ScoreDetailModal";
 import WrapperContent from "@/components/WrapperContent";
 
 interface Student {
@@ -27,6 +28,10 @@ const TeacherClassView = () => {
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [teacherData, setTeacherData] = useState<any>(null);
+  const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [selectedSession, setSelectedSession] = useState<any>(null);
+  const [attendanceSessions, setAttendanceSessions] = useState<any[]>([]);
 
   const teacherId = userProfile?.teacherId || userProfile?.uid || "";
 
@@ -68,6 +73,22 @@ const TeacherClassView = () => {
     return () => unsubscribe();
   }, []);
 
+  // Load attendance sessions
+  useEffect(() => {
+    const sessionsRef = ref(database, "datasheet/Điểm_danh_sessions");
+    const unsubscribe = onValue(sessionsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const sessionsList = Object.entries(data).map(([id, value]) => ({
+          id,
+          ...(value as any),
+        }));
+        setAttendanceSessions(sessionsList);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Use teacherData.id if available, otherwise fallback to teacherId from profile
   const actualTeacherId = teacherData?.id || teacherId;
 
@@ -100,31 +121,70 @@ const TeacherClassView = () => {
     return students.filter((s) => classData["Student IDs"]?.includes(s.id));
   };
 
-  const studentColumns = [
+  const handleOpenScoreModal = (student: Student, classData: Class) => {
+    // Find the most recent session for this class
+    const classSessions = attendanceSessions
+      .filter((session) => session["Class ID"] === classData.id)
+      .sort((a, b) => new Date(b["Ngày"]).getTime() - new Date(a["Ngày"]).getTime());
+    
+    if (classSessions.length > 0) {
+      setSelectedSession(classSessions[0]);
+      setSelectedStudent({ id: student.id, name: student["Họ và tên"] });
+      setIsScoreModalOpen(true);
+    } else {
+      Modal.warning({
+        title: "Chưa có buổi học",
+        content: "Chưa có buổi học nào để thêm điểm. Vui lòng điểm danh buổi học trước.",
+      });
+    }
+  };
+
+  const studentColumns = (classData: Class) => [
     {
       title: "Mã học sinh",
       dataIndex: "Mã học sinh",
       key: "code",
+      width: 120,
     },
     {
       title: "Họ và tên",
       dataIndex: "Họ và tên",
       key: "name",
+      width: 200,
     },
     {
       title: "Ngày sinh",
       dataIndex: "Ngày sinh",
       key: "dob",
+      width: 120,
     },
     {
       title: "Số điện thoại",
       dataIndex: "Số điện thoại",
       key: "phone",
+      width: 130,
     },
     {
       title: "Email",
       dataIndex: "Email",
       key: "email",
+      width: 200,
+    },
+    {
+      title: "Bảng điểm",
+      key: "scores",
+      width: 120,
+      align: "center" as const,
+      render: (_: any, record: Student) => (
+        <Button
+          size="small"
+          type="link"
+          icon={<FileTextOutlined />}
+          onClick={() => handleOpenScoreModal(record, classData)}
+        >
+          Nhập điểm
+        </Button>
+      ),
     },
   ];
 
@@ -223,10 +283,11 @@ const TeacherClassView = () => {
                 }
               >
                 <Table
-                  columns={studentColumns}
+                  columns={studentColumns(classData)}
                   dataSource={getClassStudents(classData)}
                   rowKey="id"
                   pagination={false}
+                  scroll={{ x: 1000 }}
                 />
               </Card>
             </div>
@@ -242,6 +303,21 @@ const TeacherClassView = () => {
         }}
         classData={selectedClass}
       />
+
+      {/* Score Detail Modal */}
+      {selectedStudent && (
+        <ScoreDetailModal
+          visible={isScoreModalOpen}
+          onClose={() => {
+            setIsScoreModalOpen(false);
+            setSelectedSession(null);
+            setSelectedStudent(null);
+          }}
+          session={selectedSession}
+          studentId={selectedStudent.id}
+          studentName={selectedStudent.name}
+        />
+      )}
     </WrapperContent>
   );
 };

@@ -629,10 +629,11 @@ const GradeReportModal: React.FC<{
   students: any[];
   attendanceSessions: any[];
 }> = ({ open, onClose, classData, students, attendanceSessions }) => {
-  if (!classData) return null;
-
+  
   // Calculate grade data for all students in the class
   const gradeData = useMemo(() => {
+    if (!classData) return [];
+    
     const studentIds = classData["Student IDs"] || [];
     
     return studentIds.map((studentId) => {
@@ -706,6 +707,49 @@ const GradeReportModal: React.FC<{
     }).filter(Boolean);
   }, [classData, students, attendanceSessions]);
 
+  // Calculate class statistics
+  const classStats = useMemo(() => {
+    if (gradeData.length === 0) return null;
+
+    const avgAttendance = gradeData.reduce((sum: number, d: any) => sum + d.attendanceRate, 0) / gradeData.length;
+    const avgScore = gradeData.reduce((sum: number, d: any) => sum + d.averageScore, 0) / gradeData.length;
+    const avgHomework = gradeData.reduce((sum: number, d: any) => sum + d.homeworkRate, 0) / gradeData.length;
+    const totalSessions = gradeData[0]?.totalSessions || 0;
+
+    return {
+      avgAttendance,
+      avgScore,
+      avgHomework,
+      totalSessions,
+    };
+  }, [gradeData]);
+
+  // Get all unique score names from all students
+  const allScoreNames = useMemo(() => {
+    if (!classData) return [];
+    
+    const scoreNamesSet = new Set<string>();
+    const classSessions = attendanceSessions.filter(
+      (session) => session["Class ID"] === classData.id
+    );
+    
+    classSessions.forEach((session) => {
+      session["Điểm danh"]?.forEach((record: any) => {
+        if (record["Chi tiết điểm"]) {
+          record["Chi tiết điểm"].forEach((score: any) => {
+            scoreNamesSet.add(score["Tên điểm"]);
+          });
+        }
+      });
+    });
+    
+    return Array.from(scoreNamesSet).sort();
+  }, [attendanceSessions, classData]);
+  
+  if (!classData) return null;
+
+
+
   // Export to Excel
   const exportToExcel = () => {
     try {
@@ -775,6 +819,48 @@ const GradeReportModal: React.FC<{
       message.error("Lỗi khi xuất file Excel");
     }
   };
+
+  // Create dynamic columns for each score name
+  const scoreColumns = allScoreNames.map((scoreName) => ({
+    title: scoreName,
+    key: `score-${scoreName}`,
+    width: 100,
+    align: "center" as const,
+    render: (_: any, record: any) => {
+      // Find the most recent score with this name for this student
+      const classSessions = attendanceSessions.filter(
+        (session) => session["Class ID"] === classData.id
+      );
+      
+      let latestScore: any = null;
+      let latestDate = "";
+      
+      classSessions.forEach((session) => {
+        const studentRecord = session["Điểm danh"]?.find(
+          (r: any) => r["Student ID"] === record.studentId
+        );
+        if (studentRecord?.["Chi tiết điểm"]) {
+          studentRecord["Chi tiết điểm"].forEach((score: any) => {
+            if (score["Tên điểm"] === scoreName) {
+              if (!latestDate || score["Ngày"] > latestDate) {
+                latestScore = score;
+                latestDate = score["Ngày"];
+              }
+            }
+          });
+        }
+      });
+      
+      if (!latestScore) return <span>-</span>;
+      
+      const scoreValue = latestScore["Điểm"];
+      return (
+        <Tag color={scoreValue >= 8 ? "green" : scoreValue >= 6.5 ? "blue" : scoreValue >= 5 ? "orange" : "red"}>
+          <strong>{scoreValue}</strong>
+        </Tag>
+      );
+    },
+  }));
 
   const columns = [
     {
@@ -846,8 +932,13 @@ const GradeReportModal: React.FC<{
         },
       ],
     },
+    // Dynamic score columns
+    ...(scoreColumns.length > 0 ? [{
+      title: "Điểm các bài kiểm tra",
+      children: scoreColumns,
+    }] : []),
     {
-      title: "Học tập",
+      title: "Tổng kết",
       children: [
         {
           title: "Điểm TB",
@@ -856,75 +947,59 @@ const GradeReportModal: React.FC<{
           width: 100,
           align: "center" as const,
           render: (val: number, record: any) => {
-            if (record.scoredSessions === 0) return <span>-</span>;
+            // Calculate average from Chi tiết điểm instead
+            const classSessions = attendanceSessions.filter(
+              (session) => session["Class ID"] === classData.id
+            );
+            let totalScore = 0;
+            let count = 0;
+            
+            classSessions.forEach((session) => {
+              const studentRecord = session["Điểm danh"]?.find(
+                (r: any) => r["Student ID"] === record.studentId
+              );
+              if (studentRecord?.["Chi tiết điểm"]) {
+                studentRecord["Chi tiết điểm"].forEach((score: any) => {
+                  totalScore += score["Điểm"];
+                  count++;
+                });
+              }
+            });
+            
+            if (count === 0) return <span>-</span>;
+            const avg = totalScore / count;
             return (
-              <Tag color={val >= 8 ? "green" : val >= 6.5 ? "blue" : val >= 5 ? "orange" : "red"}>
-                {val.toFixed(1)}
+              <Tag color={avg >= 8 ? "green" : avg >= 6.5 ? "blue" : avg >= 5 ? "orange" : "red"}>
+                <strong>{avg.toFixed(1)}</strong>
               </Tag>
             );
           },
         },
         {
-          title: "Số bài chấm",
-          dataIndex: "scoredSessions",
-          key: "scoredSessions",
-          width: 100,
-          align: "center" as const,
-        },
-      ],
-    },
-    {
-      title: "Bài tập về nhà",
-      children: [
-        {
-          title: "Hoàn thành",
-          dataIndex: "completedHomework",
-          key: "completedHomework",
-          width: 100,
-          align: "center" as const,
-        },
-        {
-          title: "Tổng",
-          dataIndex: "totalHomework",
-          key: "totalHomework",
+          title: "Số bài",
+          key: "totalScores",
           width: 80,
           align: "center" as const,
-        },
-        {
-          title: "Tỷ lệ (%)",
-          dataIndex: "homeworkRate",
-          key: "homeworkRate",
-          width: 100,
-          align: "center" as const,
-          render: (val: number) => {
-            if (val === 0) return <span>-</span>;
-            return (
-              <Tag color={val >= 80 ? "green" : val >= 60 ? "orange" : "red"}>
-                {val.toFixed(1)}%
-              </Tag>
+          render: (_: any, record: any) => {
+            const classSessions = attendanceSessions.filter(
+              (session) => session["Class ID"] === classData.id
             );
+            let count = 0;
+            classSessions.forEach((session) => {
+              const studentRecord = session["Điểm danh"]?.find(
+                (r: any) => r["Student ID"] === record.studentId
+              );
+              if (studentRecord?.["Chi tiết điểm"]) {
+                count += studentRecord["Chi tiết điểm"].length;
+              }
+            });
+            return count > 0 ? <Tag color="blue">{count}</Tag> : <span>-</span>;
           },
         },
       ],
     },
+
   ];
-
-  // Calculate class statistics
-  const classStats = useMemo(() => {
-    if (gradeData.length === 0) return null;
-
-    const avgAttendance = gradeData.reduce((sum: number, d: any) => sum + d.attendanceRate, 0) / gradeData.length;
-    const avgScore = gradeData.reduce((sum: number, d: any) => sum + d.averageScore, 0) / gradeData.length;
-    const avgHomework = gradeData.reduce((sum: number, d: any) => sum + d.homeworkRate, 0) / gradeData.length;
-    const totalSessions = gradeData[0]?.totalSessions || 0;
-
-    return {
-      avgAttendance,
-      avgScore,
-      avgHomework,
-      totalSessions,
-    };
-  }, [gradeData]);
 
   return (
     <Modal
@@ -1028,7 +1103,114 @@ const GradeReportModal: React.FC<{
         scroll={{ x: 1200, y: 400 }}
         size="small"
         bordered
+        expandable={{
+          expandedRowRender: (record) => {
+            // Get all score details for this student
+            const classSessions = attendanceSessions.filter(
+              (session) => session["Class ID"] === classData.id
+            );
+            
+            const allScores: any[] = [];
+            classSessions.forEach((session) => {
+              const studentRecord = session["Điểm danh"]?.find(
+                (r: any) => r["Student ID"] === record.studentId
+              );
+              if (studentRecord?.["Chi tiết điểm"]) {
+                studentRecord["Chi tiết điểm"].forEach((score: any) => {
+                  allScores.push({
+                    ...score,
+                    sessionDate: session["Ngày"],
+                    className: session["Tên lớp"],
+                  });
+                });
+              }
+            });
+
+            // Sort by date descending
+            allScores.sort((a, b) => new Date(b["Ngày"]).getTime() - new Date(a["Ngày"]).getTime());
+
+            if (allScores.length === 0) {
+              return <div style={{ padding: "16px", textAlign: "center", color: "#999" }}>Chưa có điểm chi tiết</div>;
+            }
+
+            const scoreColumns = [
+              {
+                title: "Ngày",
+                dataIndex: "Ngày",
+                key: "date",
+                width: 120,
+                render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
+              },
+              {
+                title: "Tên bài",
+                dataIndex: "Tên điểm",
+                key: "scoreName",
+                width: 250,
+              },
+              {
+                title: "Điểm",
+                dataIndex: "Điểm",
+                key: "score",
+                width: 100,
+                align: "center" as const,
+                render: (score: number) => (
+                  <Tag color={score >= 8 ? "green" : score >= 6.5 ? "blue" : score >= 5 ? "orange" : "red"}>
+                    <strong>{score}</strong>
+                  </Tag>
+                ),
+              },
+              {
+                title: "Ghi chú",
+                dataIndex: "Ghi chú",
+                key: "note",
+              },
+            ];
+
+            return (
+              <div style={{ margin: "0 48px" }}>
+                <Table
+                  columns={scoreColumns}
+                  dataSource={allScores}
+                  rowKey={(record) => `${record["Ngày"]}-${record["Tên điểm"]}`}
+                  pagination={false}
+                  size="small"
+                  bordered
+                  summary={() => (
+                    <Table.Summary fixed>
+                      <Table.Summary.Row>
+                        <Table.Summary.Cell index={0} colSpan={2}>
+                          <strong>Tổng cộng</strong>
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={2} align="center">
+                          <Tag color="blue">
+                            <strong>{allScores.length} điểm</strong>
+                          </Tag>
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={3}>
+                          <strong>Điểm TB: {(allScores.reduce((sum, s) => sum + s["Điểm"], 0) / allScores.length).toFixed(1)}</strong>
+                        </Table.Summary.Cell>
+                      </Table.Summary.Row>
+                    </Table.Summary>
+                  )}
+                />
+              </div>
+            );
+          },
+          rowExpandable: (record) => {
+            // Check if student has any score details
+            const classSessions = attendanceSessions.filter(
+              (session) => session["Class ID"] === classData.id
+            );
+            return classSessions.some((session) => {
+              const studentRecord = session["Điểm danh"]?.find(
+                (r: any) => r["Student ID"] === record.studentId
+              );
+              return studentRecord?.["Chi tiết điểm"]?.length > 0;
+            });
+          },
+        }}
       />
+      
     </Modal>
   );
 };

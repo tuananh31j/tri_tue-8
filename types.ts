@@ -85,6 +85,13 @@ export interface AttendanceSession {
     "Người hoàn thành"?: string; // Person who completed
 }
 
+export interface ScoreDetail {
+    "Tên điểm": string; // Score name/title
+    "Điểm": number; // Score value
+    "Ngày": string; // Date
+    "Ghi chú"?: string; // Note
+}
+
 export interface AttendanceRecord {
     "Student ID": string;
     "Tên học sinh": string;
@@ -94,6 +101,7 @@ export interface AttendanceRecord {
     "Ghi chú"?: string;
     "Điểm"?: number | null; // Score for homework (optional)
     "Bài tập hoàn thành"?: number; // Number of exercises completed
+    "Chi tiết điểm"?: ScoreDetail[]; // Detailed scores
 }
 
 export interface HomeworkAssignment {

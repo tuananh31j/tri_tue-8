@@ -1281,16 +1281,16 @@ const TeacherListView: React.FC = () => {
                 render: (_: any, teacher: any) =>
                   teacher["Email"] || teacher["Email công ty"] || "-",
               },
-              {
-                title: "Tổng giờ dạy",
-                key: "hours",
-                align: "center" as const,
-                render: (_: any, teacher: any) => (
-                  <Text strong style={{ color: "#36797f" }}>
-                    {teacher.hours}h {teacher.minutes}p
-                  </Text>
-                ),
-              },
+              // {
+              //   title: "Tổng giờ dạy",
+              //   key: "hours",
+              //   align: "center" as const,
+              //   render: (_: any, teacher: any) => (
+              //     <Text strong style={{ color: "#36797f" }}>
+              //       {teacher.hours}h {teacher.minutes}p
+              //     </Text>
+              //   ),
+              // },
               {
                 title: "Buổi dạy",
                 key: "sessions",

@@ -12,6 +12,12 @@ import {
   Statistic,
   Spin,
   Empty,
+  DatePicker,
+  Input,
+  Space,
+  Modal,
+  Form,
+  InputNumber,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -19,14 +25,19 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
+  PlusOutlined,
+  FilterOutlined,
 } from "@ant-design/icons";
 import { ref, onValue } from "firebase/database";
 import { database } from "../../firebase";
 import { useAttendanceStats } from "../../hooks/useAttendanceStats";
 import { AttendanceSession } from "../../types";
+import ScoreDetailModal from "../ScoreDetailModal";
 import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
 import "dayjs/locale/vi";
 
+dayjs.extend(isBetween);
 dayjs.locale("vi");
 
 interface Student {
@@ -48,6 +59,15 @@ const StudentReportPage = () => {
   const [student, setStudent] = useState<Student | null>(null);
   const [sessions, setSessions] = useState<AttendanceSession[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filters
+  const [dateFilter, setDateFilter] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
+  const [scoreNameFilter, setScoreNameFilter] = useState<string>("");
+  
+  // Score detail modal
+  const [isScoreModalVisible, setIsScoreModalVisible] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<AttendanceSession | null>(null);
+  const [scoreForm] = Form.useForm();
 
   const { getStudentStats } = useAttendanceStats();
 
@@ -131,6 +151,39 @@ const StudentReportPage = () => {
     }
   };
 
+  // Filter sessions
+  const filteredSessions = studentSessions.filter((session) => {
+    // Date filter
+    if (dateFilter && dateFilter[0] && dateFilter[1]) {
+      const sessionDate = dayjs(session["Ngày"]);
+      if (
+        !sessionDate.isBetween(dateFilter[0], dateFilter[1], "day", "[]")
+      ) {
+        return false;
+      }
+    }
+
+    // Score name filter
+    if (scoreNameFilter) {
+      const studentRecord = session["Điểm danh"]?.find(
+        (r) => r["Student ID"] === student.id
+      );
+      const hasMatchingScore = studentRecord?.["Chi tiết điểm"]?.some((score) =>
+        score["Tên điểm"]
+          .toLowerCase()
+          .includes(scoreNameFilter.toLowerCase())
+      );
+      if (!hasMatchingScore) return false;
+    }
+
+    return true;
+  });
+
+  const handleOpenScoreModal = (session: AttendanceSession) => {
+    setSelectedSession(session);
+    setIsScoreModalVisible(true);
+  };
+
   const columns = [
     {
       title: "Ngày",
@@ -175,6 +228,26 @@ const StudentReportPage = () => {
       width: 80,
     },
     {
+      title: "Chi tiết điểm",
+      key: "scoreDetail",
+      width: 120,
+      render: (_: any, record: AttendanceSession) => {
+        const studentRecord = record["Điểm danh"]?.find(
+          (r) => r["Student ID"] === student.id
+        );
+        const scoreCount = studentRecord?.["Chi tiết điểm"]?.length || 0;
+        return (
+          <Button
+            size="small"
+            type="link"
+            onClick={() => handleOpenScoreModal(record)}
+          >
+            {scoreCount > 0 ? `${scoreCount} điểm` : "Thêm điểm"}
+          </Button>
+        );
+      },
+    },
+    {
       title: "Bài tập",
       key: "homework",
       render: (_: any, record: AttendanceSession) => {
@@ -203,7 +276,103 @@ const StudentReportPage = () => {
   ];
 
   const handlePrint = () => {
-    window.print();
+    // Add print styles
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @media print {
+        @page {
+          size: A4;
+          margin: 15mm;
+        }
+        
+        body * {
+          visibility: hidden;
+        }
+        
+        .print-content, .print-content * {
+          visibility: visible;
+        }
+        
+        .print-content {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          background: white;
+        }
+        
+        /* Hide buttons and filters when printing */
+        button, .ant-btn, .ant-space-compact, .ant-picker, .ant-input, .no-print {
+          display: none !important;
+        }
+        
+        /* Better table styling for print */
+        .ant-table {
+          font-size: 11px !important;
+        }
+        
+        .ant-table-thead > tr > th {
+          background: #f0f0f0 !important;
+          font-weight: bold !important;
+          padding: 8px 4px !important;
+          border: 1px solid #d9d9d9 !important;
+        }
+        
+        .ant-table-tbody > tr > td {
+          padding: 6px 4px !important;
+          border: 1px solid #d9d9d9 !important;
+        }
+        
+        /* Card styling */
+        .ant-card {
+          border: 1px solid #d9d9d9 !important;
+          box-shadow: none !important;
+          page-break-inside: avoid;
+        }
+        
+        .ant-card-head {
+          background: #fafafa !important;
+          border-bottom: 2px solid #d9d9d9 !important;
+        }
+        
+        /* Statistics cards */
+        .ant-statistic {
+          page-break-inside: avoid;
+        }
+        
+        /* Descriptions */
+        .ant-descriptions-item-label {
+          font-weight: bold !important;
+        }
+        
+        /* Tags */
+        .ant-tag {
+          border: 1px solid currentColor !important;
+        }
+        
+        /* Divider */
+        .ant-divider {
+          border-color: #d9d9d9 !important;
+        }
+        
+        /* Page breaks */
+        .page-break {
+          page-break-after: always;
+        }
+        
+        /* Header styling */
+        h1, h2, h3, h4 {
+          color: #000 !important;
+          page-break-after: avoid;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    setTimeout(() => {
+      window.print();
+      document.head.removeChild(style);
+    }, 250);
   };
 
   if (studentSessions.length === 0) {
@@ -225,6 +394,7 @@ const StudentReportPage = () => {
     <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
       {/* Action Buttons */}
       <div
+        className="no-print"
         style={{
           marginBottom: 16,
           display: "flex",
@@ -246,12 +416,17 @@ const StudentReportPage = () => {
           style={{
             textAlign: "center",
             marginBottom: 24,
-            borderBottom: "2px solid #1890ff",
+            borderBottom: "3px solid #1890ff",
             paddingBottom: 16,
           }}
         >
-          <h1 style={{ color: "#1890ff", margin: 0 }}>BÁO CÁO HỌC TẬP</h1>
-          <p style={{ margin: "8px 0 0 0", color: "#666" }}>
+          <h1 style={{ color: "#1890ff", margin: 0, fontSize: "28px", fontWeight: "bold" }}>
+            BÁO CÁO HỌC TẬP
+          </h1>
+          <h2 style={{ margin: "8px 0", fontSize: "18px", color: "#333" }}>
+            Trung tâm Trí Tuệ 8+
+          </h2>
+          <p style={{ margin: "4px 0 0 0", color: "#666", fontSize: "14px" }}>
             Ngày xuất: {dayjs().format("DD/MM/YYYY HH:mm")}
           </p>
         </div>
@@ -361,29 +536,93 @@ const StudentReportPage = () => {
           </Row>
         </Card>
 
+        {/* Filters */}
+        <Card title="Bộ lọc" size="small" style={{ marginBottom: 16 }} className="no-print">
+          <Space wrap>
+            <Space direction="vertical" size="small">
+              <span>Lọc theo ngày:</span>
+              <DatePicker.RangePicker
+                value={dateFilter}
+                onChange={(dates) => setDateFilter(dates)}
+                format="DD/MM/YYYY"
+                placeholder={["Từ ngày", "Đến ngày"]}
+              />
+            </Space>
+            <Space direction="vertical" size="small">
+              <span>Lọc theo tên điểm:</span>
+              <Input
+                placeholder="VD: Kiểm tra 15 phút"
+                value={scoreNameFilter}
+                onChange={(e) => setScoreNameFilter(e.target.value)}
+                allowClear
+                style={{ width: 200 }}
+                prefix={<FilterOutlined />}
+              />
+            </Space>
+            <Button
+              onClick={() => {
+                setDateFilter(null);
+                setScoreNameFilter("");
+              }}
+            >
+              Xóa bộ lọc
+            </Button>
+          </Space>
+        </Card>
+
         {/* Session History */}
         <Card title="Lịch sử học tập" size="small">
           <Table
             columns={columns}
-            dataSource={studentSessions}
+            dataSource={filteredSessions}
             rowKey="id"
             pagination={{ pageSize: 20, showSizeChanger: false }}
             size="small"
           />
         </Card>
+        
+        {/* Score Detail Modal */}
+        <ScoreDetailModal
+          visible={isScoreModalVisible}
+          onClose={() => {
+            setIsScoreModalVisible(false);
+            setSelectedSession(null);
+          }}
+          session={selectedSession}
+          studentId={student.id}
+          studentName={student["Họ và tên"]}
+        />
 
         {/* Footer */}
         <div
           style={{
-            marginTop: 24,
-            textAlign: "center",
-            fontSize: 12,
-            color: "#999",
+            marginTop: 32,
+            paddingTop: 16,
+            borderTop: "2px solid #d9d9d9",
           }}
         >
+          <Row gutter={16}>
+            <Col span={12}>
+              <div style={{ textAlign: "center" }}>
+                <p style={{ margin: "8px 0", fontWeight: "bold" }}>Giáo viên</p>
+                <p style={{ margin: "40px 0 8px 0" }}>................................</p>
+                <p style={{ margin: 0, fontSize: "12px", color: "#666" }}>(Ký và ghi rõ họ tên)</p>
+              </div>
+            </Col>
+            <Col span={12}>
+              <div style={{ textAlign: "center" }}>
+                <p style={{ margin: "8px 0", fontWeight: "bold" }}>Phụ huynh</p>
+                <p style={{ margin: "40px 0 8px 0" }}>................................</p>
+                <p style={{ margin: 0, fontSize: "12px", color: "#666" }}>(Ký và ghi rõ họ tên)</p>
+              </div>
+            </Col>
+          </Row>
           <Divider />
-          <p>Báo cáo này được tạo tự động từ hệ thống quản lý học sinh</p>
-          <p>Mọi thắc mắc xin liên hệ với giáo viên hoặc ban quản lý</p>
+          <div style={{ textAlign: "center", fontSize: 12, color: "#999" }}>
+            <p style={{ margin: "4px 0" }}>Báo cáo này được tạo tự động từ hệ thống quản lý học sinh</p>
+            <p style={{ margin: "4px 0" }}>Mọi thắc mắc xin liên hệ với giáo viên hoặc ban quản lý</p>
+            <p style={{ margin: "4px 0", fontWeight: "bold" }}>Trung tâm Trí Tuệ 8+ - Hotline: [Số điện thoại]</p>
+          </div>
         </div>
       </div>
     </div>

@@ -958,7 +958,7 @@ const ParentPortal: React.FC = () => {
                       <Col xs={24} md={8}>
                         <Card>
                           <Statistic
-                            title="Đã thanh toán"
+                            title="Đã thu"
                             value={invoices
                               .filter((inv) => inv.status === "paid")
                               .reduce((sum, inv) => sum + (inv.finalAmount || 0), 0)}
@@ -973,7 +973,7 @@ const ParentPortal: React.FC = () => {
                       <Col xs={24} md={8}>
                         <Card>
                           <Statistic
-                            title="Chưa thanh toán"
+                            title="Chưa thu"
                             value={invoices
                               .filter((inv) => inv.status === "unpaid")
                               .reduce((sum, inv) => sum + (inv.finalAmount || 0), 0)}
@@ -1009,7 +1009,7 @@ const ParentPortal: React.FC = () => {
                           render: (val) => `${val?.toLocaleString("vi-VN")} đ`,
                         },
                         {
-                          title: "Giảm giá",
+                          title: "Miễn giảm",
                           dataIndex: "discount",
                           align: "right",
                           render: (val) =>
@@ -1036,11 +1036,11 @@ const ParentPortal: React.FC = () => {
                           render: (status) =>
                             status === "paid" ? (
                               <Tag color="success" icon={<CheckCircleOutlined />}>
-                                Đã thanh toán
+                                Đã thu
                               </Tag>
                             ) : (
                               <Tag color="error" icon={<ClockCircleOutlined />}>
-                                Chưa thanh toán
+                                Chưa thu
                               </Tag>
                             ),
                         },

@@ -49,7 +49,7 @@ const DiscountInput: React.FC<DiscountInputProps> = ({
         style={{ width: "100%" }}
         size="small"
         disabled={isPaid}
-        placeholder={isPaid ? "Đã thanh toán" : "0"}
+        placeholder={isPaid ? "Đã thu" : "0"}
       />
     </Space.Compact>
   );

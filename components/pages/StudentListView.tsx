@@ -23,6 +23,7 @@ import {
   Popconfirm,
   Dropdown,
   Tabs,
+  Divider,
 } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -60,6 +61,7 @@ interface Student {
   "Mã học sinh"?: string;
   "Ngày sinh"?: string;
   "Số điện thoại"?: string;
+  "SĐT phụ huynh"?: string;
   Email?: string;
   "Trạng thái"?: string;
   "Địa chỉ"?: string;
@@ -74,8 +76,7 @@ const StudentListView: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>([]);
   const [attendanceSessions, setAttendanceSessions] = useState<any[]>([]);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState<dayjs.Dayjs | null>(dayjs());
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
@@ -225,6 +226,7 @@ const StudentListView: React.FC = () => {
         name: editingStudent["Họ và tên"] || "",
         dob: editingStudent["Ngày sinh"] || "",
         phone: editingStudent["Số điện thoại"] || "",
+        parentPhone: editingStudent["SĐT phụ huynh"] || "",
         status: editingStudent["Trạng thái"] || "",
         address: editingStudent["Địa chỉ"] || "",
         password: editingStudent["Mật khẩu"] || "",
@@ -417,8 +419,15 @@ const StudentListView: React.FC = () => {
 
     return filteredStudents
       .map((student) => {
-        const fromDate = startDate ? new Date(startDate) : undefined;
-        const toDate = endDate ? new Date(endDate) : undefined;
+        // Calculate date range from selected month
+        let fromDate: Date | undefined;
+        let toDate: Date | undefined;
+        
+        if (selectedMonth) {
+          fromDate = selectedMonth.startOf('month').toDate();
+          toDate = selectedMonth.endOf('month').toDate();
+        }
+        
         const stats = calculateStudentHours(
           student.id, // Use student ID instead of name
           fromDate,
@@ -455,8 +464,7 @@ const StudentListView: React.FC = () => {
   }, [
     students,
     attendanceSessions,
-    startDate,
-    endDate,
+    selectedMonth,
     searchTerm,
     extensionHistory,
     userProfile,
@@ -1136,11 +1144,11 @@ const StudentListView: React.FC = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
-    // Use startDate and endDate if available, otherwise use current month
+    // Use selectedMonth if available, otherwise use current month
     let fromDate: Date, toDate: Date;
-    if (startDate && endDate) {
-      fromDate = new Date(startDate);
-      toDate = new Date(endDate);
+    if (selectedMonth) {
+      fromDate = selectedMonth.startOf('month').toDate();
+      toDate = selectedMonth.endOf('month').toDate();
     } else {
       const now = new Date();
       fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -1540,43 +1548,29 @@ const StudentListView: React.FC = () => {
         )}
       </Card>
 
-      <Card title="Filters" className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+      <Card title="Bộ lọc" className="mb-6">
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Từ ngày
+              Chọn tháng
             </label>
             <DatePicker
-              value={startDate ? dayjs(startDate) : null}
-              onChange={(date) =>
-                setStartDate(date ? date.format("YYYY-MM-DD") : "")
-              }
+              picker="month"
+              value={selectedMonth}
+              onChange={(date) => setSelectedMonth(date)}
+              format="MM/YYYY"
+              placeholder="Chọn tháng"
               className="w-full"
             />
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Đến ngày
-            </label>
-            <DatePicker
-              value={endDate ? dayjs(endDate) : null}
-              onChange={(date) =>
-                setEndDate(date ? date.format("YYYY-MM-DD") : "")
-              }
-              className="w-full"
-            />
+          <div className="pt-7">
+            <Button
+              onClick={() => setSelectedMonth(dayjs())}
+              icon={<ClearOutlined />}
+            >
+              Tháng hiện tại
+            </Button>
           </div>
-        </div>
-        <div className="mt-4">
-          <Button
-            onClick={() => {
-              setStartDate("");
-              setEndDate("");
-            }}
-            icon={<ClearOutlined />}
-          >
-            Xóa bộ lọc
-          </Button>
         </div>
       </Card>
 
@@ -1594,6 +1588,7 @@ const StudentListView: React.FC = () => {
               name: student["Họ và tên"],
               code: student["Mã học sinh"] || "-",
               phone: student["Số điện thoại"] || "-",
+              parentPhone: student["SĐT phụ huynh"] || "-",
               email: student["Email"] || "-",
               hours: `${student.hours}h ${student.minutes}p`,
               hoursExtended: `${student.hoursExtended || 0}h`,
@@ -1621,11 +1616,19 @@ const StudentListView: React.FC = () => {
                 title: "Mã học sinh",
                 dataIndex: "code",
                 key: "code",
+                width: 120,
               },
               {
-                title: "Số điện thoại",
+                title: "SĐT HS",
                 dataIndex: "phone",
                 key: "phone",
+                width: 120,
+              },
+              {
+                title: "SĐT phụ huynh",
+                dataIndex: "parentPhone",
+                key: "parentPhone",
+                width: 120,
               },
               {
                 title: "Email",
@@ -1935,23 +1938,23 @@ const StudentListView: React.FC = () => {
                           type="secondary"
                           style={{ fontSize: "12px", fontWeight: "500" }}
                         >
-                          {startDate && endDate
-                            ? `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`
+                          {selectedMonth
+                            ? selectedMonth.format('MM/YYYY')
                             : `${months[new Date().getMonth()]} ${new Date().getFullYear()}`}
                         </Typography.Text>
                       </div>
 
                     </div>
                     {(() => {
-                      const fromDate = startDate
-                        ? new Date(startDate)
+                      const fromDate = selectedMonth
+                        ? selectedMonth.startOf('month').toDate()
                         : new Date(
                             new Date().getFullYear(),
                             new Date().getMonth(),
                             1
                           );
-                      const toDate = endDate
-                        ? new Date(endDate)
+                      const toDate = selectedMonth
+                        ? selectedMonth.endOf('month').toDate()
                         : new Date(
                             new Date().getFullYear(),
                             new Date().getMonth() + 1,
@@ -2355,6 +2358,7 @@ const StudentListView: React.FC = () => {
               "Mã học sinh": studentCode,
               "Ngày sinh": values.dob,
               "Số điện thoại": values.phone,
+              "SĐT phụ huynh": values.parentPhone,
               "Trạng thái": values.status,
               "Địa chỉ": values.address,
               "Mật khẩu": values.password || "",
@@ -2385,8 +2389,13 @@ const StudentListView: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="Số điện thoại" name="phone">
-                <Input placeholder="Nhập số điện thoại" />
+              <Form.Item label="SĐT học sinh" name="phone">
+                <Input placeholder="Nhập số điện thoại học sinh" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="SĐT phụ huynh" name="parentPhone">
+                <Input placeholder="Nhập số điện thoại phụ huynh" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -2794,6 +2803,9 @@ const StudentTuitionTab: React.FC<{
   const [studentInvoices, setStudentInvoices] = useState<Record<string, any>>({});
   const [courses, setCourses] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<any>(null);
+  const [editDiscount, setEditDiscount] = useState(0);
 
   // Load student invoices from Firebase
   useEffect(() => {
@@ -2898,7 +2910,7 @@ const StudentTuitionTab: React.FC<{
         discount = invoice.discount || 0;
       }
 
-      // Tính tổng doanh thu từ tất cả các tháng (đã thanh toán)
+      // Tính tổng doanh thu từ tất cả các tháng (Đã thu)
       let totalRevenue = 0;
       Object.entries(studentInvoices).forEach(([key, inv]: [string, any]) => {
         if (key.startsWith(`${student.id}-`) && typeof inv === "object" && inv.status === "paid") {
@@ -2912,9 +2924,9 @@ const StudentTuitionTab: React.FC<{
         monthRevenue, // Học phí tháng này (chưa trừ giảm giá)
         discount, // Giảm giá
         finalMonthRevenue: Math.max(0, monthRevenue - discount), // Học phí sau giảm giá
-        paidAmount, // Số tiền đã thanh toán
+        paidAmount, // Số tiền Đã thu
         invoiceStatus, // Trạng thái thanh toán
-        totalRevenue, // Tổng doanh thu đã thanh toán
+        totalRevenue, // Tổng doanh thu Đã thu
       };
     });
 
@@ -2958,7 +2970,7 @@ const StudentTuitionTab: React.FC<{
       ),
     },
     {
-      title: "Giảm giá",
+      title: "Miễn giảm",
       dataIndex: "discount",
       key: "discount",
       align: "right" as const,
@@ -3009,6 +3021,39 @@ const StudentTuitionTab: React.FC<{
           {formatCurrency(amount)}
         </Tag>
       ),
+    },
+    {
+      title: "Thao tác",
+      key: "actions",
+      align: "center" as const,
+      width: 100,
+      fixed: "right" as const,
+      render: (_: any, record: any) => {
+        if (record.monthSessions === 0) {
+          return null;
+        }
+        const isPaid = record.invoiceStatus === "paid";
+        return (
+          <Space>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => {
+                if (isPaid) {
+                  message.warning("Không thể chỉnh sửa phiếu đã thanh toán");
+                  return;
+                }
+                setEditingStudent(record);
+                setEditDiscount(record.discount || 0);
+                setEditModalOpen(true);
+              }}
+              disabled={isPaid}
+            >
+              Sửa
+            </Button>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -3097,7 +3142,7 @@ const StudentTuitionTab: React.FC<{
       data: topStudents.map((s) => s.monthRevenue / 1000000), // Đổi sang triệu
     },
     {
-      name: "Đã thanh toán",
+      name: "Đã thu",
       data: topStudents.map((s) => s.paidAmount / 1000000),
     },
   ];
@@ -3108,7 +3153,7 @@ const StudentTuitionTab: React.FC<{
       type: "donut",
       height: 350,
     },
-    labels: ["Đã thanh toán", "Chưa thanh toán"],
+    labels: ["Đã thu", "Chưa thu"],
     colors: ["#52c41a", "#ff4d4f"],
     legend: {
       position: "bottom",
@@ -3156,7 +3201,7 @@ const StudentTuitionTab: React.FC<{
           </Col>
           <Col span={6}>
             <Statistic
-              title="Giảm giá"
+              title="Miễn giảm"
               value={formatCurrency(totalDiscount)}
               valueStyle={{ color: "#ff4d4f", fontSize: 18 }}
             />
@@ -3257,11 +3302,114 @@ const StudentTuitionTab: React.FC<{
                     {formatCurrency(totalRevenue)}
                   </Tag>
                 </Table.Summary.Cell>
+                <Table.Summary.Cell index={7} align="center">
+                  -
+                </Table.Summary.Cell>
               </Table.Summary.Row>
             </Table.Summary>
           )}
         />
       </Card>
+
+      {/* Edit Discount Modal */}
+      <Modal
+        title="Chỉnh sửa miễn giảm học phí"
+        open={editModalOpen}
+        onCancel={() => {
+          setEditModalOpen(false);
+          setEditingStudent(null);
+          setEditDiscount(0);
+        }}
+        onOk={async () => {
+          if (!editingStudent) return;
+          
+          try {
+            const month = selectedMonth.month();
+            const year = selectedMonth.year();
+            const invoiceKey = `${editingStudent.id}-${month}-${year}`;
+            
+            // Update discount in Firebase
+            const response = await fetch(
+              `${DATABASE_URL_BASE}/datasheet/Phiếu_thu_học_phí/${invoiceKey}.json`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ discount: editDiscount }),
+              }
+            );
+
+            if (response.ok) {
+              message.success("Đã cập nhật miễn giảm học phí");
+              
+              // Refresh invoices
+              const refreshResponse = await fetch(
+                `${DATABASE_URL_BASE}/datasheet/Phiếu_thu_học_phí.json?_=${new Date().getTime()}`,
+                { cache: "no-cache" }
+              );
+              const refreshData = await refreshResponse.json();
+              if (refreshData) {
+                setStudentInvoices(refreshData);
+              }
+              
+              setEditModalOpen(false);
+              setEditingStudent(null);
+              setEditDiscount(0);
+            } else {
+              message.error("Lỗi khi cập nhật miễn giảm");
+            }
+          } catch (error) {
+            console.error("Error updating discount:", error);
+            message.error("Lỗi khi cập nhật miễn giảm");
+          }
+        }}
+        okText="Lưu"
+        cancelText="Hủy"
+      >
+        {editingStudent && (
+          <Space direction="vertical" style={{ width: "100%" }} size="large">
+            <div>
+              <Text strong>Học sinh: </Text>
+              <Text>{editingStudent["Họ và tên"]}</Text>
+            </div>
+            <div>
+              <Text strong>Tháng: </Text>
+              <Text>{selectedMonth.format("MM/YYYY")}</Text>
+            </div>
+            <div>
+              <Text strong>Số buổi học: </Text>
+              <Text>{editingStudent.monthSessions} buổi</Text>
+            </div>
+            <div>
+              <Text strong>Học phí: </Text>
+              <Text style={{ color: "#36797f" }}>
+                {formatCurrency(editingStudent.monthRevenue)}
+              </Text>
+            </div>
+            <Divider />
+            <div>
+              <Text strong className="block mb-2">Miễn giảm học phí:</Text>
+              <InputNumber
+                style={{ width: "100%" }}
+                value={editDiscount}
+                onChange={(value) => setEditDiscount(value || 0)}
+                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                parser={(value) => Number(value!.replace(/\$\s?|(,*)/g, ""))}
+                addonAfter="đ"
+                min={0}
+                max={editingStudent.monthRevenue}
+                placeholder="Nhập số tiền miễn giảm"
+              />
+            </div>
+            <Divider />
+            <div>
+              <Text strong>Phải thu: </Text>
+              <Text strong style={{ color: "#1890ff", fontSize: "16px" }}>
+                {formatCurrency(Math.max(0, editingStudent.monthRevenue - editDiscount))}
+              </Text>
+            </div>
+          </Space>
+        )}
+      </Modal>
     </div>
   );
 };

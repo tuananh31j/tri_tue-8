@@ -444,10 +444,6 @@ const StudentReport = ({
             <div class="stat-label">Tỷ lệ tham gia</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${stats.totalHours}</div>
-            <div class="stat-label">Tổng số giờ học</div>
-          </div>
-          <div class="stat-card">
             <div class="stat-value">${(() => {
               const scores = studentSessions
                 .map(
@@ -488,7 +484,6 @@ const StudentReport = ({
               <th>Vắng</th>
               <th>Tỷ lệ tham gia</th>
               <th>Điểm TB</th>
-              <th>Tổng giờ học</th>
             </tr>
           </thead>
           <tbody>
@@ -507,10 +502,150 @@ const StudentReport = ({
                 <td style="text-align: center; color: ${stat.avgScore >= 8 ? "#52c41a" : stat.avgScore >= 5 ? "#fa8c16" : "#f5222d"}; font-weight: bold;">
                   ${stat.avgScore > 0 ? stat.avgScore.toFixed(1) : "-"}
                 </td>
-                <td style="text-align: center;">${stat.totalHours.toFixed(1)}h</td>
               </tr>
             `
               )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footer">
+        <p>Báo cáo được tạo tự động từ hệ thống quản lý học sinh.</p>
+        <p>Mọi thắc mắc xin liên hệ giáo viên phụ trách.</p>
+      </div>
+    `;
+  };
+
+  const generateSessionPrintContent = () => {
+    // Get status text
+    const getStatusText = (record: any) => {
+      if (record["Có mặt"]) {
+        return record["Đi muộn"] ? "Đi muộn" : "Có mặt";
+      } else {
+        return record["Vắng có phép"] ? "Vắng có phép" : "Vắng không phép";
+      }
+    };
+
+    // Get status color
+    const getStatusColor = (record: any) => {
+      if (record["Có mặt"]) {
+        return record["Đi muộn"] ? "#fa8c16" : "#52c41a";
+      } else {
+        return record["Vắng có phép"] ? "#1890ff" : "#f5222d";
+      }
+    };
+
+    // Calculate average score
+    const scores = studentSessions
+      .map(
+        (s) =>
+          s["Điểm danh"]?.find((r) => r["Student ID"] === student.id)?.[
+            "Điểm"
+          ]
+      )
+      .filter((score) => score !== undefined && score !== null) as number[];
+    const averageScore =
+      scores.length > 0
+        ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
+        : "0";
+
+    return `
+      <div class="report-header">
+        <h1>BÁO CÁO CHI TIẾT THEO BUỔI HỌC</h1>
+        <p>Ngày xuất: ${dayjs().format("DD/MM/YYYY HH:mm")}</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Thông tin học sinh</div>
+        <table>
+          <tr><th>Họ và tên</th><td>${student["Họ và tên"]}</td></tr>
+          <tr><th>Mã học sinh</th><td>${student["Mã học sinh"] || "-"}</td></tr>
+          <tr><th>Ngày sinh</th><td>${student["Ngày sinh"] ? dayjs(student["Ngày sinh"]).format("DD/MM/YYYY") : "-"}</td></tr>
+          <tr><th>Số điện thoại</th><td>${student["Số điện thoại"] || "-"}</td></tr>
+          <tr><th>Email</th><td>${student["Email"] || "-"}</td></tr>
+          <tr><th>Địa chỉ</th><td>${student["Địa chỉ"] || "-"}</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Thống kê tổng quan</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${stats.totalSessions}</div>
+            <div class="stat-label">Tổng số buổi</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.presentSessions}</div>
+            <div class="stat-label">Số buổi có mặt</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.absentSessions}</div>
+            <div class="stat-label">Số buổi vắng</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${attendanceRate}%</div>
+            <div class="stat-label">Tỷ lệ tham gia</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${averageScore} / 10</div>
+            <div class="stat-label">Điểm trung bình</div>
+          </div>
+        </div>
+      </div>
+
+      ${aiComment ? `
+      <div class="section">
+        <div class="section-title">Nhận xét học sinh</div>
+        <div class="comment-box">${aiComment.replace(/\n/g, "<br/>")}</div>
+      </div>
+      ` : ""}
+
+      <div class="section">
+        <div class="section-title">Lịch sử học tập chi tiết</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 80px;">Ngày</th>
+              <th>Lớp học</th>
+              <th style="width: 100px;">Giờ học</th>
+              <th style="width: 100px;">Trạng thái</th>
+              <th style="width: 60px;">Điểm</th>
+              <th style="width: 80px;">Bài tập</th>
+              <th>Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${studentSessions
+              .map((session) => {
+                const studentRecord = session["Điểm danh"]?.find(
+                  (r) => r["Student ID"] === student.id
+                );
+                const completed = studentRecord?.["Bài tập hoàn thành"];
+                const total = session["Bài tập"]?.["Tổng số bài"];
+                const homework =
+                  completed !== undefined && total
+                    ? `${completed}/${total}`
+                    : "-";
+                const statusText = studentRecord
+                  ? getStatusText(studentRecord)
+                  : "-";
+                const statusColor = studentRecord
+                  ? getStatusColor(studentRecord)
+                  : "#999";
+
+                return `
+              <tr>
+                <td style="text-align: center;">${dayjs(session["Ngày"]).format("DD/MM/YYYY")}</td>
+                <td>${session["Tên lớp"]}</td>
+                <td style="text-align: center;">${session["Giờ bắt đầu"]} - ${session["Giờ kết thúc"]}</td>
+                <td style="text-align: center; color: ${statusColor}; font-weight: bold;">${statusText}</td>
+                <td style="text-align: center; font-weight: bold;">${studentRecord?.["Điểm"] ?? "-"}</td>
+                <td style="text-align: center;">${homework}</td>
+                <td>${studentRecord?.["Ghi chú"] || "-"}</td>
+              </tr>
+            `;
+              })
               .join("")}
           </tbody>
         </table>
@@ -531,12 +666,9 @@ const StudentReport = ({
     let content = "";
     
     if (viewMode === "monthly") {
-      // Generate monthly report
       content = generateMonthlyPrintContent();
     } else {
-      // Use existing session detail report
-      if (!printRef.current) return;
-      content = printRef.current.innerHTML;
+      content = generateSessionPrintContent();
     }
 
     // Common CSS styles
@@ -622,7 +754,6 @@ const StudentReport = ({
           color: #004aad;
         }
         .stat-label {
-          font-size: 12px;
           color: #666;
         }
         .comment-box {
@@ -809,17 +940,7 @@ const StudentReport = ({
                 }}
               />
             </Col>
-          </Row>
-          <Divider />
-          <Row gutter={16}>
-            <Col span={12}>
-              <Statistic
-                title="Tổng số giờ học"
-                value={stats.totalHours}
-                suffix="giờ"
-              />
-            </Col>
-            <Col span={12}>
+            <Col span={6}>
               <Statistic
                 title="Điểm trung bình"
                 value={(() => {
@@ -980,13 +1101,6 @@ const StudentReport = ({
                     ) : (
                       "-"
                     ),
-                },
-                {
-                  title: "Tổng giờ học",
-                  dataIndex: "totalHours",
-                  key: "totalHours",
-                  align: "center" as const,
-                  render: (hours: number) => `${hours.toFixed(1)}h`,
                 },
               ]}
               dataSource={(() => {
